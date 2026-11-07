@@ -5,7 +5,7 @@ import { formatMoney, formatPercent } from '@/engine/format';
 import { forecast, RISK_ASSUMPTIONS } from '@/engine/projection';
 import type { Risk } from '@/engine/types';
 import { fill, useApp } from '@/state/app-store';
-import { Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
+import { Appear, Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
 import { ForecastChart } from '@/ui/forecast-chart';
 
 /** Monthly-investing step for the what-if stepper, per currency. */
@@ -21,30 +21,37 @@ export default function PlanScreen() {
   return (
     <Screen
       title={s.plan.title}
-      subtitle={fill(s.plan.subtitle, { goal: p.goalName || money(p.goalAmount), years: p.goalYears })}>
-      <Card>
-        <ForecastChart points={f.points} goal={p.goalAmount} />
-        <Txt variant="footnote" color="textSecondary">
-          {s.plan.rangeNote}
-        </Txt>
-      </Card>
+      subtitle={fill(s.plan.subtitle, {
+        goal: p.goalName || money(p.goalAmount),
+        years: p.goalYears,
+      })}>
+      <Appear index={0}>
+        <Card>
+          <ForecastChart points={f.points} goal={p.goalAmount} />
+          <Txt variant="footnote" color="textSecondary">
+            {s.plan.rangeNote}
+          </Txt>
+        </Card>
+      </Appear>
 
-      <Row style={{ alignItems: 'stretch' }}>
-        {[
-          { label: s.plan.badCase, v: f.final.low },
-          { label: s.plan.likely, v: f.final.mid },
-          { label: s.plan.goodCase, v: f.final.high },
-        ].map((c) => (
-          <Card key={c.label} style={{ flex: 1 }}>
-            <Txt variant="caption" color="textSecondary">
-              {c.label}
-            </Txt>
-            <Txt variant="headline" adjustsFontSizeToFit numberOfLines={1}>
-              {formatMoney(c.v, p.currency, lang, true)}
-            </Txt>
-          </Card>
-        ))}
-      </Row>
+      <Appear index={1}>
+        <Row style={{ alignItems: 'stretch' }}>
+          {[
+            { label: s.plan.badCase, v: f.final.low },
+            { label: s.plan.likely, v: f.final.mid },
+            { label: s.plan.goodCase, v: f.final.high },
+          ].map((c) => (
+            <Card key={c.label} style={{ flex: 1 }}>
+              <Txt variant="caption" color="textSecondary">
+                {c.label}
+              </Txt>
+              <Txt variant="headline" adjustsFontSizeToFit numberOfLines={1}>
+                {formatMoney(c.v, p.currency, lang, true)}
+              </Txt>
+            </Card>
+          ))}
+        </Row>
+      </Appear>
 
       <Card>
         <Row style={{ justifyContent: 'space-between' }}>
@@ -69,7 +76,11 @@ export default function PlanScreen() {
         <Stepper
           label={s.fields.monthlyInvest}
           display={`${money(p.monthlyInvest)}${s.common.perMonth}`}
-          onMinus={() => updateProfile({ monthlyInvest: Math.max(0, p.monthlyInvest - step) })}
+          onMinus={() =>
+            updateProfile({
+              monthlyInvest: Math.max(0, p.monthlyInvest - step),
+            })
+          }
           onPlus={() => updateProfile({ monthlyInvest: p.monthlyInvest + step })}
         />
         <Stepper
@@ -90,7 +101,10 @@ export default function PlanScreen() {
       <Card>
         <Txt variant="headline">{s.plan.assumptions}</Txt>
         <Txt variant="subhead" color="textSecondary">
-          {fill(s.plan.assumptionsBody, { mean: formatPercent(a.mean, lang), vol: formatPercent(a.vol, lang) })}
+          {fill(s.plan.assumptionsBody, {
+            mean: formatPercent(a.mean, lang),
+            vol: formatPercent(a.vol, lang),
+          })}
         </Txt>
       </Card>
       <Disclaimer />

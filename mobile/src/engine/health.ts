@@ -15,7 +15,10 @@ export function checkup(p: Profile): { key: CheckKey; ok: boolean }[] {
     { key: 'cashFlow', ok: free > 0 },
     { key: 'noDebt', ok: p.highInterestDebt <= 0 },
     { key: 'emergency', ok: p.cashSavings >= emergencyTarget },
-    { key: 'investing', ok: p.monthlyInvest > 0 && p.monthlyInvest <= Math.max(0, free) },
+    {
+      key: 'investing',
+      ok: p.monthlyInvest > 0 && p.monthlyInvest <= Math.max(0, free),
+    },
     { key: 'goal', ok: p.goalAmount > 0 && forecast(p).goalChance >= 0.5 },
   ];
 }

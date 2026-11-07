@@ -19,13 +19,17 @@ export function ForecastChart({ points, goal }: { points: ForecastPoint[]; goal:
   const y = (v: number) => (v / max) * HEIGHT;
   const money = (v: number) => formatMoney(v, profile.currency, lang, true);
 
-  const summary = points
-    .map((p) => `${fill(s.common.year, { n: p.year })}: ${money(p.low)} – ${money(p.high)}`)
-    .join('. ');
+  const summary = points.map((p) => `${fill(s.common.year, { n: p.year })}: ${money(p.low)} – ${money(p.high)}`).join('. ');
 
   return (
     <View accessible accessibilityLabel={summary} style={{ direction: 'ltr' }}>
-      <View style={{ height: HEIGHT, flexDirection: 'row', alignItems: 'flex-end', gap: 8 }}>
+      <View
+        style={{
+          height: HEIGHT,
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          gap: 8,
+        }}>
         {goal > 0 ? (
           <View
             pointerEvents="none"
@@ -38,7 +42,15 @@ export function ForecastChart({ points, goal }: { points: ForecastPoint[]; goal:
               borderStyle: 'dashed',
               borderColor: colors.warning,
             }}>
-            <Text style={{ position: 'absolute', right: 0, top: -18, fontSize: 11, fontWeight: '600', color: colors.warning }}>
+            <Text
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: -18,
+                fontSize: 11,
+                fontWeight: '600',
+                color: colors.warning,
+              }}>
               {s.plan.goalLine} {money(goal)}
             </Text>
           </View>
@@ -72,7 +84,14 @@ export function ForecastChart({ points, goal }: { points: ForecastPoint[]; goal:
       </View>
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
         {points.map((p) => (
-          <Text key={p.year} style={{ flex: 1, textAlign: 'center', fontSize: 11, color: colors.textSecondary }}>
+          <Text
+            key={p.year}
+            style={{
+              flex: 1,
+              textAlign: 'center',
+              fontSize: 11,
+              color: colors.textSecondary,
+            }}>
             {p.year}
           </Text>
         ))}

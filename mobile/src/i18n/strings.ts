@@ -4,6 +4,12 @@
  */
 const en = {
   appName: 'Kesefly',
+  splashTagline: 'Your money helper',
+  notif: {
+    title: 'Kesefly tip',
+    checkup: 'Your money check-up: {n} of 5 done. Open Kesefly to see the next step.',
+    keepGoing: 'Markets move every week. Your plan works best when you keep monthly deposits steady.',
+  },
   common: {
     next: 'Next',
     back: 'Back',
@@ -55,7 +61,13 @@ const en = {
     balancedBody: 'About 60% stocks. Medium swings.',
     growthBody: 'About 90% stocks. Big swings, best for 10+ years.',
   },
-  tabs: { home: 'Home', helper: 'Helper', plan: 'Plan', stocks: 'Stocks', learn: 'Learn' },
+  tabs: {
+    home: 'Home',
+    helper: 'Helper',
+    plan: 'Plan',
+    stocks: 'Stocks',
+    learn: 'Learn',
+  },
   home: {
     morning: 'Good morning',
     afternoon: 'Good afternoon',
@@ -94,7 +106,7 @@ const en = {
     you: 'You',
     welcome:
       'Hi! I’m Kesefly. Ask me how you are doing, how much to invest, about debt, index funds, risk, tax accounts, or a stock price like AAPL.',
-    suggestions: ['How am I doing?', 'How much should I invest?', 'What is an index fund?', 'Price of AAPL'],
+    suggestions: ['How am I doing?', 'How can I save more?', 'My portfolio', 'Price of AAPL', 'What can you do?'],
     answers: {
       greet: 'Hi! What would you like to look at: your plan, saving, or stocks?',
       thanks: 'Happy to help. Ask me anything else about your money.',
@@ -113,15 +125,13 @@ const en = {
         'You have {free} left each month and plan to invest {invest}. For the likely case to reach your goal, about {needed} a month is needed. Keep your emergency fund and debts in order first.',
       howMuchNoFree:
         'Right now you spend more than you earn, by {gap} a month. Fix that first: cut a regular cost or raise income. Investing comes after.',
-      goal:
-        'Goal "{goal}": {amount} in {years} years. Bad case {low}, likely {mid}, good case {high}. Chance to reach it: about {chance}. Open the Plan tab to try changes.',
+      goal: 'Goal "{goal}": {amount} in {years} years. Bad case {low}, likely {mid}, good case {high}. Chance to reach it: about {chance}. Open the Plan tab to try changes.',
       goalNone: 'You have no goal yet. Edit your numbers in Settings to add one.',
       indexFunds:
         'An index fund buys every company in an index, like the S&P 500 or TA-125. One purchase gives you wide diversification and very low fees (often under 0.25% a year). They are a simple core for most long-term plans.',
       stocksBonds:
         'Stocks grow more but drop harder. Bonds are steadier and grow less. Your "{risk}" profile suggests about {stocks}% stocks and {bonds}% bonds.',
-      risk:
-        'Your risk profile is "{risk}". Higher risk means bigger swings and usually more long-term growth. For money needed in under 3 years, a careful mix is safer.',
+      risk: 'Your risk profile is "{risk}". Higher risk means bigger swings and usually more long-term growth. For money needed in under 3 years, a careful mix is safer.',
       inflation:
         'Prices rise about 2–3% a year. Cash that earns less than that loses buying power. My forecasts are before inflation, so real buying power will be lower.',
       compound:
@@ -137,9 +147,29 @@ const en = {
         'I can’t tell you to buy or sell a specific stock: I’m an education tool, not a licensed adviser. A common approach is a diversified index fund core, with single stocks as a small part. Want the price of a stock? Type its symbol, like MSFT.',
       crypto:
         'Crypto can swing 50%+ in a year and has no earnings behind it. If you hold any, many planners suggest only a small share you can afford to lose.',
-      quote: '{symbol} is at {price}, {change} today ({pct}). Day range {low} – {high}. Prices may be delayed. This is not a buy or sell signal.',
-      quoteNoKey: 'To show live prices, add your free Finnhub key in the Stocks tab.',
+      quote:
+        '{symbol} is at {price}, {change} today ({pct}). Day range {low} – {high}. Prices may be delayed. This is not a buy or sell signal.',
       quoteFail: 'I couldn’t get a price for {symbol}. Check the symbol or try again later.',
+      help:
+        'I can help with: your money snapshot, how much to invest, saving tips, emergency fund, debt, your goal forecast, index funds, stocks vs. bonds, risk, market drops, tax accounts, home buying, interest rates, inflation, fees, your portfolio, and live stock prices (type a symbol like AAPL or TEVA.TA).',
+      notify:
+        'Turn on weekly tips in Settings, under Notifications. Once a week I send one short idea based on your plan. Your numbers never leave the phone.',
+      portfolio: 'Your portfolio has {n} positions: {list}. Open the Stocks tab to see live value and gain or loss for each one.',
+      portfolioNone: 'Your portfolio is empty. In the Stocks tab, tap "Add holding" to enter what you own: symbol, shares, and buy price.',
+      saveTips:
+        'A simple rule is 50/30/20: about {needs} for needs, {wants} for wants, and {save} for saving and investing. Automate the saving on payday, review subscriptions once a quarter, and compare insurance and phone plans every year.',
+      dca: 'Investing the same amount every month (dollar-cost averaging) means you buy more when prices are low and less when high. It removes the stress of timing the market. Set up an automatic monthly transfer.',
+      crash:
+        'Markets fall 10% or more about once every year or two, and 20%+ every few years. Historically they recovered, though it can take years. If your goal is far away, keep investing monthly and avoid selling in panic. Money you need within 3 years should not be in stocks.',
+      dividends:
+        'A dividend is a share of company profits paid to owners, often every quarter. Index funds collect dividends from all their companies. Reinvesting them adds to compound growth.',
+      homeIL:
+        'Buying a home in Israel: a first home usually needs a down payment of at least 25% (the Bank of Israel caps financing at 75%). Keep the monthly mortgage payment under about a third of net income, and compare a few banks and track mixes (prime, fixed, CPI-linked).',
+      homeUS:
+        'Buying a home in the US: aim for a 20% down payment to avoid mortgage insurance, keep housing costs under about 28% of gross income, and compare rates from several lenders.',
+      rates:
+        'When central banks raise rates, savings and bonds pay more, loans and mortgages cost more, and stocks often swing. When rates fall, the opposite. A long-term plan does not need to react to every change.',
+      gold: 'Gold can protect in crises and inflation, but it pays no interest or dividends and can stay flat for years. Many planners keep it at 0–10% of investments, if at all.',
       unknown:
         'I’m still learning that one. I can help with: your snapshot, how much to invest, emergency fund, debt, index funds, risk, tax accounts, inflation, fees, and stock prices.',
     },
@@ -161,31 +191,35 @@ const en = {
   stocks: {
     title: 'Stocks',
     subtitle: 'Track prices. Learn what moves them.',
-    keyTitle: 'Connect live prices',
-    keyBody:
-      'Kesefly uses Finnhub for prices. Get a free key in 1 minute: open finnhub.io, sign up, and copy the API key from your dashboard.',
-    keyOpen: 'Open finnhub.io',
-    keyPlaceholder: 'Paste your API key',
-    keySave: 'Save key',
-    keyRemove: 'Remove key',
-    keyStored: 'Your key is stored only on this device.',
     watchlist: 'Watchlist',
-    addPlaceholder: 'Add symbol, e.g. AAPL',
+    portfolio: 'My portfolio',
+    portfolioEmptyTitle: 'Track what you own',
+    portfolioEmptyBody: 'Add your stocks and funds to see their value and your gain or loss, updated live.',
+    addHolding: 'Add holding',
+    symbolPlaceholder: 'Symbol: AAPL, TEVA.TA',
+    shares: 'Shares',
+    buyPrice: 'Buy price',
+    buyPriceHint: 'Price per share, in the stock’s currency ($ for US, ₪ for Tel Aviv).',
+    totalValue: 'Total value',
+    holdingLine: '{shares} shares · bought at {price}',
+    addPlaceholder: 'Add symbol: AAPL, TEVA.TA',
     add: 'Add',
     remove: 'Remove {symbol}',
     refresh: 'Refresh',
     loading: 'Loading…',
-    error: 'Couldn’t load prices. Check your key and connection.',
-    notFound: 'No price for {symbol}. US symbols only on the free plan.',
+    error: 'Couldn’t load prices. Check your internet connection.',
+    notFound: 'No price for {symbol}. Check the symbol. Tel Aviv stocks end in .TA (TEVA.TA).',
     updated: 'Updated {time}',
     open: 'Open',
     prevClose: 'Prev. close',
     dayRange: 'Day range',
-    israelNote:
-      'Israeli companies traded in New York (TEVA, CHKP, NICE, ESLT) show here. Tel Aviv (TASE) prices need a paid data plan.',
-    priceNote: 'Prices from Finnhub, may be delayed. Not a buy or sell signal.',
+    israelNote: 'Tel Aviv stocks: add .TA to the symbol, like TEVA.TA or LUMI.TA. The TA-125 index is ^TA125.TA.',
+    priceNote: 'Free prices from Yahoo Finance, may be delayed. Not a buy or sell signal.',
     names: {
       SPY: 'S&P 500 index fund',
+      '^TA125.TA': 'TA-125 index (Tel Aviv)',
+      'TEVA.TA': 'Teva (Tel Aviv)',
+      'LUMI.TA': 'Bank Leumi (Tel Aviv)',
       QQQ: 'Nasdaq-100 index fund',
       VT: 'Whole-world index fund',
       AAPL: 'Apple',
@@ -309,8 +343,15 @@ const en = {
     cancel: 'Cancel',
     delete: 'Delete',
     about: 'About',
+    notifications: 'Notifications',
+    notifyLabel: 'Weekly money tips',
+    notifyBody: 'One short idea a week, based on your plan. Created on this device.',
+    notifyDenied: 'Notifications are blocked. Allow them for Kesefly in your phone settings.',
+    notifyTest: 'Send a test tip',
+    notifyOn: 'On',
+    notifyOff: 'Off',
     privacy:
-      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Finnhub, to fetch prices.',
+      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance, to fetch prices.',
     version: 'Kesefly {v}',
   },
 };
@@ -319,6 +360,12 @@ export type Strings = typeof en;
 
 const he: Strings = {
   appName: 'כספלי',
+  splashTagline: 'העוזר שלכם לכסף',
+  notif: {
+    title: 'טיפ מכספלי',
+    checkup: 'בדיקת המצב הכספי שלכם: {n} מתוך 5 הושלמו. פתחו את כספלי לצעד הבא.',
+    keepGoing: 'השוק זז כל שבוע. התוכנית עובדת הכי טוב כשממשיכים בהפקדות חודשיות קבועות.',
+  },
   common: {
     next: 'הבא',
     back: 'חזרה',
@@ -370,7 +417,13 @@ const he: Strings = {
     balancedBody: 'כ-60% מניות. תנודות בינוניות.',
     growthBody: 'כ-90% מניות. תנודות חדות, מתאים ל-10 שנים ומעלה.',
   },
-  tabs: { home: 'בית', helper: 'עוזר', plan: 'תוכנית', stocks: 'מניות', learn: 'לימוד' },
+  tabs: {
+    home: 'בית',
+    helper: 'עוזר',
+    plan: 'תוכנית',
+    stocks: 'מניות',
+    learn: 'לימוד',
+  },
   home: {
     morning: 'בוקר טוב',
     afternoon: 'צהריים טובים',
@@ -408,8 +461,8 @@ const he: Strings = {
     clear: 'שיחה חדשה',
     you: 'אתם',
     welcome:
-      'היי! אני כספלי. שאלו אותי מה המצב שלכם, כמה להשקיע, על חובות, קרנות מחקות, סיכון, קרן השתלמות, או מחיר של מניה כמו AAPL.',
-    suggestions: ['מה המצב שלי?', 'כמה כדאי להשקיע?', 'מה זו קרן מחקה?', 'מחיר AAPL'],
+      'היי! אני כספלי. שאלו אותי מה המצב שלכם, כמה להשקיע, על חובות, קרנות מחקות, סיכון, קרן השתלמות, או מחיר של מניה כמו AAPL או TEVA.TA.',
+    suggestions: ['מה המצב שלי?', 'איך לחסוך יותר?', 'התיק שלי', 'מחיר TEVA.TA', 'מה אתה יודע?'],
     answers: {
       greet: 'היי! במה נתמקד: התוכנית, חיסכון או מניות?',
       thanks: 'בשמחה. אפשר לשאול אותי כל דבר נוסף על הכסף שלכם.',
@@ -419,8 +472,7 @@ const he: Strings = {
       summaryNoGoal: 'הגדירו יעד כדי שאוכל לחשב לו תחזית.',
       emergencyMissing:
         'קרן חירום מכסה כ-6 חודשי הוצאות: {target} אצלכם. יש לכם {cash}, כלומר חסרים {missing}. שמרו אותה בפיקדון נזיל או בקרן כספית, לא במניות.',
-      emergencyOk:
-        'קרן החירום מכוסה: {cash} מול יעד של {target} (6 חודשי הוצאות). כסף מעבר לזה יכול לעבוד לטובת היעד.',
+      emergencyOk: 'קרן החירום מכוסה: {cash} מול יעד של {target} (6 חודשי הוצאות). כסף מעבר לזה יכול לעבוד לטובת היעד.',
       debtSome:
         'יש לכם {debt} חוב בריבית גבוהה. סגירתו היא תשואה מובטחת של 15% ומעלה בשנה, יותר מכל קרן. התחילו מהריבית הגבוהה ביותר, ואז השקיעו.',
       debtNone: 'אין לכם חוב בריבית גבוהה. מצוין: זה אחד הצעדים החשובים ביותר.',
@@ -428,22 +480,19 @@ const he: Strings = {
         'נשארים לכם {free} בכל חודש, ותכננתם להשקיע {invest}. כדי להגיע ליעד בתרחיש הסביר צריך כ-{needed} בחודש. קודם כדאי לסדר קרן חירום וחובות.',
       howMuchNoFree:
         'כרגע ההוצאות גבוהות מההכנסה ב-{gap} בחודש. קודם לתקן את זה: לקצץ הוצאה קבועה או להגדיל הכנסה. ההשקעה באה אחר כך.',
-      goal:
-        'היעד "{goal}": {amount} בעוד {years} שנים. תרחיש רע {low}, סביר {mid}, טוב {high}. סיכוי להגיע: כ-{chance}. בלשונית תוכנית אפשר לנסות שינויים.',
+      goal: 'היעד "{goal}": {amount} בעוד {years} שנים. תרחיש רע {low}, סביר {mid}, טוב {high}. סיכוי להגיע: כ-{chance}. בלשונית תוכנית אפשר לנסות שינויים.',
       goalNone: 'עדיין אין לכם יעד. אפשר להוסיף אחד בהגדרות, תחת עריכת המספרים.',
       indexFunds:
         'קרן מחקה קונה את כל החברות במדד, כמו S&P 500 או ת״א-125. ברכישה אחת מקבלים פיזור רחב ודמי ניהול נמוכים מאוד (לרוב מתחת ל-0.25% בשנה). זה בסיס פשוט לרוב התוכניות לטווח ארוך.',
       stocksBonds:
         'מניות צומחות יותר אבל יורדות חזק יותר. אג״ח יציבות יותר וצומחות פחות. לפי פרופיל "{risk}" מתאים בערך {stocks}% מניות ו-{bonds}% אג״ח.',
-      risk:
-        'פרופיל הסיכון שלכם הוא "{risk}". סיכון גבוה יותר אומר תנודות חדות יותר ובדרך כלל צמיחה גבוהה יותר לטווח ארוך. לכסף שצריך בפחות מ-3 שנים, תמהיל זהיר בטוח יותר.',
+      risk: 'פרופיל הסיכון שלכם הוא "{risk}". סיכון גבוה יותר אומר תנודות חדות יותר ובדרך כלל צמיחה גבוהה יותר לטווח ארוך. לכסף שצריך בפחות מ-3 שנים, תמהיל זהיר בטוח יותר.',
       inflation:
         'מחירים עולים בכ-2–3% בשנה. מזומן שמרוויח פחות מזה מאבד כוח קנייה. התחזיות שלי הן לפני אינפלציה, כך שכוח הקנייה בפועל יהיה נמוך יותר.',
       compound:
         'ריבית דריבית: התשואה מרוויחה תשואה. 1,000 ב-7% בשנה גדלים לכ-2,000 אחרי 10 שנים ולכ-7,600 אחרי 30. הכי חשוב להתחיל מוקדם.',
       fees: 'דמי ניהול של 1% בשנה יכולים לאכול כחמישית מהתוצאה לאורך 25 שנה. העדיפו קרנות עם דמי ניהול מתחת ל-0.25%.',
-      taxUS:
-        'בארה״ב: קודם לנצל את מלוא ההתאמה של המעסיק ב-401(k) (כסף חינם), אחר כך Roth IRA או IRA רגיל, ורק אז חשבון רגיל.',
+      taxUS: 'בארה״ב: קודם לנצל את מלוא ההתאמה של המעסיק ב-401(k) (כסף חינם), אחר כך Roth IRA או IRA רגיל, ורק אז חשבון רגיל.',
       taxIL:
         'בישראל: קרן השתלמות פטורה ממס רווחי הון אחרי 6 שנים, עד התקרה בחוק. בדקו גם את דמי הניהול בקרן הפנסיה: הם מצטברים לאורך עשרות שנים.',
       currency:
@@ -452,9 +501,28 @@ const he: Strings = {
         'אני לא יכול להמליץ לקנות או למכור מניה מסוימת: אני כלי לימוד, לא יועץ מורשה. גישה נפוצה היא בסיס של קרן מחקה מפוזרת, ומניות בודדות כחלק קטן. רוצים מחיר של מניה? הקלידו את הסימול שלה, כמו MSFT.',
       crypto:
         'קריפטו יכול לזוז ב-50% ויותר בשנה, ואין מאחוריו רווחים של חברה. אם אתם מחזיקים, מתכננים רבים ממליצים רק על חלק קטן שאפשר להרשות לעצמכם להפסיד.',
-      quote: '{symbol} עומדת על {price}, שינוי של {change} היום ({pct}). טווח יומי {low} – {high}. המחירים עשויים להיות מעוכבים. זה לא איתות לקנייה או למכירה.',
-      quoteNoKey: 'כדי להציג מחירים חיים, הוסיפו מפתח Finnhub חינמי בלשונית מניות.',
+      quote:
+        '{symbol} עומדת על {price}, שינוי של {change} היום ({pct}). טווח יומי {low} – {high}. המחירים עשויים להיות מעוכבים. זה לא איתות לקנייה או למכירה.',
       quoteFail: 'לא הצלחתי לקבל מחיר עבור {symbol}. בדקו את הסימול או נסו שוב מאוחר יותר.',
+      help:
+        'אני יכול לעזור עם: תמונת מצב, כמה להשקיע, טיפים לחיסכון, קרן חירום, חובות, תחזית ליעד, קרנות מחקות, מניות מול אג״ח, סיכון, ירידות בשוק, קרן השתלמות ומס, קניית דירה, ריבית, אינפלציה, דמי ניהול, תיק ההשקעות שלכם ומחירי מניות (הקלידו סימול כמו AAPL או TEVA.TA).',
+      notify: 'אפשר להפעיל טיפים שבועיים בהגדרות, תחת התראות. פעם בשבוע אשלח רעיון קצר לפי התוכנית שלכם. המספרים לא יוצאים מהטלפון.',
+      portfolio: 'בתיק שלכם יש {n} אחזקות: {list}. בלשונית מניות רואים את השווי ואת הרווח או ההפסד של כל אחת.',
+      portfolioNone: 'התיק שלכם ריק. בלשונית מניות הקישו "הוספת אחזקה" והזינו מה יש לכם: סימול, כמות ומחיר קנייה.',
+      saveTips:
+        'כלל פשוט הוא 50/30/20: בערך {needs} לצרכים, {wants} לרצונות ו-{save} לחיסכון ולהשקעה. הגדירו העברה אוטומטית ביום המשכורת, עברו על המנויים פעם ברבעון, והשוו ביטוחים וחבילות סלולר פעם בשנה.',
+      dca: 'השקעה של אותו סכום בכל חודש (הוראת קבע) אומרת שקונים יותר כשהמחיר נמוך ופחות כשהוא גבוה. זה חוסך את הלחץ של תזמון השוק. הגדירו העברה חודשית אוטומטית.',
+      crash:
+        'השוק יורד ב-10% ויותר בערך פעם בשנה-שנתיים, וב-20% ויותר כל כמה שנים. היסטורית הוא התאושש, לפעמים אחרי כמה שנים. אם היעד רחוק, המשיכו להשקיע כל חודש ואל תמכרו בבהלה. כסף שצריך בתוך 3 שנים לא צריך להיות במניות.',
+      dividends:
+        'דיבידנד הוא חלק מהרווח של החברה שמשולם לבעלי המניות, לרוב פעם ברבעון. קרן מחקה אוספת דיבידנדים מכל החברות שבה. השקעה מחדש שלהם מגדילה את הריבית דריבית.',
+      homeIL:
+        'קניית דירה בישראל: לדירה ראשונה צריך בדרך כלל הון עצמי של 25% לפחות (בנק ישראל מגביל מימון ל-75%). כדאי שהחזר המשכנתא יהיה עד כשליש מההכנסה נטו, ולהשוות כמה בנקים ותמהילי מסלולים (פריים, קבועה, צמודה).',
+      homeUS:
+        'קניית בית בארה״ב: כדאי לכוון ל-20% מקדמה כדי להימנע מביטוח משכנתא, לשמור את עלות הדיור מתחת לכ-28% מההכנסה ברוטו, ולהשוות ריביות מכמה מלווים.',
+      rates:
+        'כשהבנק המרכזי מעלה ריבית, פיקדונות ואג״ח מניבים יותר, הלוואות ומשכנתאות מתייקרות, והמניות לרוב תנודתיות. כשהריבית יורדת, ההפך. תוכנית לטווח ארוך לא צריכה להגיב לכל שינוי.',
+      gold: 'זהב יכול להגן בזמן משברים ואינפלציה, אבל הוא לא משלם ריבית או דיבידנד ויכול לעמוד במקום שנים. מתכננים רבים מחזיקים 0–10% ממנו בתיק, אם בכלל.',
       unknown:
         'את זה אני עוד לומד. אני יכול לעזור עם: תמונת מצב, כמה להשקיע, קרן חירום, חובות, קרנות מחקות, סיכון, קרן השתלמות ומס, אינפלציה, דמי ניהול ומחירי מניות.',
     },
@@ -476,31 +544,35 @@ const he: Strings = {
   stocks: {
     title: 'מניות',
     subtitle: 'לעקוב אחרי מחירים ולהבין מה מזיז אותם.',
-    keyTitle: 'חיבור למחירים חיים',
-    keyBody:
-      'כספלי משתמש ב-Finnhub למחירים. מפתח חינמי לוקח דקה: היכנסו ל-finnhub.io, הירשמו והעתיקו את ה-API key מלוח הבקרה.',
-    keyOpen: 'לפתוח את finnhub.io',
-    keyPlaceholder: 'הדביקו את המפתח',
-    keySave: 'שמירת מפתח',
-    keyRemove: 'הסרת המפתח',
-    keyStored: 'המפתח נשמר רק במכשיר הזה.',
     watchlist: 'רשימת מעקב',
-    addPlaceholder: 'הוספת סימול, למשל AAPL',
+    portfolio: 'תיק ההשקעות שלי',
+    portfolioEmptyTitle: 'לעקוב אחרי מה שיש לכם',
+    portfolioEmptyBody: 'הוסיפו את המניות והקרנות שלכם כדי לראות את השווי ואת הרווח או ההפסד, בעדכון חי.',
+    addHolding: 'הוספת אחזקה',
+    symbolPlaceholder: 'סימול: AAPL, TEVA.TA',
+    shares: 'כמות',
+    buyPrice: 'מחיר קנייה',
+    buyPriceHint: 'מחיר למניה, במטבע של המניה ($ לארה״ב, ₪ לתל אביב).',
+    totalValue: 'שווי כולל',
+    holdingLine: '{shares} יחידות · נקנו ב-{price}',
+    addPlaceholder: 'הוספת סימול: AAPL, TEVA.TA',
     add: 'הוספה',
     remove: 'הסרת {symbol}',
     refresh: 'רענון',
     loading: 'טוען…',
-    error: 'לא הצלחתי לטעון מחירים. בדקו את המפתח ואת החיבור.',
-    notFound: 'אין מחיר עבור {symbol}. בתוכנית החינמית יש רק סימולים אמריקאיים.',
+    error: 'לא הצלחתי לטעון מחירים. בדקו את החיבור לאינטרנט.',
+    notFound: 'אין מחיר עבור {symbol}. בדקו את הסימול. מניות בתל אביב מסתיימות ב-TA. (למשל TEVA.TA).',
     updated: 'עודכן {time}',
     open: 'פתיחה',
     prevClose: 'סגירה קודמת',
     dayRange: 'טווח יומי',
-    israelNote:
-      'חברות ישראליות שנסחרות בניו יורק (TEVA, CHKP, NICE, ESLT) מופיעות כאן. מחירי הבורסה בתל אביב דורשים תוכנית נתונים בתשלום.',
-    priceNote: 'המחירים מ-Finnhub ועשויים להיות מעוכבים. זה לא איתות לקנייה או למכירה.',
+    israelNote: 'מניות בבורסת תל אביב: הוסיפו TA. לסימול, למשל TEVA.TA או LUMI.TA. מדד ת״א-125 הוא ^TA125.TA.',
+    priceNote: 'מחירים חינמיים מ-Yahoo Finance, ועשויים להיות מעוכבים. זה לא איתות לקנייה או למכירה.',
     names: {
       SPY: 'קרן מחקה S&P 500',
+      '^TA125.TA': 'מדד ת״א-125',
+      'TEVA.TA': 'טבע (תל אביב)',
+      'LUMI.TA': 'בנק לאומי (תל אביב)',
       QQQ: 'קרן מחקה נאסד״ק 100',
       VT: 'קרן מחקה עולמית',
       AAPL: 'אפל',
@@ -624,7 +696,14 @@ const he: Strings = {
     cancel: 'ביטול',
     delete: 'מחיקה',
     about: 'אודות',
-    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Finnhub, כדי לקבל מחירים.',
+    notifications: 'התראות',
+    notifyLabel: 'טיפים שבועיים לכסף',
+    notifyBody: 'רעיון קצר אחד בשבוע, לפי התוכנית שלכם. נוצר במכשיר הזה.',
+    notifyDenied: 'ההתראות חסומות. אפשרו אותן לכספלי בהגדרות הטלפון.',
+    notifyTest: 'שליחת טיפ לדוגמה',
+    notifyOn: 'פועל',
+    notifyOff: 'כבוי',
+    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance, כדי לקבל מחירים.',
     version: 'כספלי {v}',
   },
 };

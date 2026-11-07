@@ -1,6 +1,6 @@
 /**
- * App state: language, user profile, onboarding flag, stock watchlist, Finnhub key.
- * Persisted on-device only (AsyncStorage). Only stock symbols leave the phone (to Finnhub, for prices).
+ * App state: language, user profile, onboarding flag, stock watchlist, portfolio holdings, notification setting.
+ * Persisted on-device only (AsyncStorage). Only stock symbols leave the phone (to Yahoo Finance, for prices).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
@@ -11,9 +11,20 @@ import { STRINGS, type Strings } from '@/i18n/strings';
 
 const STORAGE_KEY = 'investapp/state/v1';
 
-export const DEFAULT_WATCHLIST = ['SPY', 'VT', 'AAPL', 'MSFT', 'NVDA', 'TEVA', 'CHKP'];
+export const DEFAULT_WATCHLIST = ['SPY', 'VT', '^TA125.TA', 'AAPL', 'MSFT', 'NVDA', 'TEVA.TA', 'CHKP'];
 
-type Persisted = { lang: Lang; profile: Profile; onboarded: boolean; finnhubKey: string; watchlist: string[] };
+/** One position in the user's portfolio (תיק השקעות). Price is per share, in the stock's own currency. */
+export type Holding = { id: string; symbol: string; shares: number; buyPrice: number };
+
+type Persisted = {
+  lang: Lang;
+  profile: Profile;
+  onboarded: boolean;
+  watchlist: string[];
+  holdings: Holding[];
+  /** Weekly advice notifications on/off. */
+  notify: boolean;
+};
 
 type AppState = Persisted & {
   hydrated: boolean;
@@ -23,9 +34,11 @@ type AppState = Persisted & {
   saveProfile: (profile: Profile) => void;
   updateProfile: (patch: Partial<Profile>) => void;
   reset: () => void;
-  setFinnhubKey: (key: string) => void;
   addSymbol: (symbol: string) => void;
   removeSymbol: (symbol: string) => void;
+  addHolding: (h: Omit<Holding, 'id'>) => void;
+  removeHolding: (id: string) => void;
+  setNotify: (on: boolean) => void;
 };
 
 const AppContext = createContext<AppState | null>(null);
@@ -45,8 +58,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     lang: deviceLang(),
     profile: EMPTY_PROFILE,
     onboarded: false,
-    finnhubKey: '',
     watchlist: DEFAULT_WATCHLIST,
+    holdings: [],
+    notify: false,
   }));
 
   useEffect(() => {
@@ -58,8 +72,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           lang: saved.lang ?? prev.lang,
           profile: { ...EMPTY_PROFILE, ...saved.profile },
           onboarded: saved.onboarded ?? false,
-          finnhubKey: saved.finnhubKey ?? '',
           watchlist: Array.isArray(saved.watchlist) ? saved.watchlist : DEFAULT_WATCHLIST,
+          holdings: Array.isArray(saved.holdings) ? saved.holdings : [],
+          notify: saved.notify ?? false,
         }));
       })
       .catch(() => {
@@ -74,10 +89,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state, hydrated]);
 
   const setLang = useCallback((lang: Lang) => setState((p) => ({ ...p, lang })), []);
-  const saveProfile = useCallback(
-    (profile: Profile) => setState((p) => ({ ...p, profile, onboarded: true })),
-    [],
-  );
+  const saveProfile = useCallback((profile: Profile) => setState((p) => ({ ...p, profile, onboarded: true })), []);
   const updateProfile = useCallback(
     (patch: Partial<Profile>) => setState((p) => ({ ...p, profile: { ...p.profile, ...patch } })),
     [],
@@ -88,12 +100,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         lang: p.lang,
         profile: EMPTY_PROFILE,
         onboarded: false,
-        finnhubKey: '',
         watchlist: DEFAULT_WATCHLIST,
+        holdings: [],
+        notify: false,
       })),
     [],
   );
-  const setFinnhubKey = useCallback((finnhubKey: string) => setState((p) => ({ ...p, finnhubKey: finnhubKey.trim() })), []);
   const addSymbol = useCallback(
     (symbol: string) =>
       setState((p) => {
@@ -104,9 +116,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
   const removeSymbol = useCallback(
-    (symbol: string) => setState((p) => ({ ...p, watchlist: p.watchlist.filter((x) => x !== symbol) })),
+    (symbol: string) =>
+      setState((p) => ({
+        ...p,
+        watchlist: p.watchlist.filter((x) => x !== symbol),
+      })),
     [],
   );
+  const addHolding = useCallback(
+    (h: Omit<Holding, 'id'>) =>
+      setState((p) => ({
+        ...p,
+        holdings: [...p.holdings, { ...h, symbol: h.symbol.trim().toUpperCase(), id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }],
+      })),
+    [],
+  );
+  const removeHolding = useCallback((id: string) => setState((p) => ({ ...p, holdings: p.holdings.filter((h) => h.id !== id) })), []);
+  const setNotify = useCallback((notify: boolean) => setState((p) => ({ ...p, notify })), []);
 
   const value = useMemo<AppState>(
     () => ({
@@ -118,11 +144,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfile,
       updateProfile,
       reset,
-      setFinnhubKey,
       addSymbol,
       removeSymbol,
+      addHolding,
+      removeHolding,
+      setNotify,
     }),
-    [state, hydrated, setLang, saveProfile, updateProfile, reset, setFinnhubKey, addSymbol, removeSymbol],
+    [state, hydrated, setLang, saveProfile, updateProfile, reset, addSymbol, removeSymbol, addHolding, removeHolding, setNotify],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -13,6 +13,9 @@ import { EMERGENCY_MONTHS } from './recommendations';
 import { isTicker } from './stocks';
 import type { Lang, Profile } from './types';
 
+/** Portfolio position, as stored in app state. */
+export type HoldingLite = { symbol: string; shares: number; buyPrice: number };
+
 export type HelperReply = { text: string } | { quote: string };
 
 type Topic =
@@ -33,7 +36,17 @@ type Topic =
   | 'tax'
   | 'currency'
   | 'thanks'
-  | 'greet';
+  | 'greet'
+  | 'help'
+  | 'notify'
+  | 'portfolio'
+  | 'saveTips'
+  | 'dca'
+  | 'crash'
+  | 'dividends'
+  | 'home'
+  | 'rates'
+  | 'gold';
 
 /**
  * Keyword rules, checked in order (first match wins).
@@ -42,36 +55,154 @@ type Topic =
  * (see `matchesHebrew`). Multi-word Hebrew keywords match as plain substrings.
  */
 const RULES: { topic: Topic; en: RegExp; he: string[] }[] = [
-  { topic: 'noAdvice', en: /\b(should i (buy|sell)|buy|sell|best stock|which stock|recommend)\b/i, he: ['לקנות', 'למכור', 'כדאי לי לקנות', 'איזו מניה', 'המלצה'] },
-  { topic: 'crypto', en: /\b(crypto|bitcoin|btc|ethereum|eth)\b/i, he: ['קריפטו', 'ביטקוין', 'אתריום'] },
-  { topic: 'summary', en: /\b(how am i|how'?s my|status|snapshot|overview|summary|doing)\b/i, he: ['מה המצב', 'מצב שלי', 'איך אני', 'תמונת מצב', 'סיכום'] },
+  {
+    topic: 'help',
+    en: /\b(help|what can you do|what do you know|who are you|menu)\b/i,
+    he: ['עזרה', 'מה אתה יודע', 'מה אתה יכול', 'מי אתה', 'במה אתה'],
+  },
+  {
+    topic: 'notify',
+    en: /\b(notif\w*|remind\w*|alerts?)\b/i,
+    he: ['התראה', 'התראות', 'תזכורת'],
+  },
+  {
+    topic: 'noAdvice',
+    en: /\b(should i (buy|sell)|buy|sell|best stock|which stock|recommend)\b/i,
+    he: ['לקנות', 'למכור', 'כדאי לי לקנות', 'איזו מניה', 'המלצה'],
+  },
+  {
+    topic: 'crypto',
+    en: /\b(crypto|bitcoin|btc|ethereum|eth)\b/i,
+    he: ['קריפטו', 'ביטקוין', 'אתריום'],
+  },
+  {
+    topic: 'summary',
+    en: /\b(how am i|how'?s my|status|snapshot|overview|summary|doing)\b/i,
+    he: ['מה המצב', 'מצב שלי', 'איך אני', 'תמונת מצב', 'סיכום'],
+  },
+  {
+    topic: 'portfolio',
+    en: /\b(portfolio|holdings|my stocks|my shares|positions)\b/i,
+    he: ['תיק', 'אחזקות', 'המניות שלי'],
+  },
+  {
+    topic: 'saveTips',
+    en: /\b(how (do|can|should) i save|save more|saving tips|tips|50\/30\/20|cut costs?)\b/i,
+    he: ['איך לחסוך', 'לחסוך יותר', 'טיפים', 'טיפ', 'לקצץ'],
+  },
+  {
+    topic: 'dca',
+    en: /\b(dollar[- ]cost|every month|monthly investing|lump sum|timing|when (should i|to) invest|right time)\b/i,
+    he: ['הוראת קבע', 'כל חודש', 'תזמון', 'מתי להשקיע', 'חד פעמי'],
+  },
   {
     topic: 'howMuch',
     en: /\bhow much\b.*\b(invest|save|put)\b|\b(invest|save) (how much|monthly)\b|\b(spend\w*|income|budget|free cash)\b/i,
     he: ['כמה להשקיע', 'כמה כדאי להשקיע', 'כמה לחסוך', 'כמה לשים', 'הוצאות', 'הכנסה', 'תקציב', 'כסף הפנוי'],
   },
-  { topic: 'emergency', en: /\b(emergency|rainy day|safety net|idle cash|cash)\b/i, he: ['חירום', 'כרית ביטחון', 'מזומן'] },
-  { topic: 'debt', en: /\b(debt|loan|credit card|overdraft|owe)\b/i, he: ['חוב', 'הלוואה', 'מינוס', 'אשראי'] },
-  { topic: 'goal', en: /\b(goal|forecast|plan|target|reach)\b/i, he: ['יעד', 'תחזית', 'תוכנית', 'להגיע'] },
-  { topic: 'tax', en: /\b(tax|401k|401\(k\)|ira|roth|pension|retire\w*)\b/i, he: ['מס', 'מסים', 'מיסים', 'מיסוי', 'השתלמות', 'פנסיה', 'גמל', 'פרישה'] },
-  { topic: 'indexFunds', en: /\b(index|etf|fund|s&p|sp500|tracker)\b/i, he: ['מחקה', 'תעודת סל', 'קרן', 'מדד'] },
-  { topic: 'stocksBonds', en: /\b(bond|bonds|stocks vs|allocation|mix)\b/i, he: ['אג"ח', 'אג״ח', 'אגח', 'תמהיל'] },
-  { topic: 'risk', en: /\b(risk|risky|safe|volatil\w*)\b/i, he: ['סיכון', 'בטוח', 'תנודתיות'] },
+  {
+    topic: 'emergency',
+    en: /\b(emergency|rainy day|safety net|idle cash|cash)\b/i,
+    he: ['חירום', 'כרית ביטחון', 'מזומן'],
+  },
+  {
+    topic: 'home',
+    en: /\b(mortgage|apartment|house|home loan|real estate|rent\w*)\b/i,
+    he: ['משכנתא', 'נדל"ן', 'נדל״ן', 'דירה', 'שכירות'],
+  },
+  {
+    topic: 'crash',
+    en: /\b(crash\w*|bear market|recession|market (is )?(down|falling|dropping)|drops?|falling)\b/i,
+    he: ['ירידות', 'קריסה', 'מפולת', 'מיתון', 'נופל', 'יורד'],
+  },
+  {
+    topic: 'debt',
+    en: /\b(debt|loan|credit card|overdraft|owe)\b/i,
+    he: ['חוב', 'הלוואה', 'מינוס', 'אשראי'],
+  },
+  {
+    topic: 'goal',
+    en: /\b(goal|forecast|plan|target|reach)\b/i,
+    he: ['יעד', 'תחזית', 'תוכנית', 'להגיע'],
+  },
+  {
+    topic: 'tax',
+    en: /\b(tax|401k|401\(k\)|ira|roth|pension|retire\w*)\b/i,
+    he: ['מס', 'מסים', 'מיסים', 'מיסוי', 'השתלמות', 'פנסיה', 'גמל', 'פרישה'],
+  },
+  {
+    topic: 'indexFunds',
+    en: /\b(index|etf|fund|s&p|sp500|tracker)\b/i,
+    he: ['מחקה', 'תעודת סל', 'קרן', 'מדד'],
+  },
+  {
+    topic: 'stocksBonds',
+    en: /\b(bond|bonds|stocks vs|allocation|mix)\b/i,
+    he: ['אג"ח', 'אג״ח', 'אגח', 'תמהיל'],
+  },
+  {
+    topic: 'risk',
+    en: /\b(risk|risky|safe|volatil\w*)\b/i,
+    he: ['סיכון', 'בטוח', 'תנודתיות'],
+  },
   { topic: 'inflation', en: /\binflation\b/i, he: ['אינפלציה', 'יוקר'] },
-  { topic: 'compound', en: /\b(compound\w*|interest on interest)\b/i, he: ['ריבית דריבית', 'דריבית'] },
-  { topic: 'fees', en: /\b(fee|fees|expense ratio|commission)\b/i, he: ['דמי ניהול', 'עמלה', 'עמלות'] },
-  { topic: 'currency', en: /\b(currency|dollar|shekel|usd|ils|nis|exchange rate)\b/i, he: ['מטבע', 'דולר', 'שקל', 'שער'] },
+  {
+    topic: 'compound',
+    en: /\b(compound\w*|interest on interest)\b/i,
+    he: ['ריבית דריבית', 'דריבית'],
+  },
+  {
+    topic: 'rates',
+    en: /\b(interest rates?|rates|fed|central bank)\b/i,
+    he: ['ריבית', 'בנק ישראל', 'הפד'],
+  },
+  { topic: 'dividends', en: /\bdividends?\b/i, he: ['דיבידנד'] },
+  { topic: 'gold', en: /\b(gold|silver)\b/i, he: ['זהב'] },
+  {
+    topic: 'fees',
+    en: /\b(fee|fees|expense ratio|commission)\b/i,
+    he: ['דמי ניהול', 'עמלה', 'עמלות'],
+  },
+  {
+    topic: 'currency',
+    en: /\b(currency|dollar|shekel|usd|ils|nis|exchange rate)\b/i,
+    he: ['מטבע', 'דולר', 'שקל', 'שער'],
+  },
   { topic: 'thanks', en: /\b(thanks|thank you|thx)\b/i, he: ['תודה'] },
-  { topic: 'greet', en: /\b(hi|hello|hey|yo)\b/i, he: ['שלום', 'היי', 'אהלן', 'מה נשמע'] },
+  {
+    topic: 'greet',
+    en: /\b(hi|hello|hey|yo)\b/i,
+    he: ['שלום', 'היי', 'אהלן', 'מה נשמע'],
+  },
 ];
 
 /** Words that look like tickers but are not. */
-const NOT_TICKERS = new Set(['I', 'A', 'AN', 'ETF', 'IRA', 'USD', 'ILS', 'NIS', 'OK', 'TA', 'S', 'P', 'US', 'IL', 'AI', 'TASE', 'ROTH', 'BTC', 'ETH']);
+const NOT_TICKERS = new Set([
+  'I',
+  'A',
+  'AN',
+  'ETF',
+  'IRA',
+  'USD',
+  'ILS',
+  'NIS',
+  'OK',
+  'TA',
+  'S',
+  'P',
+  'US',
+  'IL',
+  'AI',
+  'TASE',
+  'ROTH',
+  'BTC',
+  'ETH',
+]);
 
-/** Finds a ticker the user typed in capitals (AAPL, $MSFT) or a watchlist symbol in any case. */
+/** Finds a ticker the user typed in capitals (AAPL, $MSFT, TEVA.TA) or a watchlist symbol in any case. */
 export function findTicker(text: string, watchlist: string[]): string | null {
-  for (const raw of text.split(/[\s,?!.:;()"']+/)) {
-    const tok = raw.replace(/^\$/, '');
+  for (const raw of text.split(/[\s,?!:;()"']+/)) {
+    const tok = raw.replace(/^\$/, '').replace(/\.+$/, '');
     if (!tok) continue;
     if (watchlist.includes(tok.toUpperCase())) return tok.toUpperCase();
     if (tok === tok.toUpperCase() && isTicker(tok) && !NOT_TICKERS.has(tok)) return tok;
@@ -106,7 +237,10 @@ function fill(template: string, vars: Record<string, string | number> = {}): str
   return template.replace(/\{(\w+)\}/g, (_, k: string) => (k in vars ? String(vars[k]) : `{${k}}`));
 }
 
-export function answer(text: string, ctx: { s: Strings; profile: Profile; lang: Lang; watchlist: string[] }): HelperReply {
+export function answer(
+  text: string,
+  ctx: { s: Strings; profile: Profile; lang: Lang; watchlist: string[]; holdings?: HoldingLite[] },
+): HelperReply {
   const { s, profile: p, lang } = ctx;
   const a = s.helper.answers;
   const money = (v: number) => formatMoney(v, p.currency, lang);
@@ -126,6 +260,36 @@ export function answer(text: string, ctx: { s: Strings; profile: Profile; lang: 
   switch (topic) {
     case 'greet':
       return { text: a.greet };
+    case 'help':
+      return { text: a.help };
+    case 'notify':
+      return { text: a.notify };
+    case 'portfolio': {
+      const hs = ctx.holdings ?? [];
+      if (!hs.length) return { text: a.portfolioNone };
+      const list = hs.map((h) => `${h.symbol} × ${h.shares}`).join(', ');
+      return { text: fill(a.portfolio, { n: hs.length, list }) };
+    }
+    case 'saveTips':
+      return {
+        text: fill(a.saveTips, {
+          needs: money(p.monthlyIncome * 0.5),
+          wants: money(p.monthlyIncome * 0.3),
+          save: money(p.monthlyIncome * 0.2),
+        }),
+      };
+    case 'dca':
+      return { text: a.dca };
+    case 'crash':
+      return { text: a.crash };
+    case 'dividends':
+      return { text: a.dividends };
+    case 'home':
+      return { text: p.country === 'IL' ? a.homeIL : a.homeUS };
+    case 'rates':
+      return { text: a.rates };
+    case 'gold':
+      return { text: a.gold };
     case 'thanks':
       return { text: a.thanks };
     case 'noAdvice':
@@ -135,7 +299,11 @@ export function answer(text: string, ctx: { s: Strings; profile: Profile; lang: 
     case 'summary': {
       const goalLine =
         p.goalAmount > 0
-          ? fill(a.summaryGoal, { goal: p.goalName || money(p.goalAmount), chance: pct(f.goalChance), years: p.goalYears })
+          ? fill(a.summaryGoal, {
+              goal: p.goalName || money(p.goalAmount),
+              chance: pct(f.goalChance),
+              years: p.goalYears,
+            })
           : a.summaryNoGoal;
       return {
         text: fill(a.summary, {
@@ -149,16 +317,34 @@ export function answer(text: string, ctx: { s: Strings; profile: Profile; lang: 
     }
     case 'howMuch':
       if (free <= 0) return { text: fill(a.howMuchNoFree, { gap: money(-free) }) };
-      return { text: fill(a.howMuch, { free: money(free), invest: money(p.monthlyInvest), needed: money(f.monthlyNeeded) }) };
+      return {
+        text: fill(a.howMuch, {
+          free: money(free),
+          invest: money(p.monthlyInvest),
+          needed: money(f.monthlyNeeded),
+        }),
+      };
     case 'emergency': {
       const target = p.monthlyExpenses * EMERGENCY_MONTHS;
-      if (p.cashSavings >= target) return { text: fill(a.emergencyOk, { cash: money(p.cashSavings), target: money(target) }) };
+      if (p.cashSavings >= target)
+        return {
+          text: fill(a.emergencyOk, {
+            cash: money(p.cashSavings),
+            target: money(target),
+          }),
+        };
       return {
-        text: fill(a.emergencyMissing, { target: money(target), cash: money(p.cashSavings), missing: money(target - p.cashSavings) }),
+        text: fill(a.emergencyMissing, {
+          target: money(target),
+          cash: money(p.cashSavings),
+          missing: money(target - p.cashSavings),
+        }),
       };
     }
     case 'debt':
-      return { text: p.highInterestDebt > 0 ? fill(a.debtSome, { debt: money(p.highInterestDebt) }) : a.debtNone };
+      return {
+        text: p.highInterestDebt > 0 ? fill(a.debtSome, { debt: money(p.highInterestDebt) }) : a.debtNone,
+      };
     case 'goal':
       if (p.goalAmount <= 0) return { text: a.goalNone };
       return {
@@ -175,7 +361,13 @@ export function answer(text: string, ctx: { s: Strings; profile: Profile; lang: 
     case 'indexFunds':
       return { text: a.indexFunds };
     case 'stocksBonds':
-      return { text: fill(a.stocksBonds, { risk: riskLabel, stocks: Math.round(stocks * 100), bonds: Math.round((1 - stocks) * 100) }) };
+      return {
+        text: fill(a.stocksBonds, {
+          risk: riskLabel,
+          stocks: Math.round(stocks * 100),
+          bonds: Math.round((1 - stocks) * 100),
+        }),
+      };
     case 'risk':
       return { text: fill(a.risk, { risk: riskLabel }) };
     case 'inflation':

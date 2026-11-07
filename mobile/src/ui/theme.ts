@@ -127,11 +127,31 @@ const mdType: Record<TypeRole, TextStyle> = {
   largeTitle: { fontSize: 28, lineHeight: 36, fontWeight: '400' }, // Headline medium
   title: { fontSize: 22, lineHeight: 28, fontWeight: '400' }, // Title large
   title3: { fontSize: 22, lineHeight: 28, fontWeight: '500' }, // Title large, emphasized
-  headline: { fontSize: 16, lineHeight: 24, fontWeight: '500', letterSpacing: 0.2 }, // Title medium
+  headline: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '500',
+    letterSpacing: 0.2,
+  }, // Title medium
   body: { fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: 0.5 }, // Body large
-  subhead: { fontSize: 14, lineHeight: 20, fontWeight: '400', letterSpacing: 0.2 }, // Body medium
-  footnote: { fontSize: 12, lineHeight: 16, fontWeight: '400', letterSpacing: 0.4 }, // Body small
-  caption: { fontSize: 12, lineHeight: 16, fontWeight: '500', letterSpacing: 0.5 }, // Label medium
+  subhead: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+    letterSpacing: 0.2,
+  }, // Body medium
+  footnote: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '400',
+    letterSpacing: 0.4,
+  }, // Body small
+  caption: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '500',
+    letterSpacing: 0.5,
+  }, // Label medium
 };
 
 export const Metrics = {

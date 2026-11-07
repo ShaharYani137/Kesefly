@@ -1,25 +1,31 @@
 /**
  * "Ask Kesefly": offline helper chat. Answers come from `engine/helper.ts` (rule-based,
- * uses the user's own numbers). Stock symbols trigger a live Finnhub quote when a key is set.
+ * uses the user's own numbers). Stock symbols trigger a free live quote (Yahoo Finance).
  */
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Platform, TextInput, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { answer } from '@/engine/helper';
-import { formatPrice, formatSigned, getQuote, StockError } from '@/engine/stocks';
+import { formatPrice, formatSigned, getQuote } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
 import { Chip, HelperAvatar, IconButton, Row, Txt } from '@/ui/components';
+import { enterBubble } from '@/ui/motion';
 import { Metrics, useTokens } from '@/ui/theme';
 
-type Msg = { id: number; from: 'user' | 'helper'; text: string };
+type Msg = { id: number; from: 'user' | 'helper'; text: string; typing?: boolean };
+
+/** "Thinking" pause before an offline answer, so the reply reads like a conversation. Design decision. */
+const THINK_MS = 650;
+const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let nextId = 1;
 
 export default function HelperScreen() {
   const app = useApp();
-  const { s, lang, isRTL, profile, finnhubKey, watchlist } = app;
+  const { s, lang, isRTL, profile, watchlist, holdings } = app;
   const { colors, type, isIOS } = useTokens();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [msgs, setMsgs] = useState<Msg[]>(() => [{ id: nextId++, from: 'helper', text: s.helper.welcome }]);
@@ -32,42 +38,41 @@ export default function HelperScreen() {
     setMsgs((prev) => [...prev, { ...m, id }]);
     return id;
   };
-  const replace = (id: number, text: string) => setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text } : m)));
+  const replace = (id: number, text: string) =>
+    setMsgs((prev) => prev.map((m) => (m.id === id ? { ...m, text, typing: false } : m)));
 
   const ask = useCallback(
     async (text: string) => {
       const t = text.trim();
       if (!t) return;
       push({ from: 'user', text: t });
-      const reply = answer(t, { s, profile, lang, watchlist });
+      const reply = answer(t, { s, profile, lang, watchlist, holdings });
+      // Typing indicator first, then the answer replaces it.
+      const id = push({ from: 'helper', text: '', typing: true });
       if ('text' in reply) {
-        push({ from: 'helper', text: reply.text });
+        await wait(THINK_MS);
+        replace(id, reply.text);
         return;
       }
       const a = s.helper.answers;
-      if (!finnhubKey) {
-        push({ from: 'helper', text: a.quoteNoKey });
-        return;
-      }
-      const id = push({ from: 'helper', text: s.stocks.loading });
       try {
-        const qt = await getQuote(reply.quote, finnhubKey);
+        const qt = await getQuote(reply.quote);
         replace(
           id,
           fill(a.quote, {
             symbol: qt.symbol,
-            price: formatPrice(qt.price, lang),
-            change: formatSigned(qt.change, lang),
-            pct: formatSigned(qt.changePct, lang, true),
-            low: formatPrice(qt.low, lang),
-            high: formatPrice(qt.high, lang),
+            price: formatPrice(qt.price, qt.currency, lang),
+            change: formatSigned(qt.change, qt.currency, lang),
+            pct: formatSigned(qt.changePct, qt.currency, lang, true),
+            low: formatPrice(qt.low, qt.currency, lang),
+            high: formatPrice(qt.high, qt.currency, lang),
           }),
         );
-      } catch (e) {
-        replace(id, e instanceof StockError && e.code === 'noKey' ? a.quoteNoKey : fill(a.quoteFail, { symbol: reply.quote }));
+      } catch {
+        replace(id, fill(a.quoteFail, { symbol: reply.quote }));
       }
     },
-    [s, profile, lang, watchlist, finnhubKey],
+    [s, profile, lang, watchlist, holdings],
   );
 
   // Question handed over from Home ("Ask me about this").
@@ -86,7 +91,13 @@ export default function HelperScreen() {
   const clear = () => setMsgs([{ id: nextId++, from: 'helper', text: s.helper.welcome }]);
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
+    <SafeAreaView
+      edges={['top']}
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        direction: isRTL ? 'rtl' : 'ltr',
+      }}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Row style={{ paddingHorizontal: Metrics.margin, paddingVertical: 8 }}>
           <HelperAvatar size={40} />
@@ -111,17 +122,26 @@ export default function HelperScreen() {
           renderItem={({ item }) => <Bubble msg={item} />}
         />
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          contentContainerStyle={{ paddingHorizontal: Metrics.margin, gap: 8, paddingBottom: 8 }}>
+        {/* Wrapping row (not a horizontal scroller): starts at the leading edge in both directions. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            paddingHorizontal: Metrics.margin,
+            gap: 8,
+            paddingBottom: 8,
+          }}>
           {s.helper.suggestions.map((sug) => (
             <Chip key={sug} label={sug} onPress={() => ask(sug)} />
           ))}
-        </ScrollView>
+        </View>
 
-        <Row style={{ paddingHorizontal: Metrics.margin, paddingBottom: 8, gap: 8 }}>
+        <Row
+          style={{
+            paddingHorizontal: Metrics.margin,
+            paddingBottom: 8,
+            gap: 8,
+          }}>
           <TextInput
             accessibilityLabel={s.helper.placeholder}
             value={draft}
@@ -162,7 +182,14 @@ function Bubble({ msg }: { msg: Msg }) {
   const { colors } = useTokens();
   const mine = msg.from === 'user';
   return (
-    <Row style={{ alignItems: 'flex-end', justifyContent: mine ? 'flex-end' : 'flex-start', gap: 8 }}>
+    <Animated.View
+      entering={enterBubble()}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: mine ? 'flex-end' : 'flex-start',
+        gap: 8,
+      }}>
       {mine ? null : <HelperAvatar size={28} />}
       <View
         style={{
@@ -174,10 +201,40 @@ function Bubble({ msg }: { msg: Msg }) {
           paddingHorizontal: 14,
           paddingVertical: 10,
         }}>
-        <Txt variant="body" color={mine ? 'onAccent' : 'text'}>
-          {msg.text}
-        </Txt>
+        {msg.typing ? (
+          <TypingDots />
+        ) : (
+          <Txt variant="body" color={mine ? 'onAccent' : 'text'}>
+            {msg.text}
+          </Txt>
+        )}
       </View>
-    </Row>
+    </Animated.View>
   );
+}
+
+/** Three dots that bounce in turn while the helper "types" (fast spatial spring feel, looped). */
+function TypingDots() {
+  return (
+    <View accessibilityLabel="…" style={{ flexDirection: 'row', gap: 5, paddingVertical: 6, paddingHorizontal: 2 }}>
+      {[0, 1, 2].map((i) => (
+        <Dot key={i} delay={i * 140} />
+      ))}
+    </View>
+  );
+}
+
+function Dot({ delay }: { delay: number }) {
+  const { colors } = useTokens();
+  const y = useSharedValue(0);
+  useEffect(() => {
+    y.set(
+      withDelay(
+        delay,
+        withRepeat(withSequence(withTiming(-5, { duration: 260 }), withTiming(0, { duration: 260 }), withTiming(0, { duration: 200 })), -1),
+      ),
+    );
+  }, [y, delay]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }], opacity: 0.5 + (-y.value / 5) * 0.5 }));
+  return <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.textSecondary }, style]} />;
 }

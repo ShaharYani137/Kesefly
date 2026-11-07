@@ -1,13 +1,30 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
-import { Alert, View } from 'react-native';
+import { Alert, Switch, View } from 'react-native';
 
 import type { Currency, Lang } from '@/engine/types';
 import { fill, useApp } from '@/state/app-store';
-import { Button, Card, Disclaimer, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
+import { cancelTips, requestPermission, scheduleWeeklyTips, sendTestTip } from '@/state/notifications';
+import { Button, Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
+import { useTokens } from '@/ui/theme';
 
 export default function SettingsScreen() {
-  const { s, lang, setLang, profile, updateProfile, reset } = useApp();
+  const { s, lang, setLang, profile, updateProfile, reset, notify, setNotify } = useApp();
+  const { colors } = useTokens();
+
+  const toggleNotify = async (on: boolean) => {
+    if (!on) {
+      setNotify(false);
+      await cancelTips();
+      return;
+    }
+    if (!(await requestPermission())) {
+      Alert.alert(s.settings.notifications, s.settings.notifyDenied);
+      return;
+    }
+    setNotify(true);
+    await scheduleWeeklyTips(profile, s, lang);
+  };
 
   const confirmReset = () =>
     Alert.alert(s.settings.resetConfirmTitle, s.settings.resetConfirmBody, [
@@ -41,6 +58,26 @@ export default function SettingsScreen() {
         />
       </Card>
 
+      <SectionHeader>{s.settings.notifications}</SectionHeader>
+      <Card>
+        <Row>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Txt variant="headline">{s.settings.notifyLabel}</Txt>
+            <Txt variant="footnote" color="textSecondary">
+              {s.settings.notifyBody}
+            </Txt>
+          </View>
+          <Switch
+            accessibilityLabel={s.settings.notifyLabel}
+            value={notify}
+            onValueChange={toggleNotify}
+            trackColor={{ true: colors.accent, false: colors.fill }}
+            thumbColor="#FFFFFF"
+          />
+        </Row>
+        {notify ? <Button kind="plain" label={s.settings.notifyTest} onPress={() => sendTestTip(profile, s, lang)} /> : null}
+      </Card>
+
       <View style={{ gap: 4 }}>
         <Button kind="tonal" label={s.settings.editProfile} onPress={() => router.push('/onboarding?edit=1')} />
         <Button kind="destructive" label={s.settings.reset} onPress={confirmReset} />
@@ -51,7 +88,9 @@ export default function SettingsScreen() {
         <Txt variant="subhead">{s.settings.privacy}</Txt>
         <Disclaimer />
         <Txt variant="footnote" color="textSecondary">
-          {fill(s.settings.version, { v: Constants.expoConfig?.version ?? '1.0.0' })}
+          {fill(s.settings.version, {
+            v: Constants.expoConfig?.version ?? '1.0.0',
+          })}
         </Txt>
       </Card>
     </Screen>

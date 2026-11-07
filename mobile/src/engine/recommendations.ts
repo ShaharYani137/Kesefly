@@ -23,13 +23,25 @@ export function recommendations(p: Profile): Idea[] {
   const free = p.monthlyIncome - p.monthlyExpenses;
 
   if (free <= 0) {
-    ideas.push({ key: 'negativeCashFlow', kind: 'warning', vars: { gap: -free } });
+    ideas.push({
+      key: 'negativeCashFlow',
+      kind: 'warning',
+      vars: { gap: -free },
+    });
   } else if (p.monthlyInvest > free) {
-    ideas.push({ key: 'investOverBudget', kind: 'warning', vars: { invest: p.monthlyInvest, free } });
+    ideas.push({
+      key: 'investOverBudget',
+      kind: 'warning',
+      vars: { invest: p.monthlyInvest, free },
+    });
   }
 
   if (p.highInterestDebt > 0) {
-    ideas.push({ key: 'payDebt', kind: 'action', vars: { debt: p.highInterestDebt } });
+    ideas.push({
+      key: 'payDebt',
+      kind: 'action',
+      vars: { debt: p.highInterestDebt },
+    });
   }
 
   const emergencyTarget = p.monthlyExpenses * EMERGENCY_MONTHS;
@@ -37,10 +49,18 @@ export function recommendations(p: Profile): Idea[] {
     ideas.push({
       key: 'emergencyFund',
       kind: 'action',
-      vars: { target: emergencyTarget, missing: emergencyTarget - p.cashSavings, months: EMERGENCY_MONTHS },
+      vars: {
+        target: emergencyTarget,
+        missing: emergencyTarget - p.cashSavings,
+        months: EMERGENCY_MONTHS,
+      },
     });
   } else if (p.cashSavings > emergencyTarget * 2 && emergencyTarget > 0) {
-    ideas.push({ key: 'idleCash', kind: 'tip', vars: { extra: p.cashSavings - emergencyTarget } });
+    ideas.push({
+      key: 'idleCash',
+      kind: 'tip',
+      vars: { extra: p.cashSavings - emergencyTarget },
+    });
   }
 
   ideas.push({ key: p.country === 'IL' ? 'taxIL' : 'taxUS', kind: 'action' });
@@ -51,21 +71,35 @@ export function recommendations(p: Profile): Idea[] {
       ideas.push({
         key: 'goalGap',
         kind: 'action',
-        vars: { needed: f.monthlyNeeded, chance: Math.round(f.goalChance * 100) },
+        vars: {
+          needed: f.monthlyNeeded,
+          chance: Math.round(f.goalChance * 100),
+        },
       });
     } else {
-      ideas.push({ key: 'goalOnTrack', kind: 'tip', vars: { chance: Math.round(f.goalChance * 100) } });
+      ideas.push({
+        key: 'goalOnTrack',
+        kind: 'tip',
+        vars: { chance: Math.round(f.goalChance * 100) },
+      });
     }
   }
 
   const { stocks } = RISK_ASSUMPTIONS[p.risk];
   if (p.goalYears < 3 && p.risk !== 'conservative') {
-    ideas.push({ key: 'shortHorizon', kind: 'warning', vars: { years: p.goalYears } });
+    ideas.push({
+      key: 'shortHorizon',
+      kind: 'warning',
+      vars: { years: p.goalYears },
+    });
   }
   ideas.push({
     key: p.country === 'IL' ? 'allocationIL' : 'allocationUS',
     kind: 'tip',
-    vars: { stocks: Math.round(stocks * 100), bonds: Math.round((1 - stocks) * 100) },
+    vars: {
+      stocks: Math.round(stocks * 100),
+      bonds: Math.round((1 - stocks) * 100),
+    },
   });
   ideas.push({ key: 'lowFees', kind: 'tip' });
 

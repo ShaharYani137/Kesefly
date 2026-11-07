@@ -37,13 +37,13 @@ Windows only: add this line to `mobile/android/local.properties`. CMake 3.22's n
 cmake.dir=C:/Users/<you>/AppData/Local/Android/Sdk/cmake/3.31.6
 ```
 
-Then build the standalone APK and install it:
+Then, with the phone connected over USB, build the standalone APK, install it, and open it (run from `mobile/`):
 
 ```
-cd android
-.\gradlew.bat app:assembleRelease -PreactNativeArchitectures=arm64-v8a
-adb install -r app\build\outputs\apk\release\app-release.apk
+npm run apk
 ```
+
+The installed app runs on its own: no PC, Metro, or Expo needed. Run `npm run apk` again after each code change.
 
 The release build is signed with the debug key. Create a real upload key before publishing to Google Play.
 

@@ -106,3 +106,16 @@ One section per working session. Newest at bottom.
 - Uninstall old `com.anonymous.mobile` debug app from phone.
 - Release is signed with the debug keystore: make a real upload keystore before Play Store.
 - `expo prebuild --clean` wipes `android/local.properties`: re-add `cmake.dir` after each prebuild.
+
+**Later in session 4:**
+- Pushed project to GitHub (`ShaharYani137/Kesefly`); private data redacted from logs; repo email set to GitHub noreply.
+- `npm run apk` (`mobile/scripts/build-apk.js`): build release APK, install, open.
+- Stock prices switched from Finnhub (key) to Yahoo Finance (free, no key, includes Tel Aviv `.TA`; unofficial endpoint).
+- Stock charts (react-native-svg), portfolio holdings with value and gain/loss, weekly local tip notifications (expo-notifications).
+- Animated splash (coin spin, glow, rings, sparkles), M3 Expressive spring motion across screens, chat typing indicator, 10 new chat topics.
+- Hebrew fixes verified on the phone: RLM for Android bidi, chips wrap, compact money, RTL page slides.
+
+**Open items (updated):**
+- Notifications not yet tested on device (needs the user to allow the permission).
+- Real upload keystore before Play Store.
+- After any `expo prebuild`, re-create `android/local.properties` with `cmake.dir` (prebuild deletes it).

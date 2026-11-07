@@ -15,8 +15,18 @@ import { useTokens } from '@/ui/theme';
 const TABS = [
   { name: 'index', label: 'home', sf: 'house.fill', md: 'home' },
   { name: 'helper', label: 'helper', sf: 'sparkles', md: 'psychology' },
-  { name: 'plan', label: 'plan', sf: 'chart.line.uptrend.xyaxis', md: 'trending_up' },
-  { name: 'stocks', label: 'stocks', sf: 'chart.bar.xaxis', md: 'candlestick_chart' },
+  {
+    name: 'plan',
+    label: 'plan',
+    sf: 'chart.line.uptrend.xyaxis',
+    md: 'trending_up',
+  },
+  {
+    name: 'stocks',
+    label: 'stocks',
+    sf: 'chart.bar.xaxis',
+    md: 'candlestick_chart',
+  },
   { name: 'learn', label: 'learn', sf: 'book.fill', md: 'school' },
 ] as const;
 

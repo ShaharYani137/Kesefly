@@ -1,18 +1,11 @@
-import { type ReactNode } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  type TextProps,
-  TextInput,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { Children, type ReactNode, useEffect } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, type TextProps, TextInput, View, type ViewStyle } from 'react-native';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/state/app-store';
+import { enterItem, Springs } from '@/ui/motion';
 import { Metrics, type TypeRole, useTokens } from '@/ui/theme';
 
 /* ---------- Text ---------- */
@@ -23,18 +16,31 @@ type TxtProps = TextProps & {
   center?: boolean;
 };
 
-export function Txt({ variant = 'body', color = 'text', center, style, ...rest }: TxtProps) {
+/** Right-to-left mark. Android ignores `writingDirection`, and picks a paragraph's direction from its
+ * first strong character; a leading RLM makes Hebrew lines that start with Latin or digits (S&P 500,
+ * AAPL, 6 months) still read right-to-left, with punctuation on the correct side. */
+const RLM = '‏';
+
+export function Txt({ variant = 'body', color = 'text', center, style, children, ...rest }: TxtProps) {
   const { colors, type } = useTokens();
   const { isRTL } = useApp();
+  const content = isRTL
+    ? Children.map(children, (c, i) => (i === 0 && (typeof c === 'string' || typeof c === 'number') ? RLM + c : c))
+    : children;
   return (
     <Text
       {...rest}
       style={[
         type[variant],
-        { color: colors[color], textAlign: center ? 'center' : isRTL ? 'right' : 'left', writingDirection: isRTL ? 'rtl' : 'ltr' },
+        {
+          color: colors[color],
+          textAlign: center ? 'center' : isRTL ? 'right' : 'left',
+          writingDirection: isRTL ? 'rtl' : 'ltr',
+        },
         style,
-      ]}
-    />
+      ]}>
+      {content}
+    </Text>
   );
 }
 
@@ -125,7 +131,13 @@ export function Screen({
   const { colors } = useTokens();
   const { isRTL } = useApp();
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
+    <SafeAreaView
+      edges={['top']}
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        direction: isRTL ? 'rtl' : 'ltr',
+      }}>
       {onBack ? (
         <View style={{ flexDirection: 'row', paddingHorizontal: 4, paddingTop: 4 }}>
           <BackButton onPress={onBack} />
@@ -133,15 +145,29 @@ export function Screen({
       ) : null}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: Metrics.margin, paddingBottom: Metrics.margin * 3, gap: Metrics.gap }}
+        contentContainerStyle={{
+          padding: Metrics.margin,
+          paddingBottom: Metrics.margin * 3,
+          gap: Metrics.gap,
+        }}
         keyboardShouldPersistTaps="handled">
         {title ? (
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: onBack ? 0 : 8 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+              gap: 8,
+              marginTop: onBack ? 0 : 8,
+            }}>
             <View style={{ flex: 1, gap: 4 }}>
               <Txt variant="largeTitle" accessibilityRole="header">
                 {title}
               </Txt>
-              {subtitle ? <Txt color="textSecondary" variant="subhead">{subtitle}</Txt> : null}
+              {subtitle ? (
+                <Txt color="textSecondary" variant="subhead">
+                  {subtitle}
+                </Txt>
+              ) : null}
             </View>
             {trailing}
           </View>
@@ -152,7 +178,24 @@ export function Screen({
   );
 }
 
-export function Card({ children, style, tone = 'default' }: { children: ReactNode; style?: ViewStyle; tone?: 'default' | 'accent' }) {
+/** Entrance animation wrapper: content rises into place, staggered by `index` (see ui/motion.ts). */
+export function Appear({ index = 0, children, style }: { index?: number; children: ReactNode; style?: ViewStyle }) {
+  return (
+    <Animated.View entering={enterItem(index)} style={style}>
+      {children}
+    </Animated.View>
+  );
+}
+
+export function Card({
+  children,
+  style,
+  tone = 'default',
+}: {
+  children: ReactNode;
+  style?: ViewStyle;
+  tone?: 'default' | 'accent';
+}) {
   const { colors } = useTokens();
   return (
     <View
@@ -177,7 +220,14 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
 export function SectionHeader({ children }: { children: string }) {
   const { isIOS } = useTokens();
   return (
-    <Txt variant={isIOS ? 'footnote' : 'caption'} color={isIOS ? 'textSecondary' : 'accent'} style={{ marginBottom: -8, marginHorizontal: 4, textTransform: isIOS ? 'uppercase' : 'none' }}>
+    <Txt
+      variant={isIOS ? 'footnote' : 'caption'}
+      color={isIOS ? 'textSecondary' : 'accent'}
+      style={{
+        marginBottom: -8,
+        marginHorizontal: 4,
+        textTransform: isIOS ? 'uppercase' : 'none',
+      }}>
       {children}
     </Txt>
   );
@@ -192,30 +242,61 @@ type ButtonProps = {
   disabled?: boolean;
 };
 
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+/** Press feedback: shrink slightly with the fast spatial spring (M3 Expressive buttons). */
+function usePressScale() {
+  const scale = useSharedValue(1);
+  const style = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  return {
+    style,
+    onPressIn: () => {
+      scale.set(withSpring(0.95, Springs.spatialFast));
+    },
+    onPressOut: () => {
+      scale.set(withSpring(1, Springs.spatialFast));
+    },
+  };
+}
+
 export function Button({ label, onPress, kind = 'filled', disabled }: ButtonProps) {
   const { colors } = useTokens();
+  const press = usePressScale();
   const bg = kind === 'filled' ? colors.accent : kind === 'tonal' ? colors.accentSoft : 'transparent';
   const fg =
-    kind === 'filled' ? colors.onAccent : kind === 'tonal' ? colors.onAccentSoft : kind === 'destructive' ? colors.danger : colors.accent;
+    kind === 'filled'
+      ? colors.onAccent
+      : kind === 'tonal'
+        ? colors.onAccentSoft
+        : kind === 'destructive'
+          ? colors.danger
+          : colors.accent;
   return (
-    <Pressable
+    <AnimatedPressable
       accessibilityRole="button"
       accessibilityState={{ disabled }}
       disabled={disabled}
       onPress={onPress}
+      onPressIn={press.onPressIn}
+      onPressOut={press.onPressOut}
       android_ripple={{ color: colors.fill, borderless: false }}
-      style={({ pressed }) => ({
-        minHeight: kind === 'plain' || kind === 'destructive' ? Metrics.minTarget : Metrics.buttonHeight,
-        borderRadius: 999,
-        backgroundColor: bg,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 24,
-        opacity: disabled ? 0.4 : pressed ? 0.7 : 1,
-        overflow: 'hidden',
-      })}>
+      style={[
+        {
+          minHeight: kind === 'plain' || kind === 'destructive' ? Metrics.minTarget : Metrics.buttonHeight,
+          borderRadius: 999,
+          backgroundColor: bg,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          opacity: disabled ? 0.4 : 1,
+          overflow: 'hidden',
+        },
+        press.style,
+      ]}>
       <Text style={{ color: fg, fontSize: 17, fontWeight: '600' }}>{label}</Text>
-    </Pressable>
+    </AnimatedPressable>
   );
 }
 
@@ -264,7 +345,15 @@ export function NumberField({
             const n = Number(t.replace(/[^\d.]/g, ''));
             onChange(Number.isFinite(n) ? n : 0);
           }}
-          style={[type.body, { flex: 1, color: colors.text, paddingVertical: 10, textAlign: isRTL ? 'right' : 'left' }]}
+          style={[
+            type.body,
+            {
+              flex: 1,
+              color: colors.text,
+              paddingVertical: 10,
+              textAlign: isRTL ? 'right' : 'left',
+            },
+          ]}
         />
       </View>
       {hint ? (
@@ -276,7 +365,17 @@ export function NumberField({
   );
 }
 
-export function TextField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (s: string) => void; placeholder?: string }) {
+export function TextField({
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (s: string) => void;
+  placeholder?: string;
+}) {
   const { colors, type, isIOS } = useTokens();
   const { isRTL } = useApp();
   return (
@@ -368,7 +467,17 @@ export function Segmented<T extends string>({
 }
 
 /** − value + control. Each button meets the platform minimum target. */
-export function Stepper({ label, display, onMinus, onPlus }: { label: string; display: string; onMinus: () => void; onPlus: () => void }) {
+export function Stepper({
+  label,
+  display,
+  onMinus,
+  onPlus,
+}: {
+  label: string;
+  display: string;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
   const { colors } = useTokens();
   const btn = (sign: string, onPress: () => void, a11y: string) => (
     <Pressable
@@ -404,13 +513,36 @@ export function Stepper({ label, display, onMinus, onPlus }: { label: string; di
 export function ProgressBar({ value }: { value: number }) {
   const { colors } = useTokens();
   const pct = Math.max(0, Math.min(1, value));
+  // Fills from 0 on first show and glides to new values (default spatial spring).
+  const w = useSharedValue(0);
+  useEffect(() => {
+    w.set(withSpring(pct, Springs.spatialSlow));
+  }, [pct, w]);
+  const fillStyle = useAnimatedStyle(() => ({
+    width: `${Math.max(0, Math.min(1, w.value)) * 100}%`,
+  }));
   return (
     <View
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: Math.round(pct * 100) }}
       // M3 layout.md: linear progress stays left-to-right in Hebrew.
-      style={{ height: 8, borderRadius: 999, backgroundColor: colors.fill, overflow: 'hidden', direction: 'ltr' }}>
-      <View style={{ width: `${pct * 100}%`, height: '100%', borderRadius: 999, backgroundColor: colors.positive }} />
+      style={{
+        height: 8,
+        borderRadius: 999,
+        backgroundColor: colors.fill,
+        overflow: 'hidden',
+        direction: 'ltr',
+      }}>
+      <Animated.View
+        style={[
+          {
+            height: '100%',
+            borderRadius: 999,
+            backgroundColor: colors.positive,
+          },
+          fillStyle,
+        ]}
+      />
     </View>
   );
 }
