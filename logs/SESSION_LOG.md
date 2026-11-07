@@ -133,5 +133,5 @@ One section per working session. Newest at bottom.
 - Use the `public/` root fallback (`/apple-touch-icon.png`) instead of a custom `+html.tsx`.
 
 **Next steps:**
-- Install the Claude GitHub App on `ShaharYani137/Kesefly` so the `Shavit` commit can be pushed.
+- Merge `Shavit` into `main` (pull request) when ready.
 - For a home-screen web app that works without the PC: set `web.output` to `single`, `npx expo export --platform web`, host `dist/`.
