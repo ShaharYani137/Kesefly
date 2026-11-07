@@ -119,3 +119,19 @@ One section per working session. Newest at bottom.
 - Notifications not yet tested on device (needs the user to allow the permission).
 - Real upload keystore before Play Store.
 - After any `expo prebuild`, re-create `android/local.properties` with `cmake.dir` (prebuild deletes it).
+
+## Session 5 — 2026-11-07
+
+**Goal:** run Kesefly on an iPhone and add a home-screen icon.
+
+**Work done:**
+- Ran the app on iPhone through Expo dev server (LAN, `http://10.0.0.4:8081`); web version opened in Safari.
+- Added `mobile/public/apple-touch-icon.png` (180×180) so iOS "Add to Home Screen" shows the Kesefly logo.
+- Branches `Shavit` and `Shahar` created from `main` to split work; icon change made on `Shavit`.
+
+**Decisions:**
+- Use the `public/` root fallback (`/apple-touch-icon.png`) instead of a custom `+html.tsx`.
+
+**Next steps:**
+- Install the Claude GitHub App on `ShaharYani137/Kesefly` so the `Shavit` commit can be pushed.
+- For a home-screen web app that works without the PC: set `web.output` to `single`, `npx expo export --platform web`, host `dist/`.
