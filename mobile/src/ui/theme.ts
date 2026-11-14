@@ -15,8 +15,7 @@
  *   - foundations.md: 48dp target size.
  *
  * DESIGN DECISIONS (not taken from the references):
- *   - Android color scheme: tonal palette generated from green seed #386A20 (finance/growth feel).
- *     Role names follow M3 (primary, primaryContainer, surfaceContainer...), values are ours.
+ *   - Brand v2 colors and the Rubik typeface (see the color and Fonts blocks below).
  *   - iOS card corner radius 10pt and prominent button height 50pt.
  *   - Android primary button height 56dp (M3 Expressive "medium" button size).
  */
@@ -39,23 +38,34 @@ type Colors = {
   danger: string;
   fill: string;
   range: string;
+  gold: string;
+  /** Dark brand surface for hero cards (portfolio, market clocks). */
+  hero: string;
+  onHero: string;
 };
 
+// DESIGN DECISION (brand v2, 2026-11-14): brand teal #0F7B6C, midnight #062A26, gold #F5C542.
+// iOS keeps Apple's system background, label and separator colors (color.md) and uses the
+// brand teal as the app tint (HIG allows one custom key color). Positive/negative stay distinct
+// from the tint: green for gains, red for losses.
 const iosLight: Colors = {
   background: '#F2F2F7', // systemGroupedBackground
   card: '#FFFFFF', // secondarySystemGroupedBackground
   text: '#000000', // label
   textSecondary: 'rgba(60,60,67,0.6)', // secondaryLabel
   separator: 'rgba(60,60,67,0.29)', // separator
-  accent: '#007AFF', // systemBlue
+  accent: '#0F7B6C', // brand tint
   onAccent: '#FFFFFF',
-  accentSoft: 'rgba(0,122,255,0.12)',
-  onAccentSoft: '#007AFF',
-  positive: '#34C759', // systemGreen
-  warning: '#FF9500', // systemOrange
-  danger: '#FF3B30', // systemRed
+  accentSoft: 'rgba(15,123,108,0.12)',
+  onAccentSoft: '#0B5E53',
+  positive: '#248A3D', // accessible systemGreen (dark text variant)
+  warning: '#C93400', // accessible systemOrange
+  danger: '#D70015', // accessible systemRed
   fill: 'rgba(118,118,128,0.12)', // tertiarySystemFill
-  range: 'rgba(52,199,89,0.28)',
+  range: 'rgba(15,123,108,0.22)',
+  gold: '#B8860B',
+  hero: '#062A26',
+  onHero: '#FFFFFF',
 };
 
 const iosDark: Colors = {
@@ -64,92 +74,115 @@ const iosDark: Colors = {
   text: '#FFFFFF',
   textSecondary: 'rgba(235,235,245,0.6)',
   separator: 'rgba(84,84,88,0.65)',
-  accent: '#0A84FF',
-  onAccent: '#FFFFFF',
-  accentSoft: 'rgba(10,132,255,0.2)',
-  onAccentSoft: '#0A84FF',
+  accent: '#3CC4AE',
+  onAccent: '#00201B',
+  accentSoft: 'rgba(60,196,174,0.2)',
+  onAccentSoft: '#7FE3D1',
   positive: '#30D158',
   warning: '#FF9F0A',
   danger: '#FF453A',
   fill: 'rgba(118,118,128,0.24)',
-  range: 'rgba(48,209,88,0.32)',
+  range: 'rgba(60,196,174,0.3)',
+  gold: '#F5C542',
+  hero: '#0B3B35',
+  onHero: '#FFFFFF',
 };
 
-// Design decision: M3 roles, values from green seed #386A20.
+// M3 roles, values from SchemeTonalSpot of seed #0F7B6C (@material/material-color-utilities 0.3.0).
+// positive / warning / gold / hero are design decisions (M3 has no success role).
 const mdLight: Colors = {
-  background: '#F8FAF0', // surface
-  card: '#ECEFE4', // surfaceContainer
-  text: '#191D16', // onSurface
-  textSecondary: '#43483E', // onSurfaceVariant
-  separator: '#C3C8BB', // outlineVariant
-  accent: '#386A20', // primary
+  background: '#F5FBF8', // surface
+  card: '#E9EFEC', // surfaceContainer
+  text: '#171D1B', // onSurface
+  textSecondary: '#3F4946', // onSurfaceVariant
+  separator: '#BEC9C5', // outlineVariant
+  accent: '#016B5D', // primary
   onAccent: '#FFFFFF', // onPrimary
-  accentSoft: '#B8F397', // primaryContainer
-  onAccentSoft: '#082100', // onPrimaryContainer
-  positive: '#386A20',
+  accentSoft: '#9FF2E0', // primaryContainer
+  onAccentSoft: '#005046', // onPrimaryContainer
+  positive: '#1E7B34',
   warning: '#7A5900',
   danger: '#BA1A1A', // error
-  fill: '#E1E4D9', // surfaceContainerHighest
-  range: '#B8F397',
+  fill: '#DEE4E1', // surfaceContainerHighest
+  range: '#9FF2E0',
+  gold: '#8A6500',
+  hero: '#062A26',
+  onHero: '#FFFFFF',
 };
 
 const mdDark: Colors = {
-  background: '#11140F',
-  card: '#1D211A',
-  text: '#E1E4DA',
-  textSecondary: '#C3C8BB',
-  separator: '#43483E',
-  accent: '#9DD67D',
-  onAccent: '#0C3900',
-  accentSoft: '#215106',
-  onAccentSoft: '#B8F397',
-  positive: '#9DD67D',
+  background: '#0E1513', // surface
+  card: '#1B211F', // surfaceContainer
+  text: '#DEE4E1', // onSurface
+  textSecondary: '#BEC9C5', // onSurfaceVariant
+  separator: '#3F4946', // outlineVariant
+  accent: '#83D5C5', // primary
+  onAccent: '#003730', // onPrimary
+  accentSoft: '#005046', // primaryContainer
+  onAccentSoft: '#9FF2E0', // onPrimaryContainer
+  positive: '#6DD58C',
   warning: '#F5BF48',
-  danger: '#FFB4AB',
-  fill: '#33362F',
-  range: '#215106',
+  danger: '#FFB4AB', // error
+  fill: '#303634', // surfaceContainerHighest
+  range: '#005046',
+  gold: '#F5C542',
+  hero: '#0B3B35',
+  onHero: '#FFFFFF',
 };
+
+/**
+ * Rubik (Google Fonts, @expo-google-fonts/rubik): one family for Latin and Hebrew, so mixed
+ * lines (Hebrew + tickers + numbers) keep the same look in both directions. User request
+ * 2026-11-14. Custom fonts do not synthesize weights reliably on Android, so each weight is
+ * its own family and `fontWeight` is not set alongside it.
+ */
+export const Fonts = {
+  regular: 'Rubik_400Regular',
+  medium: 'Rubik_500Medium',
+  semibold: 'Rubik_600SemiBold',
+  bold: 'Rubik_700Bold',
+} as const;
 
 export type TypeRole = 'largeTitle' | 'title' | 'title3' | 'headline' | 'body' | 'subhead' | 'footnote' | 'caption';
 
 const iosType: Record<TypeRole, TextStyle> = {
-  largeTitle: { fontSize: 34, lineHeight: 41, fontWeight: '700' },
-  title: { fontSize: 28, lineHeight: 34, fontWeight: '700' },
-  title3: { fontSize: 20, lineHeight: 25, fontWeight: '600' },
-  headline: { fontSize: 17, lineHeight: 22, fontWeight: '600' },
-  body: { fontSize: 17, lineHeight: 22, fontWeight: '400' },
-  subhead: { fontSize: 15, lineHeight: 20, fontWeight: '400' },
-  footnote: { fontSize: 13, lineHeight: 18, fontWeight: '400' },
-  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' },
+  largeTitle: { fontSize: 34, lineHeight: 41, fontFamily: Fonts.bold },
+  title: { fontSize: 28, lineHeight: 34, fontFamily: Fonts.bold },
+  title3: { fontSize: 20, lineHeight: 25, fontFamily: Fonts.semibold },
+  headline: { fontSize: 17, lineHeight: 22, fontFamily: Fonts.semibold },
+  body: { fontSize: 17, lineHeight: 22, fontFamily: Fonts.regular },
+  subhead: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.regular },
+  footnote: { fontSize: 13, lineHeight: 18, fontFamily: Fonts.regular },
+  caption: { fontSize: 12, lineHeight: 16, fontFamily: Fonts.regular },
 };
 
 const mdType: Record<TypeRole, TextStyle> = {
-  largeTitle: { fontSize: 28, lineHeight: 36, fontWeight: '400' }, // Headline medium
-  title: { fontSize: 22, lineHeight: 28, fontWeight: '400' }, // Title large
-  title3: { fontSize: 22, lineHeight: 28, fontWeight: '500' }, // Title large, emphasized
+  largeTitle: { fontSize: 28, lineHeight: 36, fontFamily: Fonts.regular }, // Headline medium
+  title: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.regular }, // Title large
+  title3: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.medium }, // Title large, emphasized
   headline: {
     fontSize: 16,
     lineHeight: 24,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     letterSpacing: 0.2,
   }, // Title medium
-  body: { fontSize: 16, lineHeight: 24, fontWeight: '400', letterSpacing: 0.5 }, // Body large
+  body: { fontSize: 16, lineHeight: 24, fontFamily: Fonts.regular, letterSpacing: 0.5 }, // Body large
   subhead: {
     fontSize: 14,
     lineHeight: 20,
-    fontWeight: '400',
+    fontFamily: Fonts.regular,
     letterSpacing: 0.2,
   }, // Body medium
   footnote: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: '400',
+    fontFamily: Fonts.regular,
     letterSpacing: 0.4,
   }, // Body small
   caption: {
     fontSize: 12,
     lineHeight: 16,
-    fontWeight: '500',
+    fontFamily: Fonts.medium,
     letterSpacing: 0.5,
   }, // Label medium
 };

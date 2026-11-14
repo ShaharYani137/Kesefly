@@ -23,6 +23,8 @@ import {
   SectionHeader,
   Txt,
 } from '@/ui/components';
+import { LearnCard, LiveFeed, MarketGlance, PortfolioCard, TimeCard, TopMovers } from '@/ui/home-widgets';
+import { usePortfolio } from '@/state/portfolio';
 import { IdeaCard, useIdeaText } from '@/ui/idea-card';
 import { enterPop } from '@/ui/motion';
 import { Metrics, useTokens } from '@/ui/theme';
@@ -41,6 +43,9 @@ export default function HomeScreen() {
   const checks = useMemo(() => checkup(p), [p]);
   const done = checks.filter((c) => c.ok).length;
   const top = useIdeaText(ideas[0]);
+  const { watchlist } = useApp();
+  const extra = useMemo(() => [...watchlist, '^GSPC', '^IXIC', '^TA125.TA', 'ILS=X'], [watchlist]);
+  const pf = usePortfolio(extra);
 
   const free = p.monthlyIncome - p.monthlyExpenses;
   const rate = p.monthlyIncome > 0 ? free / p.monthlyIncome : 0;
@@ -83,7 +88,34 @@ export default function HomeScreen() {
         </Card>
       </Appear>
 
+      {/* Phone time and date (Gregorian + Hebrew), Wall Street and Tel Aviv market clocks. */}
       <Appear index={1}>
+        <TimeCard />
+      </Appear>
+
+      {/* Live portfolio, the main markets and today's biggest watchlist moves. */}
+      <Appear index={2}>
+        <PortfolioCard pf={pf} />
+      </Appear>
+      <SectionHeader>{s.home2.glance}</SectionHeader>
+      <Appear index={2}>
+        <MarketGlance quotes={pf.quotes} />
+      </Appear>
+      {watchlist.some((w) => pf.quotes[w]) ? <SectionHeader>{s.home2.movers}</SectionHeader> : null}
+      <Appear index={2}>
+        <TopMovers quotes={pf.quotes} />
+      </Appear>
+
+      {/* "Minute by minute": live world and economy events. */}
+      <Appear index={2}>
+        <LiveFeed />
+      </Appear>
+
+      <Appear index={3}>
+        <LearnCard />
+      </Appear>
+
+      <Appear index={4}>
         <Row style={{ alignItems: 'stretch' }}>
           <Card style={{ flex: 1 }}>
             <Txt variant="footnote" color="textSecondary">
@@ -102,7 +134,7 @@ export default function HomeScreen() {
         </Row>
       </Appear>
 
-      <Appear index={2}>
+      <Appear index={5}>
         <Card>
           <Txt variant="footnote" color="textSecondary">
             {s.home.netWorth}
@@ -112,7 +144,7 @@ export default function HomeScreen() {
       </Appear>
 
       {p.goalAmount > 0 ? (
-        <Appear index={3}>
+        <Appear index={6}>
           <Pressable accessibilityRole="button" onPress={() => router.navigate('/plan')}>
             <Card>
               <Txt variant="footnote" color="textSecondary">
@@ -126,13 +158,18 @@ export default function HomeScreen() {
               <Txt variant="subhead" color={f.goalChance >= 0.5 ? 'positive' : 'warning'}>
                 {fill(s.home.chance, { p: formatPercent(f.goalChance, lang) })}
               </Txt>
+              <Button kind="plain" label={s.goal.edit} onPress={() => router.push('/goal')} />
             </Card>
           </Pressable>
         </Appear>
-      ) : null}
+      ) : (
+        <Appear index={6}>
+          <Button kind="tonal" label={s.goal.set} onPress={() => router.push('/goal')} />
+        </Appear>
+      )}
 
       <SectionHeader>{s.home.checkupTitle}</SectionHeader>
-      <Appear index={4}>
+      <Appear index={7}>
         <Card>
           <Row style={{ justifyContent: 'space-between' }}>
             <Txt variant="headline" style={{ flex: 1 }}>
@@ -165,11 +202,12 @@ export default function HomeScreen() {
         <Chip label={s.home.quickHelper} sf="sparkles" md="psychology" onPress={() => router.navigate('/helper')} />
         <Chip label={s.home.quickStocks} sf="chart.bar.xaxis" md="candlestick_chart" onPress={() => router.navigate('/stocks')} />
         <Chip label={s.home.quickPlan} sf="chart.line.uptrend.xyaxis" md="trending_up" onPress={() => router.navigate('/plan')} />
+        <Chip label={s.events.title} sf="bell.badge" md="notifications" onPress={() => router.push('/events')} />
       </View>
 
       <SectionHeader>{s.home.topIdeas}</SectionHeader>
       {ideas.slice(1, 3).map((i, n) => (
-        <Appear key={i.key} index={5 + n}>
+        <Appear key={i.key} index={8 + n}>
           <IdeaCard idea={i} />
         </Appear>
       ))}

@@ -26,6 +26,11 @@ export type Quote = {
   prevClose: number;
   /** Quote time, ms since epoch. */
   time: number;
+  /** 52-week range, in the display currency. */
+  yearHigh: number;
+  yearLow: number;
+  volume: number;
+  exchange: string;
 };
 
 export class StockError extends Error {
@@ -52,6 +57,10 @@ type ChartMeta = {
   regularMarketTime?: number;
   longName?: string;
   shortName?: string;
+  fiftyTwoWeekHigh?: number;
+  fiftyTwoWeekLow?: number;
+  regularMarketVolume?: number;
+  fullExchangeName?: string;
 };
 
 type ChartResponse = {
@@ -108,6 +117,10 @@ export async function getQuote(symbol: string, force = false): Promise<Quote> {
     open,
     prevClose: prev,
     time: m.regularMarketTime ? m.regularMarketTime * 1000 : Date.now(),
+    yearHigh: (m.fiftyTwoWeekHigh ?? m.regularMarketDayHigh ?? m.regularMarketPrice) * k,
+    yearLow: (m.fiftyTwoWeekLow ?? m.regularMarketDayLow ?? m.regularMarketPrice) * k,
+    volume: m.regularMarketVolume ?? 0,
+    exchange: m.fullExchangeName ?? '',
   };
   cache.set(sym, { at: Date.now(), quote });
   return quote;
@@ -153,9 +166,11 @@ export function formatSigned(v: number, currency: string, lang: 'en' | 'he', pct
 
 /** Chart ranges offered in the UI, mapped to Yahoo range + interval. */
 export const RANGES = {
+  '1D': { range: '1d', interval: '5m' },
+  '1W': { range: '5d', interval: '30m' },
   '1M': { range: '1mo', interval: '1d' },
   '6M': { range: '6mo', interval: '1d' },
-  '1Y': { range: '1y', interval: '1wk' },
+  '1Y': { range: '1y', interval: '1d' },
   '5Y': { range: '5y', interval: '1mo' },
 } as const;
 export type RangeKey = keyof typeof RANGES;
@@ -201,4 +216,65 @@ export async function getHistory(symbol: string, key: RangeKey): Promise<History
   if (points.length < 2) throw new StockError('notFound');
   histCache.set(cacheKey, { at: Date.now(), points });
   return points;
+}
+
+/** Quotes for many symbols; failures are left out instead of failing the whole batch. */
+export async function getQuotes(symbols: string[], force = false): Promise<Record<string, Quote>> {
+  const out: Record<string, Quote> = {};
+  await Promise.all(
+    symbols.map(async (s) => {
+      try {
+        out[s.toUpperCase()] = await getQuote(s, force);
+      } catch {
+        // Skip: the caller shows a dash for missing quotes.
+      }
+    }),
+  );
+  return out;
+}
+
+/** Shekels per dollar (Yahoo symbol ILS=X). */
+export async function getUsdIls(): Promise<number | null> {
+  try {
+    return (await getQuote('ILS=X')).price;
+  } catch {
+    return null;
+  }
+}
+
+/** Converts between USD and ILS with a USD/ILS rate. Other currencies pass through unchanged. */
+export function convert(v: number, from: string, to: string, usdIls: number | null): number {
+  if (from === to || !usdIls) return v;
+  if (from === 'USD' && to === 'ILS') return v * usdIls;
+  if (from === 'ILS' && to === 'USD') return v / usdIls;
+  return v;
+}
+
+/** Market overview tiles: indices, the shekel, gold, bitcoin, fear gauge. */
+export const MARKET_TILES = ['^GSPC', '^IXIC', '^DJI', '^TA125.TA', 'ILS=X', 'GC=F', 'BTC-USD', '^VIX'] as const;
+
+/** Simple stats over a closing-price series (oldest first). */
+export function seriesStats(points: HistoryPoint[]) {
+  const closes = points.map((p) => p.close);
+  const last = closes[closes.length - 1];
+  const first = closes[0];
+  const rets = closes.slice(1).map((c, i) => c / closes[i] - 1);
+  const mean = rets.reduce((a, b) => a + b, 0) / Math.max(1, rets.length);
+  const sd = Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, rets.length - 1));
+  const tail = closes.slice(-50);
+  const avg50 = tail.reduce((a, b) => a + b, 0) / tail.length;
+  let peak = closes[0];
+  let maxDrawdown = 0;
+  for (const c of closes) {
+    peak = Math.max(peak, c);
+    maxDrawdown = Math.min(maxDrawdown, c / peak - 1);
+  }
+  return {
+    change: first ? last / first - 1 : 0,
+    /** Daily volatility annualized (252 trading days). */
+    volatility: sd * Math.sqrt(252),
+    aboveAvg50: last >= avg50,
+    avg50,
+    maxDrawdown,
+  };
 }

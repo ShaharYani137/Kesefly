@@ -9,17 +9,29 @@
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/images/icon.png",
-      "bundleIdentifier": "com.kesefly.app"
+      "bundleIdentifier": "com.kesefly.app",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Kesefly uses Face ID to unlock the app and keep your money data private."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#2E7D32",
+        "backgroundColor": "#0F7B6C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.kesefly.app"
+      "package": "com.kesefly.app",
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "WAKE_LOCK"
+      ]
     },
     "web": {
       "output": "server",
@@ -30,7 +42,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1E5A2A",
+          "backgroundColor": "#062A26",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }
@@ -45,7 +57,49 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#2E7D32"
+          "color": "#0F7B6C",
+          "sounds": [
+            "./assets/sounds/chime.wav",
+            "./assets/sounds/coin.wav",
+            "./assets/sounds/bell.wav",
+            "./assets/sounds/pulse.wav",
+            "./assets/sounds/alert.wav"
+          ]
+        }
+      ],
+      "expo-background-task",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Kesefly uses Face ID to unlock the app and keep your money data private."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# WorkManager (expo-background-task) builds its Room database by reflection; R8 must keep the generated constructors.\n-keep class androidx.work.** { *; }\n-keep class * extends androidx.room.RoomDatabase { <init>(); }\n-keep class androidx.room.** { *; }\n"
+          }
+        }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "Kesefly",
+              "label": "Kesefly",
+              "description": "Portfolio value and market clocks",
+              "minWidth": "250dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 4,
+              "targetCellHeight": 2,
+              "previewImage": "./assets/images/widget-preview.png",
+              "resizeMode": "horizontal|vertical",
+              "updatePeriodMillis": 1800000
+            }
+          ]
         }
       ]
     ],

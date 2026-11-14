@@ -1,102 +1,101 @@
-"""Kesefly icon: gold coin with a rising trend arrow and a small wing, on a deep green field."""
-import sys, math
-from PIL import Image, ImageDraw, ImageFilter
+"""Kesefly icon (brand v2, 2026-11-14): a gold "K" monogram whose upper arm is a rising
+market arrow, with a small spark at the tip, on a teal-to-midnight gradient.
+
+Usage: python scripts/make_icon.py assets/images
+
+DESIGN DECISIONS (brand, not from HIG or M3):
+  - Brand teal #0F7B6C (also the M3 seed color in src/ui/theme.ts), midnight #062A26, gold #F5C542.
+  - Glyph sits inside the Android adaptive-icon 66% safe zone for the foreground layer.
+"""
+import sys
+from PIL import Image, ImageDraw
 
 OUT = sys.argv[1]
 S = 1024
 SS = 4  # supersample
 W = S * SS
 
-GREEN_TOP = (46, 125, 50)
-GREEN_BOT = (20, 70, 32)
-GOLD = (247, 197, 66)
-GOLD_DARK = (214, 158, 30)
-DARK = (22, 78, 36)
+TEAL = (15, 123, 108)
+MIDNIGHT = (6, 42, 38)
+GOLD = (245, 197, 66)
+GOLD_LIGHT = (255, 226, 140)
 WHITE = (255, 255, 255)
 
+
 def gradient(size):
+    """Diagonal gradient, teal at top-left to midnight at bottom-right."""
     img = Image.new('RGB', (size, size))
-    d = ImageDraw.Draw(img)
+    px = img.load()
     for y in range(size):
-        t = y / (size - 1)
-        c = tuple(int(GREEN_TOP[i] + (GREEN_BOT[i] - GREEN_TOP[i]) * t) for i in range(3))
-        d.line([(0, y), (size, y)], fill=c)
+        for x in range(0, size):
+            t = min(1.0, (x * 0.35 + y * 0.65) / size)
+            px[x, y] = tuple(int(TEAL[i] + (MIDNIGHT[i] - TEAL[i]) * t) for i in range(3))
     return img
 
-def feather(w, h, angle, color):
-    lay = Image.new('RGBA', (w * 3, w * 3), (0, 0, 0, 0))
-    d = ImageDraw.Draw(lay)
-    cx, cy = lay.width // 2, lay.height // 2
-    d.ellipse([cx - w // 2, cy - h // 2, cx + w // 2, cy + h // 2], fill=color)
-    return lay.rotate(angle, resample=Image.BICUBIC)
 
-def glyph(scale=1.0, mono=False):
-    """Glyph on transparent canvas W x W, centered, sized by scale (1.0 = coin diameter 0.5*W)."""
+def glyph(scale=1.0, color=GOLD, accent=GOLD_LIGHT):
+    """K monogram on a transparent W x W canvas. scale 1.0 = glyph height 0.56 W."""
     img = Image.new('RGBA', (W, W), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    cx, cy = W * 0.54, W * 0.5
-    r = W * 0.25 * scale
-    gold = WHITE if mono else GOLD
-    gold_dark = WHITE if mono else GOLD_DARK
-    ink = (0, 0, 0, 0) if mono else DARK
-    # wing: three feathers on the left of the coin
-    fw = int(r * 0.42)
-    for i, (dy, length, ang) in enumerate([(-0.45, 1.25, 28), (-0.05, 1.05, 14), (0.32, 0.85, 2)]):
-        fl = feather(fw, int(r * length), 90 + ang, (*WHITE, 255))
-        px = int(cx - r * 1.05 - fl.width / 2 + r * 0.1 * i)
-        py = int(cy + r * dy - fl.height / 2)
-        img.alpha_composite(fl, (px, py))
-    d = ImageDraw.Draw(img)
-    # coin
-    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=(*gold_dark, 255))
-    ri = r * 0.86
-    d.ellipse([cx - ri, cy - ri, cx + ri, cy + ri], fill=(*gold, 255))
-    # rising trend arrow inside coin
-    lw = int(r * 0.13)
-    pts = [(-0.55, 0.38), (-0.18, 0.02), (0.08, 0.24), (0.5, -0.32)]
-    pts = [(cx + x * r, cy + y * r) for x, y in pts]
-    if mono:
-        # cut the arrow out of the white coin
-        mask = Image.new('L', (W, W), 0)
-        md = ImageDraw.Draw(mask)
-        md.line(pts, fill=255, width=lw, joint='curve')
-        for p in pts:
-            md.ellipse([p[0] - lw / 2, p[1] - lw / 2, p[0] + lw / 2, p[1] + lw / 2], fill=255)
-        tip = pts[-1]
-        ah = r * 0.34
-        md.polygon([(tip[0] + ah * 0.35, tip[1] - ah * 0.35), (tip[0] - ah * 0.55, tip[1] - ah * 0.2), (tip[0] + ah * 0.2, tip[1] + ah * 0.55)], fill=255)
-        a = img.split()[3]
-        a = Image.composite(Image.new('L', (W, W), 0), a, mask)
-        img.putalpha(a)
-    else:
-        d.line(pts, fill=(*ink, 255), width=lw, joint='curve')
-        for p in pts:
-            d.ellipse([p[0] - lw / 2, p[1] - lw / 2, p[0] + lw / 2, p[1] + lw / 2], fill=(*ink, 255))
-        tip = pts[-1]
-        ah = r * 0.34
-        d.polygon([(tip[0] + ah * 0.35, tip[1] - ah * 0.35), (tip[0] - ah * 0.55, tip[1] - ah * 0.2), (tip[0] + ah * 0.2, tip[1] + ah * 0.55)], fill=(*ink, 255))
+    h = W * 0.56 * scale
+    cx, cy = W * 0.5, W * 0.5
+    top, bot = cy - h / 2, cy + h / 2
+    left = cx - h * 0.42
+    stem = h * 0.17  # stroke width
+    c = (*color, 255)
+    # Stem, rounded ends.
+    d.rounded_rectangle([left, top, left + stem, bot], radius=stem / 2, fill=c)
+    # Junction point on the stem.
+    jx, jy = left + stem * 0.9, cy + h * 0.06
+    # Lower leg: from junction down to bottom right.
+    lx, ly = cx + h * 0.36, bot - stem / 2
+    d.line([(jx, jy), (lx, ly)], fill=c, width=int(stem))
+    d.ellipse([lx - stem / 2, ly - stem / 2, lx + stem / 2, ly + stem / 2], fill=c)
+    # Upper arm as a rising chart line: junction -> dip -> tip (top right).
+    p1 = (jx, jy)
+    p2 = (cx + h * 0.02, cy - h * 0.12)
+    p3 = (cx + h * 0.14, cy - h * 0.02)
+    tip = (cx + h * 0.40, cy - h * 0.38)
+    lw = int(stem * 0.78)
+    d.line([p1, p2, p3, tip], fill=c, width=lw, joint='curve')
+    for p in (p1, p2, p3):
+        d.ellipse([p[0] - lw / 2, p[1] - lw / 2, p[0] + lw / 2, p[1] + lw / 2], fill=c)
+    # Arrow head pointing up-right.
+    a = h * 0.2
+    d.polygon([(tip[0] + a * 0.42, tip[1] - a * 0.42), (tip[0] - a * 0.75, tip[1] - a * 0.2), (tip[0] + a * 0.2, tip[1] + a * 0.75)], fill=c)
+    # Spark: a 4-point star above the arrow.
+    sx, sy, r = tip[0] - h * 0.02, top - h * 0.02, h * 0.07
+    q = r * 0.28
+    d.polygon([(sx, sy - r), (sx + q, sy - q), (sx + r, sy), (sx + q, sy + q), (sx, sy + r), (sx - q, sy + q), (sx - r, sy), (sx - q, sy - q)], fill=(*accent, 255))
     return img
+
 
 def down(img, size=S):
     return img.resize((size, size), Image.LANCZOS)
 
+
 bg = gradient(S)
-# Full icon (iOS / legacy / store): glyph at full size on gradient. iOS masks corners itself.
+# Full icon (iOS / store): glyph on gradient. iOS masks the corners itself.
 full = bg.convert('RGBA')
-full.alpha_composite(down(glyph(1.15)))
+full.alpha_composite(down(glyph(1.0)))
 full.convert('RGB').save(f'{OUT}/icon.png')
-# Android adaptive: background layer, foreground within the 66% safe zone.
+# Android adaptive: background layer, foreground within the 66% safe zone, monochrome for themed icons.
 bg.save(f'{OUT}/android-icon-background.png')
-down(glyph(0.9)).save(f'{OUT}/android-icon-foreground.png')
-down(glyph(0.9, mono=True)).save(f'{OUT}/android-icon-monochrome.png')
-# Splash: glyph only, transparent (splash background color set in app.json).
-down(glyph(1.3)).save(f'{OUT}/splash-icon.png')
+down(glyph(0.78)).save(f'{OUT}/android-icon-foreground.png')
+down(glyph(0.78, WHITE, WHITE)).save(f'{OUT}/android-icon-monochrome.png')
+# Splash: glyph only, transparent (background color set in app.json).
+down(glyph(1.15)).save(f'{OUT}/splash-icon.png')
+# Notification small icon: white silhouette, Android tints it.
+down(glyph(1.25, WHITE, WHITE), 96).save(f'{OUT}/notification-icon.png')
 # Favicon
 full.convert('RGB').resize((48, 48), Image.LANCZOS).save(f'{OUT}/favicon.png')
-# Preview: adaptive icon masked as a circle, as a launcher shows it.
-prev = bg.convert('RGBA'); prev.alpha_composite(down(glyph(0.9)))
-m = Image.new('L', (S, S), 0); ImageDraw.Draw(m).ellipse([0, 0, S, S], fill=255)
-out = Image.new('RGBA', (S, S), (255, 255, 255, 255)); out.paste(prev, (0, 0), m)
+# Previews (not shipped): adaptive icon masked as a circle, and the full icon.
+prev = bg.convert('RGBA')
+prev.alpha_composite(down(glyph(0.78)))
+m = Image.new('L', (S, S), 0)
+ImageDraw.Draw(m).ellipse([0, 0, S, S], fill=255)
+out = Image.new('RGBA', (S, S), (255, 255, 255, 255))
+out.paste(prev, (0, 0), m)
 out.convert('RGB').resize((256, 256), Image.LANCZOS).save(f'{OUT}/preview-adaptive.png')
 full.convert('RGB').resize((256, 256), Image.LANCZOS).save(f'{OUT}/preview-full.png')
 print('ok')

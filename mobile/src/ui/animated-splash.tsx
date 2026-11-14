@@ -1,7 +1,7 @@
 /**
- * Animated splash. Starts pixel-identical to the native splash (same green, same 160dp glyph,
+ * Animated splash. Starts pixel-identical to the native splash (same midnight teal, same 160dp glyph,
  * see app.json `expo-splash-screen`), so there is no flash when the native one hides. Then:
- *   1. the coin spins once (Y-axis flip) and pops with a fast spatial spring,
+ *   1. the K monogram spins once (Y-axis flip) and pops with a fast spatial spring,
  *   2. a soft glow breathes behind it and two rings ripple outward,
  *   3. gold sparkles burst from the coin and fade,
  *   4. the name and tagline rise in, and a thin loading line fills,
@@ -29,10 +29,12 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { useApp } from '@/state/app-store';
+import { bidi } from '@/ui/bidi';
 import { Springs } from '@/ui/motion';
+import { Fonts } from '@/ui/theme';
 
-export const SPLASH_BG = '#1E5A2A';
-const GOLD = '#F7C542';
+export const SPLASH_BG = '#062A26';
+const GOLD = '#F5C542';
 const GLYPH = 160;
 const SPARKS = 10;
 const TOTAL_MS = 1900;
@@ -98,7 +100,7 @@ export function AnimatedSplash({ onDone }: { onDone: () => void }) {
       </Animated.View>
       <Animated.View style={[styles.textBox, textStyle]}>
         <Text style={styles.name}>{s.appName}</Text>
-        <Text style={styles.tagline}>{s.splashTagline}</Text>
+        <Text style={styles.tagline}>{bidi(s.splashTagline, isRTL)}</Text>
         {/* Loading line fills from the reading start edge. */}
         <View style={[styles.track, { direction: isRTL ? 'rtl' : 'ltr' }]}>
           <Animated.View style={[styles.fill, barStyle]} />
@@ -145,8 +147,8 @@ const styles = StyleSheet.create({
   ring: { position: 'absolute', width: GLYPH * 1.2, height: GLYPH * 1.2, borderRadius: GLYPH, borderWidth: 2, borderColor: GOLD },
   spark: { position: 'absolute', backgroundColor: GOLD },
   textBox: { position: 'absolute', top: '60%', alignItems: 'center', gap: 6, width: 220 },
-  name: { color: '#FFFFFF', fontSize: 36, fontWeight: '700', letterSpacing: 0.5 },
-  tagline: { color: GOLD, fontSize: 16, fontWeight: '500' },
+  name: { color: '#FFFFFF', fontSize: 36, fontFamily: Fonts.bold, letterSpacing: 0.5 },
+  tagline: { color: GOLD, fontSize: 16, fontFamily: Fonts.medium },
   track: { marginTop: 14, width: 120, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 2, backgroundColor: GOLD },
 });

@@ -29,7 +29,7 @@ export function formatMoney(value: number, currency: Currency, lang: Lang, compa
   } catch {
     // Older Intl builds may lack compact notation.
     const sign = currency === 'USD' ? '$' : '₪';
-    return `${sign}${Math.round(value).toLocaleString()}`;
+    return `${sign}${Math.round(value).toLocaleString(LOCALE[lang])}`;
   }
 }
 

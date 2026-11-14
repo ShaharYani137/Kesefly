@@ -8,7 +8,7 @@ import { Text, View } from 'react-native';
 import type { ForecastPoint } from '@/engine/projection';
 import { formatMoney } from '@/engine/format';
 import { fill, useApp } from '@/state/app-store';
-import { useTokens } from '@/ui/theme';
+import { Fonts, useTokens } from '@/ui/theme';
 
 const HEIGHT = 180;
 
@@ -48,7 +48,7 @@ export function ForecastChart({ points, goal }: { points: ForecastPoint[]; goal:
                 right: 0,
                 top: -18,
                 fontSize: 11,
-                fontWeight: '600',
+                fontFamily: Fonts.semibold,
                 color: colors.warning,
               }}>
               {s.plan.goalLine} {money(goal)}
