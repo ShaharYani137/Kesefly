@@ -12,6 +12,9 @@
       "bundleIdentifier": "com.kesefly.app",
       "infoPlist": {
         "NSFaceIDUsageDescription": "Kesefly uses Face ID to unlock the app and keep your money data private."
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.kesefly.app"]
       }
     },
     "android": {
@@ -39,6 +42,7 @@
     },
     "plugins": [
       "expo-router",
+      "@bacons/apple-targets",
       [
         "expo-splash-screen",
         {

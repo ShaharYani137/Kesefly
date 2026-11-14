@@ -189,3 +189,9 @@ One section per working session. Newest at bottom.
 - Build the APK and test the four screens on the phone (Hebrew and English).
 - Optional: file picker for CSV (expo-document-picker, needs rebuild); test with real IBI / Meitav / Excellence exports and add header words they use.
 - Optional: inflation-adjusted (real) gain for Israeli shekel assets using CPI.
+
+**Later in session 6: iOS widget + APK**
+- iOS WidgetKit widget via `@bacons/apple-targets` (`mobile/targets/widget/`): small, medium, large, lock screen. App writes data to App Group `group.com.kesefly.app` (`src/widget/ios.ts`); the widget fetches prices itself and falls back to the app's last numbers offline.
+- Widgets (Android + iOS) now also refresh after sales, dividends and CSV imports.
+- Release APK built from `feature/top-value`; phone was not connected, so not installed.
+- iOS next steps: add `ios.appleTeamId` to `app.json`, run `eas build -p ios`; first Swift compile happens there. Register the App Group in the Apple developer account if EAS does not do it automatically.

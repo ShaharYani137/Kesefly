@@ -6,11 +6,12 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
 import { type ImportResult, type ImportRow, parseImport } from '@/engine/csv-import';
 import { formatPrice } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
+import { alertDir } from '@/ui/bidi';
 import { guessCurrency } from '@/state/portfolio';
 import { Button, Card, Pill, Row, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
 import { Fonts, Metrics, useTokens } from '@/ui/theme';
@@ -27,7 +28,7 @@ const key = (r: { symbol: string; date?: string; shares?: number; price?: number
   [r.symbol, r.date ?? '', r.shares ?? '', r.price !== undefined ? r.price.toFixed(4) : '', r.amount !== undefined ? r.amount.toFixed(2) : ''].join('|');
 
 export default function ImportScreen() {
-  const { s, lang, holdings, sales, dividends, importRecords } = useApp();
+  const { s, lang, isRTL, holdings, sales, dividends, importRecords } = useApp();
   const { colors, type, isIOS } = useTokens();
   const [text, setText] = useState('');
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -62,7 +63,7 @@ export default function ImportScreen() {
 
   const doImport = () => {
     if (!fresh.length) {
-      Alert.alert(s.importer.title, s.importer.nothing);
+      alertDir(isRTL, s.importer.title, s.importer.nothing);
       return;
     }
     const opt = (v: number) => (v ? v : undefined);
@@ -72,7 +73,7 @@ export default function ImportScreen() {
       dividends: fresh.filter((r) => r.kind === 'dividend').map((r) => ({ symbol: r.symbol, amount: r.amount, tax: opt(r.tax), date: r.date })),
     });
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    Alert.alert(s.importer.title, fill(s.importer.done, { n: fresh.length }), [{ text: s.common.done, onPress: () => router.back() }]);
+    alertDir(isRTL, s.importer.title, fill(s.importer.done, { n: fresh.length }), [{ text: s.common.done, onPress: () => router.back() }]);
   };
 
   const kindLabel = { buy: s.importer.buy, sell: s.importer.sell, dividend: s.importer.dividend };

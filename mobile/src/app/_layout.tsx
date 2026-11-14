@@ -4,7 +4,7 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { Appearance, Platform, useColorScheme, View } from 'react-native';
+import { Appearance, AppState, Platform, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useApp } from '@/state/app-store';
@@ -15,6 +15,7 @@ import { ensureChannel, scheduleWeeklyTips } from '@/state/notifications';
 import { AnimatedSplash } from '@/ui/animated-splash';
 import { AuthScreen, LockScreen, PinSetup } from '@/ui/auth-screens';
 import { OfflineBanner } from '@/ui/offline-banner';
+import { syncIosWidget } from '@/widget/ios';
 import { refreshWidget } from '@/widget/task';
 
 SplashScreen.preventAutoHideAsync();
@@ -84,13 +85,31 @@ function NotificationSync() {
   return null;
 }
 
-/** Keeps the Android home-screen widget in step with holdings, language and currency. */
+/**
+ * Keeps the home-screen widgets in step with purchases, sales, dividends, language and currency:
+ * Android widget (widget/task.tsx) and iOS WidgetKit widget (widget/ios.ts). The widgets read
+ * the saved state, and this child effect runs before AppProvider's save effect, so the sync
+ * waits a moment for the write. iOS also syncs when the app goes to the background, so the
+ * widget starts from fresh prices.
+ */
 function WidgetSync() {
-  const { holdings, lang, profile, hydrated } = useApp();
+  const { holdings, sales, dividends, lang, profile, hydrated } = useApp();
   const currency = profile.currency;
   useEffect(() => {
-    if (hydrated && Platform.OS === 'android') refreshWidget().catch(() => {});
-  }, [holdings, lang, currency, hydrated]);
+    if (!hydrated) return;
+    const id = setTimeout(() => {
+      if (Platform.OS === 'android') refreshWidget().catch(() => {});
+      if (Platform.OS === 'ios') syncIosWidget().catch(() => {});
+    }, 800);
+    return () => clearTimeout(id);
+  }, [holdings, sales, dividends, lang, currency, hydrated]);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'background') syncIosWidget().catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
   return null;
 }
 
