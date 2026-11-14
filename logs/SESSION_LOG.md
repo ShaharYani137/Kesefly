@@ -228,3 +228,14 @@ One section per working session. Newest at bottom.
 **Next steps:**
 - Watch the first `iOS build` run; fix anything it reports.
 - Install on the iPhone with Sideloadly and test Face ID, notifications and Hebrew layout.
+
+**End of session 6: merge, Android CI, Compare fix**
+- Merged `feature/top-value` (money tools + iOS widget) into main at 6ebba0d, together with the teammate's iPhone build (PR #1).
+- Local APK builds failed on Windows paths (worktree folder name with `+`, then ninja mkdir errors in copied folders). Added GitHub Actions "Android build" (Linux): APK published as a pre-release (`android-build-N`). Build 1 and 2 installed on the phone, no crashes.
+- Checked Compare on the phone: index chips were cut off and undated holdings got the wrong message. Fixed (wrapping chips, "N purchases need a date"); verified by screenshot. Comparison result not seen on device (no purchase dates in user data).
+
+**Next steps:**
+- Merge `feature/top-value` into main again (Compare fix + Android workflow are only on the branch).
+- Update the main checkout (`git pull`) so local incremental builds (minutes) work again; optional: add Gradle + ccache caching to the Android workflow (~8-10 min runs).
+- iOS: add `ios.appleTeamId`; check the iOS build workflow run for main 6ebba0d (widget's first compile); App Group may not sign with a free Apple ID (Sideloadly).
+- Add purchase dates on the phone and check the Compare result screen.
