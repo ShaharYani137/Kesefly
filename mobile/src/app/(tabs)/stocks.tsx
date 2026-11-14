@@ -33,6 +33,7 @@ import {
   Txt,
 } from '@/ui/components';
 import { enterFade, Springs } from '@/ui/motion';
+import { ToolRow } from '@/ui/money-ui';
 import { StockChart } from '@/ui/stock-chart';
 import { Fonts, Metrics, useTokens } from '@/ui/theme';
 
@@ -167,6 +168,18 @@ export default function StocksScreen() {
           ) : (
             <Button kind="tonal" label={s.stocks.addHolding} onPress={() => setAdding(true)} />
           )}
+
+          {/* ---------- Portfolio tools: tax, index comparison, broker import ---------- */}
+          <SectionHeader>{s.tools.title}</SectionHeader>
+          <Card style={{ gap: 0, paddingVertical: 4 }}>
+            {holdings.length ? (
+              <>
+                <ToolRow first sf="percent" md="percent" title={s.tools.tax} hint={s.tools.taxHint} onPress={() => router.push('/tax')} />
+                <ToolRow sf="chart.line.uptrend.xyaxis" md="compare_arrows" title={s.tools.compare} hint={s.tools.compareHint} onPress={() => router.push('/compare')} />
+              </>
+            ) : null}
+            <ToolRow first={!holdings.length} sf="square.and.arrow.down" md="upload_file" title={s.tools.import} hint={s.tools.importHint} onPress={() => router.push('/import')} />
+          </Card>
 
           {/* ---------- Watchlist ---------- */}
           <SectionHeader>{s.stocks.watchlist}</SectionHeader>

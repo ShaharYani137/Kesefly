@@ -8,12 +8,13 @@ import type { Risk } from '@/engine/types';
 import { fill, useApp } from '@/state/app-store';
 import { Appear, Button, Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
 import { ForecastChart } from '@/ui/forecast-chart';
+import { ToolRow } from '@/ui/money-ui';
 
 /** Monthly-investing step for the what-if stepper, per currency. */
 const INVEST_STEP = { USD: 50, ILS: 200 } as const;
 
 export default function PlanScreen() {
-  const { s, profile: p, lang, updateProfile } = useApp();
+  const { s, profile: p, lang, updateProfile, savings } = useApp();
   const money = (v: number) => formatMoney(v, p.currency, lang);
   const f = useMemo(() => forecast(p), [p]);
   const a = RISK_ASSUMPTIONS[p.risk];
@@ -99,6 +100,17 @@ export default function PlanScreen() {
             options={(['conservative', 'balanced', 'growth'] as const).map((r) => ({ value: r, label: s.risk[r] }))}
           />
         </View>
+      </Card>
+
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ToolRow
+          first
+          sf="building.columns.fill"
+          md="account_balance"
+          title={s.savings.title}
+          hint={savings.length ? fill(s.savings.countHint, { n: savings.length }) : s.savings.hint}
+          onPress={() => router.push('/savings')}
+        />
       </Card>
 
       <Card>

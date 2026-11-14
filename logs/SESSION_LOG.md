@@ -166,3 +166,26 @@ One section per working session. Newest at bottom.
 - Create Supabase project for cloud accounts (optional).
 - Background task timing is set by Android; alerts are not instant.
 - TASE Friday close time approximate; holiday list covers 2026-2027 only.
+
+## Session 6 — 2026-11-14
+
+**Goal:** Build the "Top value (Israel + US investor)" features: tax view, pension + Keren Hishtalmut, broker CSV import, benchmark compare.
+
+**Work done (branch `feature/top-value`):**
+- Tax view (`app/tax.tsx`, `engine/tax.ts`): tax residence switch (Israel / US). Israel: 25% on gains with same-year loss offset, average cost. US: short/long-term by lot age (FIFO), user-picked rates, short/long netting, "turns long-term in N days" hint. Tax this year so far, tax if each holding or everything were sold today, losses that would cut this year's tax (with wash-sale / Form 1301 notes), dividend tax still due, W-8BEN check.
+- Pension and savings (`app/savings.tsx`, `engine/savings.ts`): pension fund, study fund, provident fund, 401(k), IRA. Fee check (good / above good / legal max), fee cost until retirement, projection at 5%, study fund tax-free date, Har HaKesef / Mislaka tip. Linked from the Plan tab.
+- Import from broker (`app/import.tsx`, `engine/csv-import.ts`): paste CSV; IBKR activity statement and generic tables with English or Hebrew headers; TASE security numbers and Hebrew names to symbols; agorot handling; preview, unreadable lines, duplicates skipped; one-tap import.
+- Compare to an index (`app/compare.tsx`, `engine/benchmark.ts`): S&P 500, TA-125, Nasdaq-100, World (VT); same cash flows on the same days with historical USD/ILS; end value and XIRR for both.
+- Stocks tab: "Portfolio tools" card (Tax view, Compare, Import).
+- Checks: tsc 0, eslint 0, Node tests for all four engines pass, Yahoo daily history verified live for every benchmark.
+
+**Decisions:**
+- Israeli tax uses average cost (same as the ledger); US uses FIFO (IRS default). Gains are nominal at today's FX; screen explains the real-gain difference.
+- US dividend withholding for Israeli residents: 25% with W-8BEN (treaty), 30% without.
+- "Good fee" reference rates are a Kesefly design decision, labelled as such in code and UI.
+- Import by pasted text in v1: no new native dependency.
+
+**Next steps:**
+- Build the APK and test the four screens on the phone (Hebrew and English).
+- Optional: file picker for CSV (expo-document-picker, needs rebuild); test with real IBI / Meitav / Excellence exports and add header words they use.
+- Optional: inflation-adjusted (real) gain for Israeli shekel assets using CPI.

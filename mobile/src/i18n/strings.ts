@@ -3,6 +3,7 @@
  * the `Strings` type is derived from English, so a missing Hebrew key fails typecheck.
  */
 import { EXTRA, type ExtraStrings } from './extra';
+import { MONEY, type MoneyStrings } from './money';
 
 const en = {
   appName: 'Kesefly',
@@ -362,7 +363,7 @@ const en = {
 };
 
 type BaseStrings = typeof en;
-export type Strings = BaseStrings & ExtraStrings;
+export type Strings = BaseStrings & ExtraStrings & MoneyStrings;
 
 const he: BaseStrings = {
   appName: 'כספלי',
@@ -718,6 +719,6 @@ const he: BaseStrings = {
 };
 
 export const STRINGS: Record<'en' | 'he', Strings> = {
-  en: { ...en, ...EXTRA.en },
-  he: { ...he, ...EXTRA.he },
+  en: { ...en, ...EXTRA.en, ...MONEY.en },
+  he: { ...he, ...EXTRA.he, ...MONEY.he },
 };

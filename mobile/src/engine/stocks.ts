@@ -298,6 +298,54 @@ export async function getHistory(symbol: string, key: RangeKey): Promise<History
   return points;
 }
 
+/**
+ * Daily closes from a date until today, oldest first (agorot converted to shekels). For the
+ * benchmark comparison and FX history, which need more than the chart ranges. Cached per day.
+ */
+export async function getHistorySince(symbol: string, fromMs: number): Promise<HistoryPoint[]> {
+  const sym = symbol.toUpperCase();
+  // Start a week early so the first cash flow has a close on or before its date.
+  const from = Math.floor((fromMs - 7 * 86400_000) / 86400_000) * 86400;
+  const cacheKey = `${sym}|since|${from}`;
+  const hit = histCache.get(cacheKey);
+  if (hit && Date.now() - hit.at < HIST_CACHE_MS) return hit.points;
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${encodeURIComponent(sym)}?period1=${from}&period2=${Math.floor(Date.now() / 1000)}&interval=1d`, {
+      headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' },
+    });
+  } catch {
+    throw new StockError('network');
+  }
+  if (res.status === 404) throw new StockError('notFound');
+  if (!res.ok) throw new StockError('network', `HTTP ${res.status}`);
+  const r = ((await res.json()) as HistoryResponse).chart?.result?.[0];
+  const ts = r?.timestamp ?? [];
+  const closes = r?.indicators?.quote?.[0]?.close ?? [];
+  const k = r?.meta.currency === 'ILA' ? 0.01 : 1;
+  const points: HistoryPoint[] = [];
+  ts.forEach((t, i) => {
+    const c = closes[i];
+    if (c != null && Number.isFinite(c)) points.push({ t: t * 1000, close: c * k });
+  });
+  if (points.length < 2) throw new StockError('notFound');
+  histCache.set(cacheKey, { at: Date.now(), points });
+  return points;
+}
+
+/** Last close on or before `t` (series oldest first); the first close if `t` is earlier. */
+export function closeAt(points: HistoryPoint[], t: number): number {
+  let lo = 0;
+  let hi = points.length - 1;
+  if (t <= points[0].t) return points[0].close;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (points[mid].t <= t) lo = mid;
+    else hi = mid - 1;
+  }
+  return points[lo].close;
+}
+
 /** Quotes for many symbols; failures are left out instead of failing the whole batch. */
 export async function getQuotes(symbols: string[], force = false): Promise<Record<string, Quote>> {
   const out: Record<string, Quote> = {};
