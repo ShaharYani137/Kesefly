@@ -10,8 +10,11 @@
     "ios": {
       "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.kesefly.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
       "infoPlist": {
-        "NSFaceIDUsageDescription": "Kesefly uses Face ID to unlock the app and keep your money data private."
+        "NSFaceIDUsageDescription": "Kesefly uses Face ID to unlock the app and keep your money data private.",
+        "ITSAppUsesNonExemptEncryption": false
       },
       "entitlements": {
         "com.apple.security.application-groups": ["group.com.kesefly.app"]
@@ -105,7 +108,8 @@
             }
           ]
         }
-      ]
+      ],
+      "./plugins/with-local-notifications-only"
     ],
     "experiments": {
       "typedRoutes": true,

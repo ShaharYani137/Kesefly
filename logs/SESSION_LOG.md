@@ -120,6 +120,22 @@ One section per working session. Newest at bottom.
 - Real upload keystore before Play Store.
 - After any `expo prebuild`, re-create `android/local.properties` with `cmake.dir` (prebuild deletes it).
 
+## Session 4b — 2026-11-07 (branch `Shavit`)
+
+**Goal:** run Kesefly on an iPhone and add a home-screen icon.
+
+**Work done:**
+- Ran the app on iPhone through Expo dev server (LAN, `http://10.0.0.4:8081`); web version opened in Safari.
+- Added `mobile/public/apple-touch-icon.png` (180×180) so iOS "Add to Home Screen" shows the Kesefly logo.
+- Branches `Shavit` and `Shahar` created from `main` to split work; icon change made on `Shavit`.
+
+**Decisions:**
+- Use the `public/` root fallback (`/apple-touch-icon.png`) instead of a custom `+html.tsx`.
+
+**Next steps:**
+- Merge `Shavit` into `main` (pull request) when ready.
+- For a home-screen web app that works without the PC: set `web.output` to `single`, `npx expo export --platform web`, host `dist/`.
+
 ---
 
 ## Session 5 — 2026-11-14
@@ -195,3 +211,20 @@ One section per working session. Newest at bottom.
 - Widgets (Android + iOS) now also refresh after sales, dividends and CSV imports.
 - Release APK built from `feature/top-value`; phone was not connected, so not installed.
 - iOS next steps: add `ios.appleTeamId` to `app.json`, run `eas build -p ios`; first Swift compile happens there. Register the App Group in the Apple developer account if EAS does not do it automatically.
+## Session 6 — 2026-11-14 (branch `Shavit`)
+
+**Goal:** run Kesefly on an iPhone as a standalone app (no Expo Go), from Windows.
+
+**Work done:**
+- Merged `main` (Kesefly v2) into `Shavit`.
+- iOS adaptations: Android widget registration gated to Android; iOS `app.json` settings; config plugin removing the push entitlement.
+- GitHub Actions workflow `iOS build` producing an unsigned `Kesefly.ipa` with the JS bundled in.
+- README section for installing on iPhone with Sideloadly.
+
+**Decisions:**
+- Free route: GitHub-hosted Mac build + Sideloadly with a free Apple ID (7-day reinstall). Paid account / EAS left as an upgrade path.
+- Local notifications only on iOS, so `aps-environment` is removed.
+
+**Next steps:**
+- Watch the first `iOS build` run; fix anything it reports.
+- Install on the iPhone with Sideloadly and test Face ID, notifications and Hebrew layout.
