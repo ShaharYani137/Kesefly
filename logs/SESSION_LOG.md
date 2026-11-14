@@ -181,3 +181,21 @@ One section per working session. Newest at bottom.
 - Create Supabase project for cloud accounts (optional).
 - Background task timing is set by Android; alerts are not instant.
 - TASE Friday close time approximate; holiday list covers 2026-2027 only.
+
+## Session 6 — 2026-11-14 (branch `Shavit`)
+
+**Goal:** run Kesefly on an iPhone as a standalone app (no Expo Go), from Windows.
+
+**Work done:**
+- Merged `main` (Kesefly v2) into `Shavit`.
+- iOS adaptations: Android widget registration gated to Android; iOS `app.json` settings; config plugin removing the push entitlement.
+- GitHub Actions workflow `iOS build` producing an unsigned `Kesefly.ipa` with the JS bundled in.
+- README section for installing on iPhone with Sideloadly.
+
+**Decisions:**
+- Free route: GitHub-hosted Mac build + Sideloadly with a free Apple ID (7-day reinstall). Paid account / EAS left as an upgrade path.
+- Local notifications only on iOS, so `aps-environment` is removed.
+
+**Next steps:**
+- Watch the first `iOS build` run; fix anything it reports.
+- Install on the iPhone with Sideloadly and test Face ID, notifications and Hebrew layout.

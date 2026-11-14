@@ -1,0 +1,103 @@
+# Builds a standalone iPhone app (.ipa) on GitHub's Macs. No Expo Go, no Metro, no computer
+# needed at run time: the JavaScript is bundled into the app (Release build).
+#
+# The .ipa is UNSIGNED. Install it from Windows with Sideloadly and a free Apple ID, which
+# signs it for your iPhone (free-account apps must be reinstalled every 7 days).
+# Steps: README.md, "Run on an iPhone (Windows, no Mac)".
+#
+# Download: repo > Actions > "iOS build" > latest run > Artifacts > Kesefly-ios.
+
+name: iOS build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, Shavit, Shahar]
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/ios-build.yml'
+
+concurrency:
+  group: ios-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      # Optional cloud accounts. Set these as repository VARIABLES (Settings > Secrets and
+      # variables > Actions > Variables). Empty = accounts stay on the phone (device mode).
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install JavaScript packages
+        run: npm ci
+
+      - name: Generate the iOS project (expo prebuild)
+        run: npx expo prebuild --platform ios --no-install
+
+      - name: Check entitlements (free Apple ID cannot sign push)
+        run: |
+          ENT=$(ls ios/*/*.entitlements 2>/dev/null | head -1 || true)
+          if [ -n "$ENT" ]; then
+            plutil -p "$ENT"
+            if /usr/libexec/PlistBuddy -c 'Print :aps-environment' "$ENT" >/dev/null 2>&1; then
+              echo "::warning::aps-environment still present; removing it"
+              /usr/libexec/PlistBuddy -c 'Delete :aps-environment' "$ENT"
+            fi
+          fi
+
+      - name: Install CocoaPods
+        run: cd ios && pod install
+
+      - name: Build (Release, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -workspace ios/Kesefly.xcworkspace \
+            -scheme Kesefly \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            build | tee xcodebuild.log | grep -E '(error|warning: .*deprecated|BUILD (SUCCEEDED|FAILED))' || true
+          test -d build/Build/Products/Release-iphoneos/Kesefly.app
+
+      - name: Package .ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/Kesefly.app Payload/
+          test -f Payload/Kesefly.app/main.jsbundle
+          zip -qry Kesefly.ipa Payload
+          ls -lh Kesefly.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kesefly-ios
+          path: mobile/Kesefly.ipa
+          retention-days: 30
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log
+          path: mobile/xcodebuild.log
+          if-no-files-found: ignore
