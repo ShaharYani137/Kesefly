@@ -325,6 +325,15 @@ const en = {
     remove: 'Remove goal',
     saved: 'Goal saved',
   },
+  money: {
+    title: 'Savings and investments',
+    subtitle: 'Update these when your balances change. Your plan and forecast use them.',
+    edit: 'Edit savings and investments',
+    cashHint: 'Bank and savings accounts, deposits.',
+    investHint: 'Funds and stocks you already hold. Pension not included.',
+    total: 'Savings + investments',
+    save: 'Save',
+  },
   holding: {
     title: 'Edit {symbol}',
     subtitle: 'Record every purchase, sale and dividend. Fees and dates are optional.',
@@ -729,6 +738,15 @@ const he: ExtraStrings = {
     save: 'שמירת היעד',
     remove: 'מחיקת היעד',
     saved: 'היעד נשמר',
+  },
+  money: {
+    title: 'חסכונות והשקעות',
+    subtitle: 'עדכנו כשהיתרות משתנות. התוכנית והתחזית מתבססות עליהן.',
+    edit: 'עריכת חסכונות והשקעות',
+    cashHint: 'עו"ש, חשבונות חיסכון ופיקדונות.',
+    investHint: 'קרנות ומניות שכבר יש לכם. בלי פנסיה.',
+    total: 'חסכונות + השקעות',
+    save: 'שמירה',
   },
   holding: {
     title: 'עריכת {symbol}',

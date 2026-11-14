@@ -159,6 +159,8 @@ export function Screen({
       ) : null}
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
+        // iOS: scroll the focused field above the keyboard (forms such as Goal and Money).
+        automaticallyAdjustKeyboardInsets
         contentContainerStyle={{
           padding: Metrics.margin,
           paddingBottom: Metrics.margin * 3,

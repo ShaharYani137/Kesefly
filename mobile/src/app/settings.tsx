@@ -269,6 +269,7 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={{ gap: 4 }}>
+        <Button kind="tonal" label={s.money.edit} onPress={() => router.push('/money')} />
         <Button kind="tonal" label={s.settings.editProfile} onPress={() => router.push('/onboarding?edit=1')} />
         <Button kind="destructive" label={s.settings.reset} onPress={confirmReset} />
         <Button kind="destructive" label={s.settings2.signOut} onPress={confirmSignOut} />

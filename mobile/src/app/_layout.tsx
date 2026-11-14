@@ -130,6 +130,7 @@ function AppStack() {
       <Stack.Screen name="stock/[symbol]" />
       <Stack.Screen name="lesson/[id]" />
       <Stack.Screen name="goal" />
+      <Stack.Screen name="money" />
       <Stack.Screen name="holding/[symbol]" />
       <Stack.Screen name="assessment" options={{ animation: 'slide_from_bottom' }} />
     </Stack>

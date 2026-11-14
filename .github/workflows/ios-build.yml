@@ -52,6 +52,14 @@ jobs:
       - name: Install JavaScript packages
         run: npm ci
 
+      # Report type errors as annotations on the run, without blocking the app build.
+      - name: Type check
+        continue-on-error: true
+        run: |
+          npx tsc --noEmit --pretty false > tsc.log 2>&1 && echo "tsc: 0 errors" && exit 0
+          sed -E 's/^([^(]+)\(([0-9]+),([0-9]+)\): error (.*)$/::error file=mobile\/\1,line=\2,col=\3::\4/' tsc.log | head -50
+          exit 1
+
       - name: Generate the iOS project (expo prebuild)
         run: npx expo prebuild --platform ios --no-install
 
