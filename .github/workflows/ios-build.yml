@@ -12,7 +12,7 @@ name: iOS build
 on:
   workflow_dispatch:
   push:
-    branches: [main, Shavit, Shahar, feature/edit-savings-chat-keyboard]
+    branches: [main, Shavit, Shahar]
     paths:
       - 'mobile/**'
       - '.github/workflows/ios-build.yml'
