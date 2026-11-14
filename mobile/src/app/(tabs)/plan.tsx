@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { View } from 'react-native';
 
@@ -5,7 +6,7 @@ import { formatMoney, formatPercent } from '@/engine/format';
 import { forecast, RISK_ASSUMPTIONS } from '@/engine/projection';
 import type { Risk } from '@/engine/types';
 import { fill, useApp } from '@/state/app-store';
-import { Appear, Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
+import { Appear, Button, Card, Disclaimer, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
 import { ForecastChart } from '@/ui/forecast-chart';
 
 /** Monthly-investing step for the what-if stepper, per currency. */
@@ -25,6 +26,8 @@ export default function PlanScreen() {
         goal: p.goalName || money(p.goalAmount),
         years: p.goalYears,
       })}>
+      <Button kind="tonal" label={p.goalAmount > 0 ? s.goal.edit : s.goal.set} onPress={() => router.push('/goal')} />
+
       <Appear index={0}>
         <Card>
           <ForecastChart points={f.points} goal={p.goalAmount} />

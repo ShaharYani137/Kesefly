@@ -1,12 +1,13 @@
-import { Children, type ReactNode, useEffect } from 'react';
+import { Children, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, type TextProps, TextInput, View, type ViewStyle } from 'react-native';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/state/app-store';
+import { bidi, ltr } from '@/ui/bidi';
 import { enterItem, Springs } from '@/ui/motion';
-import { Metrics, type TypeRole, useTokens } from '@/ui/theme';
+import { Fonts, Metrics, type TypeRole, useTokens } from '@/ui/theme';
 
 /* ---------- Text ---------- */
 
@@ -16,17 +17,23 @@ type TxtProps = TextProps & {
   center?: boolean;
 };
 
-/** Right-to-left mark. Android ignores `writingDirection`, and picks a paragraph's direction from its
- * first strong character; a leading RLM makes Hebrew lines that start with Latin or digits (S&P 500,
- * AAPL, 6 months) still read right-to-left, with punctuation on the correct side. */
-const RLM = '‏';
-
+/**
+ * Android ignores `writingDirection` and picks each paragraph's direction from its first strong
+ * character, falling back to the SYSTEM language. So every paragraph of every string child gets a
+ * direction mark (see ui/bidi.ts): RLM in Hebrew, LRM for text styled LTR (tickers, prices,
+ * English headlines). This keeps Hebrew right-to-left on phones set to English, including
+ * multi-line chat answers whose lines start with "•", digits or Latin.
+ */
 export function Txt({ variant = 'body', color = 'text', center, style, children, ...rest }: TxtProps) {
   const { colors, type } = useTokens();
   const { isRTL } = useApp();
-  const content = isRTL
-    ? Children.map(children, (c, i) => (i === 0 && (typeof c === 'string' || typeof c === 'number') ? RLM + c : c))
-    : children;
+  const forcedLtr = StyleSheet.flatten(style)?.writingDirection === 'ltr';
+  const mark = (c: ReactNode) => {
+    if (typeof c !== 'string' && typeof c !== 'number') return c;
+    if (forcedLtr) return ltr(String(c));
+    return isRTL ? bidi(String(c), true) : c;
+  };
+  const content = isRTL || forcedLtr ? Children.map(children, mark) : children;
   return (
     <Text
       {...rest}
@@ -34,10 +41,17 @@ export function Txt({ variant = 'body', color = 'text', center, style, children,
         type[variant],
         {
           color: colors[color],
-          textAlign: center ? 'center' : isRTL ? 'right' : 'left',
+          // RN Android swaps textAlign left/right inside an RTL layout ('left' = start). So 'left'
+          // puts Hebrew on the right. LTR-styled text gets its own LTR layout below (no swap), so
+          // it uses the absolute side of the UI's start: right in Hebrew, left in English.
+          textAlign: center ? 'center' : forcedLtr && isRTL ? 'right' : 'left',
           writingDirection: isRTL ? 'rtl' : 'ltr',
         },
         style,
+        // RN Android maps textAlign left/right through the LAYOUT direction: in an RTL screen
+        // 'left' becomes "opposite", which right-aligns an English paragraph. LTR text gets an
+        // LTR layout direction so 'left' really means left.
+        forcedLtr ? { direction: 'ltr' as const } : null,
       ]}>
       {content}
     </Text>
@@ -263,6 +277,7 @@ function usePressScale() {
 
 export function Button({ label, onPress, kind = 'filled', disabled }: ButtonProps) {
   const { colors } = useTokens();
+  const { isRTL } = useApp();
   const press = usePressScale();
   const bg = kind === 'filled' ? colors.accent : kind === 'tonal' ? colors.accentSoft : 'transparent';
   const fg =
@@ -295,7 +310,9 @@ export function Button({ label, onPress, kind = 'filled', disabled }: ButtonProp
         },
         press.style,
       ]}>
-      <Text style={{ color: fg, fontSize: 17, fontWeight: '600' }}>{label}</Text>
+      <Text numberOfLines={2} style={{ color: fg, fontSize: 17, fontFamily: Fonts.semibold, textAlign: 'center' }}>
+        {bidi(label, isRTL)}
+      </Text>
     </AnimatedPressable>
   );
 }
@@ -412,12 +429,21 @@ export function Segmented<T extends string>({
   options,
   value,
   onChange,
+  tone = 'default',
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
+  /** 'hero' = on the dark brand surface. */
+  tone?: 'default' | 'hero';
 }) {
-  const { colors, isIOS } = useTokens();
+  const base = useTokens();
+  const { isIOS } = base;
+  const { isRTL } = useApp();
+  const colors =
+    tone === 'hero'
+      ? { ...base.colors, fill: 'rgba(255,255,255,0.12)', card: 'rgba(255,255,255,0.22)', separator: 'rgba(255,255,255,0.25)', text: '#FFFFFF', accentSoft: 'rgba(255,255,255,0.22)', onAccentSoft: '#FFFFFF' }
+      : base.colors;
   return (
     <View
       accessibilityRole="radiogroup"
@@ -453,11 +479,10 @@ export function Segmented<T extends string>({
               numberOfLines={1}
               style={{
                 fontSize: isIOS ? 13 : 14,
-                fontWeight: selected ? '600' : '500',
+                fontFamily: selected ? Fonts.semibold : Fonts.medium,
                 color: selected && !isIOS ? colors.onAccentSoft : colors.text,
               }}>
-              {!isIOS && selected ? '✓ ' : ''}
-              {o.label}
+              {bidi(`${!isIOS && selected ? '✓ ' : ''}${o.label}`, isRTL)}
             </Text>
           </Pressable>
         );
@@ -493,7 +518,7 @@ export function Stepper({
         justifyContent: 'center',
         opacity: pressed ? 0.6 : 1,
       })}>
-      <Text style={{ color: colors.onAccentSoft, fontSize: 22, fontWeight: '600' }}>{sign}</Text>
+      <Text style={{ color: colors.onAccentSoft, fontSize: 22, fontFamily: Fonts.semibold }}>{sign}</Text>
     </Pressable>
   );
   return (
@@ -550,6 +575,7 @@ export function ProgressBar({ value }: { value: number }) {
 /** Suggestion / assist chip (M3 chips; iOS uses the same capsule shape as a bordered button). */
 export function Chip({ label, onPress, sf, md }: { label: string; onPress: () => void; sf?: SFSymbol; md?: AndroidSymbol }) {
   const { colors, isIOS } = useTokens();
+  const { isRTL } = useApp();
   return (
     <Pressable
       accessibilityRole="button"
@@ -569,7 +595,7 @@ export function Chip({ label, onPress, sf, md }: { label: string; onPress: () =>
         overflow: 'hidden',
       })}>
       {sf && md ? <Icon sf={sf} md={md} size={18} color={colors.accent} /> : null}
-      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '500' }}>{label}</Text>
+      <Text style={{ color: colors.text, fontSize: 14, fontFamily: Fonts.medium }}>{bidi(label, isRTL)}</Text>
     </Pressable>
   );
 }
@@ -604,3 +630,88 @@ export function Disclaimer() {
 export const styles = StyleSheet.create({
   flex1: { flex: 1 },
 });
+
+/* ---------- Brand v2 bits ---------- */
+
+/** Number that counts up to its value (ease-out, 700 ms) when it first shows or changes. */
+export function CountUp({ value, format, style }: { value: number; format: (v: number) => string; style?: TxtProps['style'] }) {
+  const [shown, setShown] = useState(value);
+  const from = useRef(0);
+  useEffect(() => {
+    const start = from.current;
+    const t0 = Date.now();
+    let raf = 0;
+    const tick = () => {
+      const k = Math.min(1, (Date.now() - t0) / 700);
+      const e = 1 - (1 - k) ** 3;
+      setShown(start + (value - start) * e);
+      if (k < 1) raf = requestAnimationFrame(tick);
+      else from.current = value;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return (
+    <Text accessibilityLabel={format(value)} style={style}>
+      {format(shown)}
+    </Text>
+  );
+}
+
+const BADGE_COLORS = ['#0F7B6C', '#3B5BA9', '#8A4FB8', '#B5542C', '#2E7D4F', '#9A6B00', '#A23B62', '#3A6F8F'];
+
+/** Round badge with a symbol's initials, color picked from the symbol (stable). */
+export function SymbolBadge({ symbol, size = 40 }: { symbol: string; size?: number }) {
+  const clean = symbol.replace(/^\^/, '').replace(/[.=-].*$/, '');
+  let h = 0;
+  for (let i = 0; i < symbol.length; i++) h = (h * 31 + symbol.charCodeAt(i)) >>> 0;
+  return (
+    <View
+      style={{
+        width: size,
+        height: size,
+        borderRadius: size / 2,
+        backgroundColor: BADGE_COLORS[h % BADGE_COLORS.length],
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}>
+      <Text style={{ color: '#FFFFFF', fontFamily: Fonts.bold, fontSize: size * 0.32 }}>{clean.slice(0, clean.length > 4 ? 3 : 4)}</Text>
+    </View>
+  );
+}
+
+/** Pulsing red dot for live content. */
+export function LiveDot({ color = '#E53935' }: { color?: string }) {
+  const p = useSharedValue(0);
+  useEffect(() => {
+    p.set(withRepeat(withTiming(1, { duration: 1200 }), -1, false));
+  }, [p]);
+  const ring = useAnimatedStyle(() => ({ opacity: 1 - p.value, transform: [{ scale: 1 + p.value * 1.6 }] }));
+  return (
+    <View style={{ width: 10, height: 10, alignItems: 'center', justifyContent: 'center' }}>
+      <Animated.View style={[{ position: 'absolute', width: 10, height: 10, borderRadius: 5, backgroundColor: color }, ring]} />
+      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
+    </View>
+  );
+}
+
+/** Small colored label (impact, category, change). */
+export function Pill({ label, bg, fg }: { label: string; bg: string; fg: string }) {
+  const { isRTL } = useApp();
+  return (
+    <View style={{ backgroundColor: bg, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, alignSelf: 'flex-start' }}>
+      <Text style={{ color: fg, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 16 }}>{bidi(label, isRTL)}</Text>
+    </View>
+  );
+}
+
+/** Change badge: green / red pill with signed percent. Latin digits stay LTR. */
+export function ChangeBadge({ pct, text }: { pct: number; text: string }) {
+  const { colors } = useTokens();
+  return (
+    <View style={{ backgroundColor: pct >= 0 ? colors.positive : colors.danger, borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+      {/* Text in the page background color: dark on the light dark-mode greens, light on the deep light-mode greens. */}
+      <Text style={{ color: colors.background, fontFamily: Fonts.medium, fontSize: 12, lineHeight: 16, writingDirection: 'ltr' }}>{text}</Text>
+    </View>
+  );
+}

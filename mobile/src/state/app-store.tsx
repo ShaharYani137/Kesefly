@@ -1,20 +1,44 @@
 /**
- * App state: language, user profile, onboarding flag, stock watchlist, portfolio holdings, notification setting.
+ * App state: language, user profile, onboarding flag, stock watchlist, portfolio holdings, notification
+ * settings, Kesefly Academy progress.
  * Persisted on-device only (AsyncStorage). Only stock symbols leave the phone (to Yahoo Finance, for prices).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { type AcademyProgress, completeLesson as completeLessonFn, EMPTY_PROGRESS, type Placement } from '@/engine/academy';
 import { EMPTY_PROFILE, type Lang, type Profile } from '@/engine/types';
+import type { LessonId } from '@/i18n/academy';
+
+import { DEFAULT_SOUNDS, type NotifType, type SoundId } from './sounds';
 import { STRINGS, type Strings } from '@/i18n/strings';
 
-const STORAGE_KEY = 'investapp/state/v1';
+/** Also read by the background event-alert task (state/event-alerts.ts). */
+export const STORAGE_KEY = 'investapp/state/v1';
 
 export const DEFAULT_WATCHLIST = ['SPY', 'VT', '^TA125.TA', 'AAPL', 'MSFT', 'NVDA', 'TEVA.TA', 'CHKP'];
 
 /** One position in the user's portfolio (תיק השקעות). Price is per share, in the stock's own currency. */
 export type Holding = { id: string; symbol: string; shares: number; buyPrice: number };
+
+/** User preferences from Settings. Also read by the background alert task. */
+export type Prefs = {
+  /** App appearance; 'system' follows the phone. */
+  theme: 'system' | 'light' | 'dark';
+  /** Seconds in the background before the app locks again; -1 = only when the app starts. */
+  autoLock: 0 | 60 | 300 | -1;
+  /** Which stories alert: only my stocks, important (my stocks + high impact), or all medium+. */
+  alertScope: 'mine' | 'important' | 'all';
+  /** Daily move (%) in a holding that triggers an alert. */
+  moveThreshold: 2 | 3 | 5;
+  /** No alerts 22:00-07:00 local time; they wait for the morning. */
+  quietHours: boolean;
+  /** Sound per notification type (state/sounds.ts). */
+  sounds: Record<NotifType, SoundId>;
+};
+
+export const DEFAULT_PREFS: Prefs = { theme: 'system', autoLock: 60, alertScope: 'important', moveThreshold: 3, quietHours: true, sounds: DEFAULT_SOUNDS };
 
 type Persisted = {
   lang: Lang;
@@ -24,6 +48,11 @@ type Persisted = {
   holdings: Holding[];
   /** Weekly advice notifications on/off. */
   notify: boolean;
+  /** World / economy event alerts on/off. */
+  eventAlerts: boolean;
+  /** Kesefly Academy: placement result, finished lessons, XP, streak. */
+  academy: AcademyProgress;
+  prefs: Prefs;
 };
 
 type AppState = Persisted & {
@@ -38,7 +67,14 @@ type AppState = Persisted & {
   removeSymbol: (symbol: string) => void;
   addHolding: (h: Omit<Holding, 'id'>) => void;
   removeHolding: (id: string) => void;
+  /** Edit one purchase lot (shares and/or buy price). */
+  updateHolding: (id: string, patch: Partial<Omit<Holding, 'id' | 'symbol'>>) => void;
   setNotify: (on: boolean) => void;
+  setEventAlerts: (on: boolean) => void;
+  savePlacement: (p: Placement) => void;
+  finishLesson: (id: LessonId, correct: number, total: number) => void;
+  setPrefs: (patch: Partial<Prefs>) => void;
+  resetAcademy: () => void;
 };
 
 const AppContext = createContext<AppState | null>(null);
@@ -61,6 +97,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     watchlist: DEFAULT_WATCHLIST,
     holdings: [],
     notify: false,
+    eventAlerts: false,
+    academy: EMPTY_PROGRESS,
+    prefs: DEFAULT_PREFS,
   }));
 
   useEffect(() => {
@@ -75,6 +114,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           watchlist: Array.isArray(saved.watchlist) ? saved.watchlist : DEFAULT_WATCHLIST,
           holdings: Array.isArray(saved.holdings) ? saved.holdings : [],
           notify: saved.notify ?? false,
+          eventAlerts: saved.eventAlerts ?? false,
+          academy: { ...EMPTY_PROGRESS, ...saved.academy },
+          prefs: { ...DEFAULT_PREFS, ...saved.prefs, sounds: { ...DEFAULT_SOUNDS, ...saved.prefs?.sounds } },
         }));
       })
       .catch(() => {
@@ -103,6 +145,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         watchlist: DEFAULT_WATCHLIST,
         holdings: [],
         notify: false,
+        eventAlerts: false,
+        academy: EMPTY_PROGRESS,
+        prefs: p.prefs,
       })),
     [],
   );
@@ -132,7 +177,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
   const removeHolding = useCallback((id: string) => setState((p) => ({ ...p, holdings: p.holdings.filter((h) => h.id !== id) })), []);
+  const updateHolding = useCallback(
+    (id: string, patch: Partial<Omit<Holding, 'id' | 'symbol'>>) =>
+      setState((p) => ({ ...p, holdings: p.holdings.map((h) => (h.id === id ? { ...h, ...patch } : h)) })),
+    [],
+  );
   const setNotify = useCallback((notify: boolean) => setState((p) => ({ ...p, notify })), []);
+  const setEventAlerts = useCallback((eventAlerts: boolean) => setState((p) => ({ ...p, eventAlerts })), []);
+  const savePlacement = useCallback(
+    (placement: Placement) => setState((p) => ({ ...p, academy: { ...p.academy, placement } })),
+    [],
+  );
+  const setPrefs = useCallback((patch: Partial<Prefs>) => setState((p) => ({ ...p, prefs: { ...p.prefs, ...patch } })), []);
+  const resetAcademy = useCallback(() => setState((p) => ({ ...p, academy: EMPTY_PROGRESS })), []);
+  const finishLesson = useCallback(
+    (id: LessonId, correct: number, total: number) =>
+      setState((p) => ({ ...p, academy: completeLessonFn(p.academy, id, correct, total) })),
+    [],
+  );
 
   const value = useMemo<AppState>(
     () => ({
@@ -148,9 +210,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       removeSymbol,
       addHolding,
       removeHolding,
+      updateHolding,
       setNotify,
+      setEventAlerts,
+      savePlacement,
+      finishLesson,
+      setPrefs,
+      resetAcademy,
     }),
-    [state, hydrated, setLang, saveProfile, updateProfile, reset, addSymbol, removeSymbol, addHolding, removeHolding, setNotify],
+    [
+      state,
+      hydrated,
+      setLang,
+      saveProfile,
+      updateProfile,
+      reset,
+      addSymbol,
+      removeSymbol,
+      addHolding,
+      removeHolding,
+      updateHolding,
+      setNotify,
+      setEventAlerts,
+      savePlacement,
+      finishLesson,
+      setPrefs,
+      resetAcademy,
+    ],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

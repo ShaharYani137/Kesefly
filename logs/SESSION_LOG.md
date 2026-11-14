@@ -116,6 +116,49 @@ One section per working session. Newest at bottom.
 - Hebrew fixes verified on the phone: RLM for Android bidi, chips wrap, compact money, RTL page slides.
 
 **Open items (updated):**
-- Notifications not yet tested on device (needs the user to allow the permission).
+- Notifications verified on device by user (2026-11-07).
 - Real upload keystore before Play Store.
 - After any `expo prebuild`, re-create `android/local.properties` with `cmake.dir` (prebuild deletes it).
+
+---
+
+## Session 5 — 2026-11-14
+
+**Goal:** Economy/world-event notifications tied to the user's stocks; rebrand (keep name); sign-in + app lock; smarter chat on real data; more impressive Stocks page. Added during the session: Rubik font + RTL/LTR polish, market clocks and phone date (Gregorian + Hebrew) on Home, live "דקה אחר דקה" feed, learning program with level test, chat keyboard fix, network handling.
+
+**Done:**
+- Saved the DONE wrap-up command to memory.
+- Brand v2: gold "K" monogram with rising-arrow arm on teal-to-midnight; new icon set, splash colors; M3 scheme from seed #0F7B6C; iOS tint brand teal; Rubik everywhere (per-weight families).
+- Auth: Supabase REST accounts when `EXPO_PUBLIC_SUPABASE_*` set, else on-phone account; 4-digit PIN (salted SHA-256 in secure store), fingerprint/Face ID, relock after 60 s, lockout after 5 wrong PINs.
+- Events: `engine/news.ts` (CNBC, MarketWatch, Globes RSS + Yahoo per-ticker news), categories, impact, tone, affected symbols, "why it matters"; events screen; Home live feed; background alerts every ~30 min + foreground every 10 min, ±3% holding moves.
+- Home: phone time, Gregorian + Hebrew date, Wall Street + Tel Aviv clocks with open/closed countdown (`engine/clock.ts`, verified vs ICU 2020-2031).
+- Chat: `engine/assistant.ts` live analysis (stock, compare, why, market, FX, news, hours, date, portfolio review, learning, follow-ups); keyboard fixed for Android edge-to-edge.
+- Stocks: market strip, portfolio hero (value in user currency via USD/ILS, chart, allocation donut), holdings weights, watchlist sparklines + sort, new stock page.
+- Academy: 12-question level test, 4 levels x 4 lessons (en + he) with quizzes, personal "for you" picks, XP, streak, knowledge score.
+- Offline banner; explicit Android permissions (INTERNET, ACCESS_NETWORK_STATE, biometrics, notifications, boot).
+- tsc 0, eslint 0. Assistant tested live in Node (27 en/he questions).
+
+**Decisions:**
+- User answers: keep name, new look; auth = account + biometric/PIN; smarter offline chat (no paid AI); on-phone background news check (no server).
+- Rubik chosen over Assistant: one family for Hebrew + Latin.
+- No Supabase project yet, so accounts run in device mode until keys are added to `mobile/.env.local`.
+
+**Later in session 5 (after phone testing):**
+- Fixed launch crash (R8 stripped WorkManager Room constructor) via expo-build-properties keep rules.
+- Hebrew on English-language phones: per-paragraph RLM/LRM, RTL alert dialogs, notifications and biometric prompt; textAlign swap fix (RN Android swaps left/right in RTL layout); tab labels always shown; horizontal rows start at item 1 in Hebrew.
+- Notifications follow app language (titles, foreign-story intro, channel names); live feed in Hebrew (Hebrew sources + machine-translated English headlines).
+- Goal editor, portfolio lot editor, more Settings (theme, auto-lock, change PIN, alert scope/threshold/quiet hours, sounds per type, export data, reset learning).
+- Chat: longer thinking animation with steps, typewriter, auto-scroll, composer with chips + send in one bar, web answers (Wikipedia), learning memory (name, favorites, thumbs feedback), conversation context and follow-up chips, small talk, "What is coming up?" calendar with scenarios.
+- Home: portfolio card, markets at a glance, top movers, SVG US/Israel flags after exchange names.
+
+- Android home-screen widget (portfolio value, Wall Street / Tel Aviv clocks with flags), verified on the phone after a React Compiler opt-out fix.
+- Wrapped up with DONE: logs redacted, changes scanned, committed and pushed to origin/Shahar.
+
+**Open items / next steps:**
+- Verify on phone: sound picker previews, "What is coming up?" chip.
+- Widget refreshes about every 30 min (Android limit): clock times can lag; option to drop exact times or show market tiles when there are no holdings.
+- iOS widget would need a native WidgetKit target.
+- Bank of Israel decision dates and 2027 FOMC dates are not in the calendar yet.
+- Create Supabase project for cloud accounts (optional).
+- Background task timing is set by Android; alerts are not instant.
+- TASE Friday close time approximate; holiday list covers 2026-2027 only.

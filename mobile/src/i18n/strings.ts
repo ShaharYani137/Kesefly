@@ -2,6 +2,8 @@
  * UI strings. Placeholders use {name}. Keep both languages in sync:
  * the `Strings` type is derived from English, so a missing Hebrew key fails typecheck.
  */
+import { EXTRA, type ExtraStrings } from './extra';
+
 const en = {
   appName: 'Kesefly',
   splashTagline: 'Your money helper',
@@ -99,14 +101,14 @@ const en = {
   },
   helper: {
     title: 'Ask Kesefly',
-    subtitle: 'Your money helper. Works offline, knows your plan.',
-    placeholder: 'Ask about saving, debt, funds, or a stock…',
+    subtitle: 'Your money helper. Live prices and news, knows your plan.',
+    placeholder: 'Ask Kesefly anything…',
     send: 'Send',
     clear: 'New chat',
     you: 'You',
     welcome:
-      'Hi! I’m Kesefly. Ask me how you are doing, how much to invest, about debt, index funds, risk, tax accounts, or a stock price like AAPL.',
-    suggestions: ['How am I doing?', 'How can I save more?', 'My portfolio', 'Price of AAPL', 'What can you do?'],
+      'Hi! I’m Kesefly. Ask me about the markets today, any stock (AAPL, Apple, Teva), the dollar rate, news that affects you, your portfolio, or your own plan.',
+    suggestions: ['What is coming up?', 'Markets today', 'Latest news for me', 'Review my portfolio', 'Dollar rate', 'AAPL vs MSFT', 'Is Wall Street open?', 'How am I doing?', 'My learning path'],
     answers: {
       greet: 'Hi! What would you like to look at: your plan, saving, or stocks?',
       thanks: 'Happy to help. Ask me anything else about your money.',
@@ -151,7 +153,7 @@ const en = {
         '{symbol} is at {price}, {change} today ({pct}). Day range {low} – {high}. Prices may be delayed. This is not a buy or sell signal.',
       quoteFail: 'I couldn’t get a price for {symbol}. Check the symbol or try again later.',
       help:
-        'I can help with: your money snapshot, how much to invest, saving tips, emergency fund, debt, your goal forecast, index funds, stocks vs. bonds, risk, market drops, tax accounts, home buying, interest rates, inflation, fees, your portfolio, and live stock prices (type a symbol like AAPL or TEVA.TA).',
+        'I work with live data. Try: "Markets today", "Apple" or "TEVA.TA" (price, trend, risk, news), "AAPL vs MSFT", "Why is NVDA down?", "Dollar rate", "Latest news for me", "Review my portfolio", "Is Wall Street open?", "Hebrew date", "My learning path". I also explain saving, debt, emergency funds, your goal forecast, index funds, risk, taxes, rates, inflation and fees.',
       notify:
         'Turn on weekly tips in Settings, under Notifications. Once a week I send one short idea based on your plan. Your numbers never leave the phone.',
       portfolio: 'Your portfolio has {n} positions: {list}. Open the Stocks tab to see live value and gain or loss for each one.',
@@ -351,14 +353,15 @@ const en = {
     notifyOn: 'On',
     notifyOff: 'Off',
     privacy:
-      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance, to fetch prices.',
+      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance (prices and news), and the app reads public news feeds (CNBC, MarketWatch, Globes). Your PIN and password are stored encrypted on the phone.',
     version: 'Kesefly {v}',
   },
 };
 
-export type Strings = typeof en;
+type BaseStrings = typeof en;
+export type Strings = BaseStrings & ExtraStrings;
 
-const he: Strings = {
+const he: BaseStrings = {
   appName: 'כספלי',
   splashTagline: 'העוזר שלכם לכסף',
   notif: {
@@ -455,14 +458,14 @@ const he: Strings = {
   },
   helper: {
     title: 'לשאול את כספלי',
-    subtitle: 'העוזר שלכם לכסף. עובד בלי אינטרנט ומכיר את התוכנית שלכם.',
-    placeholder: 'שאלו על חיסכון, חובות, קרנות או מניה…',
+    subtitle: 'העוזר שלכם לכסף. מחירים וחדשות בזמן אמת, ומכיר את התוכנית שלכם.',
+    placeholder: 'שאלו את כספלי כל דבר…',
     send: 'שליחה',
     clear: 'שיחה חדשה',
     you: 'אתם',
     welcome:
-      'היי! אני כספלי. שאלו אותי מה המצב שלכם, כמה להשקיע, על חובות, קרנות מחקות, סיכון, קרן השתלמות, או מחיר של מניה כמו AAPL או TEVA.TA.',
-    suggestions: ['מה המצב שלי?', 'איך לחסוך יותר?', 'התיק שלי', 'מחיר TEVA.TA', 'מה אתה יודע?'],
+      'היי! אני כספלי. שאלו אותי מה קורה בשווקים, על כל מניה (אפל, טבע, AAPL), שער הדולר, חדשות שמשפיעות עליכם, התיק שלכם או התוכנית שלכם.',
+    suggestions: ['מה צפוי בקרוב?', 'מה קורה בשווקים?', 'חדשות שחשובות לי', 'ניתוח התיק שלי', 'שער הדולר', 'אפל מול מיקרוסופט', 'וול סטריט פתוחה?', 'מה המצב שלי?', 'מסלול הלמידה שלי'],
     answers: {
       greet: 'היי! במה נתמקד: התוכנית, חיסכון או מניות?',
       thanks: 'בשמחה. אפשר לשאול אותי כל דבר נוסף על הכסף שלכם.',
@@ -505,7 +508,7 @@ const he: Strings = {
         '{symbol} עומדת על {price}, שינוי של {change} היום ({pct}). טווח יומי {low} – {high}. המחירים עשויים להיות מעוכבים. זה לא איתות לקנייה או למכירה.',
       quoteFail: 'לא הצלחתי לקבל מחיר עבור {symbol}. בדקו את הסימול או נסו שוב מאוחר יותר.',
       help:
-        'אני יכול לעזור עם: תמונת מצב, כמה להשקיע, טיפים לחיסכון, קרן חירום, חובות, תחזית ליעד, קרנות מחקות, מניות מול אג״ח, סיכון, ירידות בשוק, קרן השתלמות ומס, קניית דירה, ריבית, אינפלציה, דמי ניהול, תיק ההשקעות שלכם ומחירי מניות (הקלידו סימול כמו AAPL או TEVA.TA).',
+        'אני עובד עם נתונים חיים. נסו: "מה קורה בשווקים?", "אפל" או "טבע" (מחיר, מגמה, סיכון, חדשות), "אפל מול מיקרוסופט", "למה אנבידיה יורדת?", "שער הדולר", "חדשות שחשובות לי", "ניתוח התיק שלי", "וול סטריט פתוחה?", "תאריך עברי", "מסלול הלמידה שלי". אני גם מסביר על חיסכון, חובות, קרן חירום, תחזית ליעד, קרנות מחקות, סיכון, מס, ריבית, אינפלציה ודמי ניהול.',
       notify: 'אפשר להפעיל טיפים שבועיים בהגדרות, תחת התראות. פעם בשבוע אשלח רעיון קצר לפי התוכנית שלכם. המספרים לא יוצאים מהטלפון.',
       portfolio: 'בתיק שלכם יש {n} אחזקות: {list}. בלשונית מניות רואים את השווי ואת הרווח או ההפסד של כל אחת.',
       portfolioNone: 'התיק שלכם ריק. בלשונית מניות הקישו "הוספת אחזקה" והזינו מה יש לכם: סימול, כמות ומחיר קנייה.',
@@ -703,9 +706,12 @@ const he: Strings = {
     notifyTest: 'שליחת טיפ לדוגמה',
     notifyOn: 'פועל',
     notifyOff: 'כבוי',
-    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance, כדי לקבל מחירים.',
+    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance (מחירים וחדשות), והאפליקציה קוראת פידים ציבוריים של חדשות (CNBC, MarketWatch, גלובס). הקוד והסיסמה נשמרים מוצפנים בטלפון.',
     version: 'כספלי {v}',
   },
 };
 
-export const STRINGS = { en, he };
+export const STRINGS: Record<'en' | 'he', Strings> = {
+  en: { ...en, ...EXTRA.en },
+  he: { ...he, ...EXTRA.he },
+};

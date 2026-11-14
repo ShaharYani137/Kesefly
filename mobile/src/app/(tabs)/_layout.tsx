@@ -2,7 +2,7 @@ import { Redirect } from 'expo-router';
 import { NativeTabs } from 'expo-router/native-tabs';
 
 import { useApp } from '@/state/app-store';
-import { useTokens } from '@/ui/theme';
+import { Fonts, useTokens } from '@/ui/theme';
 
 /**
  * Native tab bar: UITabBar on iOS (SF Symbols), Material navigation bar on Android (Material Symbols).
@@ -44,7 +44,10 @@ export default function TabsLayout() {
       key={lang}
       tintColor={colors.accent}
       backgroundColor={isIOS ? undefined : colors.card}
-      indicatorColor={isIOS ? undefined : colors.accentSoft}>
+      indicatorColor={isIOS ? undefined : colors.accentSoft}
+      // M3 navigation bar: every destination keeps its label, not only the selected one.
+      labelVisibilityMode="labeled"
+      labelStyle={{ fontFamily: Fonts.medium }}>
       {tabs.map((t) => (
         <NativeTabs.Trigger key={t.name} name={t.name}>
           <NativeTabs.Trigger.Label>{s.tabs[t.label]}</NativeTabs.Trigger.Label>

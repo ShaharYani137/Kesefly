@@ -10,34 +10,30 @@
  * get a calm weekend read). 8 weeks ahead.
  */
 import * as Notifications from 'expo-notifications';
-import { Platform } from 'react-native';
 
 import { checkup } from '@/engine/health';
 import { recommendations } from '@/engine/recommendations';
 import type { Lang, Profile } from '@/engine/types';
 import type { Strings } from '@/i18n/strings';
+import { bidi } from '@/ui/bidi';
+
+import { channelId, contentSound, DEFAULT_SOUNDS, ensureSoundChannel, type SoundId } from './sounds';
 import { ideaText } from '@/ui/idea-card';
 
 const WEEKS = 8;
-const CHANNEL = 'tips';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });
 
-async function ensureChannel(s: Strings) {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(CHANNEL, {
-    name: s.settings.notifyLabel,
-    // eslint-disable-next-line import/namespace -- enum is re-exported via `export *`, which the rule cannot follow
-    importance: Notifications.AndroidImportance.DEFAULT,
-    lightColor: '#2E7D32',
-  });
+/** Creates or renames the tips channel for the chosen sound (Android shows its name in system settings). */
+export async function ensureChannel(s: Strings, sound: SoundId = DEFAULT_SOUNDS.tips) {
+  await ensureSoundChannel('tips', sound, `${s.settings.notifyLabel} · ${s.settings3.soundNames[sound]}`);
 }
 
 /** Asks for permission if needed. Returns true when notifications may be shown. */
@@ -72,14 +68,14 @@ function tips(profile: Profile, s: Strings, lang: Lang): { title: string; body: 
 }
 
 /** Replaces all scheduled tips with a fresh set. Call when enabling, or when the plan changes. */
-export async function scheduleWeeklyTips(profile: Profile, s: Strings, lang: Lang) {
-  await ensureChannel(s);
+export async function scheduleWeeklyTips(profile: Profile, s: Strings, lang: Lang, sound: SoundId = DEFAULT_SOUNDS.tips) {
+  await ensureChannel(s, sound);
   await Notifications.cancelAllScheduledNotificationsAsync();
   const list = tips(profile, s, lang);
   for (let w = 0; w < list.length; w++) {
     await Notifications.scheduleNotificationAsync({
-      content: { title: list[w].title, body: list[w].body },
-      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: sunday(w), channelId: CHANNEL },
+      content: { title: bidi(list[w].title, lang === 'he'), body: bidi(list[w].body, lang === 'he'), sound: contentSound(sound) },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: sunday(w), channelId: channelId('tips', sound) },
     });
   }
 }
@@ -89,11 +85,11 @@ export async function cancelTips() {
 }
 
 /** Sends one tip in 3 seconds, so the user can see what it looks like. */
-export async function sendTestTip(profile: Profile, s: Strings, lang: Lang) {
-  await ensureChannel(s);
+export async function sendTestTip(profile: Profile, s: Strings, lang: Lang, sound: SoundId = DEFAULT_SOUNDS.tips) {
+  await ensureChannel(s, sound);
   const t = tips(profile, s, lang)[0];
   await Notifications.scheduleNotificationAsync({
-    content: { title: t.title, body: t.body },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3, channelId: CHANNEL },
+    content: { title: bidi(t.title, lang === 'he'), body: bidi(t.body, lang === 'he'), sound: contentSound(sound) },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: 3, channelId: channelId('tips', sound) },
   });
 }
