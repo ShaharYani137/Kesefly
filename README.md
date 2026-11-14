@@ -65,7 +65,9 @@ Free Apple ID limits:
 - The app stops opening after **7 days**. Connect the phone and click **Start** in Sideloadly again; your data stays.
 - At most 3 sideloaded apps at once.
 - Notifications are local only (weekly tips, events, price moves): they work. Remote push is off, because a free Apple ID cannot sign it (`mobile/plugins/with-local-notifications-only.js`).
-- The home-screen widget is Android only.
+- Home-screen widget: a free Apple ID through Sideloadly gets no App Group, so the app cannot share the portfolio with the widget. The widget then shows live markets (S&P 500, Nasdaq, TA-125, USD/ILS) and the Wall Street / Tel Aviv clocks.
+
+**Portfolio widget on iPhone (like Android):** install `Kesefly-AltStore.ipa` (same release) with [AltStore](https://altstore.io) or [SideStore](https://sidestore.io) instead of Sideloadly. Both are free and create a renamed App Group for your Apple ID; the app finds it at run time (`mobile/modules/kesefly-group`). Open the app once, then add the widget. A paid Apple Developer account also works.
 
 A paid Apple Developer account ($99/year) removes the 7-day limit and allows TestFlight. Then build with EAS (`eas build -p ios`) instead.
 

@@ -260,3 +260,22 @@ One section per working session. Newest at bottom.
 - Install the new `Kesefly.ipa` and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
 - Check Android chat composer has no extra bottom gap.
 - Optional: remove the branch from the iOS build push trigger after merge.
+
+## Session 8 — 2026-11-15 (branch `feature/ios-widget-sideload`)
+
+**Goal:** iPhone widget like the Android one (it showed "Open Kesefly once to show your portfolio here.").
+
+**Work done:**
+- Diagnosis: the CI `.ipa` is unsigned, and a free Apple ID through Sideloadly grants no App Group, so the app cannot share holdings with the widget.
+- Widget markets mode (works with Sideloadly): live S&P 500, Nasdaq, TA-125, USD/ILS and Wall Street / Tel Aviv clocks, phone language.
+- Portfolio widget for AltStore / SideStore / paid account: App Group resolved at run time (`modules/kesefly-group`, also in the widget); CI publishes `Kesefly-AltStore.ipa` with the App Group entitlements embedded.
+
+**Decisions:**
+- User chose both: markets fallback now + full portfolio widget through AltStore/SideStore.
+- Keep `Kesefly.ipa` unsigned so the Sideloadly install path does not change.
+- Clocks in markets mode use weekday hours only (holidays need the app's data).
+
+**Next steps:**
+- Check the CI build compiles the Swift; install and look at the widget (Sideloadly: markets).
+- Optional: try `Kesefly-AltStore.ipa` with AltStore or SideStore for the portfolio widget.
+- Remove the branch from the iOS build push trigger after merge.

@@ -10,6 +10,11 @@
 // Sizes: small (value), medium (value + movers + clocks), large (everything), and lock screen
 // rectangular / inline. Hebrew lays out right-to-left.
 //
+// No shared data (free Apple ID through Sideloadly grants no App Group, so the app cannot pass
+// its holdings): the widget shows live markets instead: S&P 500, Nasdaq, TA-125, USD/ILS and
+// Wall Street / Tel Aviv clocks, in the phone's language. The App Group name is resolved at
+// run time (AppGroupResolver.swift), because sideloading tools rename it.
+//
 // Layout values follow the Apple HIG widget guidance (apple-human-interface-guidelines
 // references/widgets.md: 16 pt margins via the default content margins, SF system text styles).
 // Brand colors are design decisions (same as the Android widget).
@@ -20,7 +25,6 @@ import WidgetKit
 
 // MARK: - Shared data
 
-let appGroup = "group.com.kesefly.app"
 let dataKey = "kesefly.widget"
 
 struct Units: Codable { let d: String; let h: String; let m: String }
@@ -83,7 +87,8 @@ struct Payload: Codable {
 }
 
 func loadPayload() -> Payload? {
-  guard let raw = UserDefaults(suiteName: appGroup)?.string(forKey: dataKey),
+  guard let group = AppGroupResolver.resolve(),
+        let raw = UserDefaults(suiteName: group)?.string(forKey: dataKey),
         let data = raw.data(using: .utf8) else { return nil }
   return try? JSONDecoder().decode(Payload.self, from: data)
 }
@@ -266,6 +271,8 @@ struct Entry: TimelineEntry {
   let date: Date
   let payload: Payload?
   let numbers: Numbers?
+  /// Markets-only mode (no shared data): live index rows.
+  var markets: [IndexRow]? = nil
 }
 
 struct Provider: TimelineProvider {
@@ -280,7 +287,9 @@ struct Provider: TimelineProvider {
     Task {
       let now = Date()
       guard let p = loadPayload() else {
-        completion(Timeline(entries: [Entry(date: now, payload: nil, numbers: nil)], policy: .after(now.addingTimeInterval(1800))))
+        let rows = await fetchIndexes()
+        let entries = (0..<4).map { i in Entry(date: now.addingTimeInterval(Double(i) * 900), payload: nil, numbers: nil, markets: rows) }
+        completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(1800))))
         return
       }
       let symbols = p.positions.filter { !$0.fund }.map { $0.symbol }
@@ -390,7 +399,7 @@ struct KeseflyWidgetView: View {
 
   var body: some View {
     content
-      .environment(\.layoutDirection, entry.payload?.lang == "he" ? .rightToLeft : .leftToRight)
+      .environment(\.layoutDirection, (entry.payload?.lang ?? (phoneHebrew ? "he" : "en")) == "he" ? .rightToLeft : .leftToRight)
       .containerBackground(for: .widget) { bg }
       .widgetURL(URL(string: "kesefly://"))
   }
@@ -433,11 +442,194 @@ struct KeseflyWidgetView: View {
         }
       }
     } else {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Kesefly").font(.caption.weight(.bold)).foregroundColor(gold)
-        Text("Open Kesefly once to show your portfolio here.").font(.footnote).foregroundColor(.white)
+      MarketsView(rows: entry.markets ?? [], date: entry.date)
+    }
+  }
+}
+
+// MARK: - Markets only (no shared data)
+
+/// Phone language decides the labels when the app could not share its own.
+let phoneHebrew = Locale.preferredLanguages.first?.hasPrefix("he") ?? false
+
+struct IndexRow: Identifiable {
+  let name: String
+  let value: String
+  let pct: String
+  let up: Bool
+  var id: String { name }
+}
+
+/// S&P 500, Nasdaq, TA-125 and USD/ILS straight from Yahoo. Rows that fail are left out.
+func fetchIndexes() async -> [IndexRow] {
+  let list: [(String, String, String, Int)] = [
+    ("^GSPC", "S&P 500", "S&P 500", 2),
+    ("^IXIC", "Nasdaq", "נאסד״ק", 2),
+    ("^TA125.TA", "TA-125", "ת״א 125", 2),
+    ("ILS=X", "USD/ILS", "דולר/שקל", 3),
+  ]
+  var quotes: [String: LiveQuote] = [:]
+  await withTaskGroup(of: (String, LiveQuote?).self) { group in
+    for item in list {
+      let s = item.0
+      group.addTask { (s, await fetchQuote(s)) }
+    }
+    for await (s, q) in group {
+      if let q = q { quotes[s] = q }
+    }
+  }
+  var rows: [IndexRow] = []
+  for (sym, en, he, digits) in list {
+    guard let q = quotes[sym], q.price > 0 else { continue }
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.locale = Locale(identifier: "en_US")
+    f.minimumFractionDigits = digits
+    f.maximumFractionDigits = digits
+    // Index points as Yahoo gives them (TA-125 comes as "ILS", not agorot, so no scaling).
+    let value = q.price
+    let change = q.change
+    let prev = value - change
+    let pct = prev > 0 ? change / prev : 0
+    rows.append(IndexRow(name: phoneHebrew ? he : en, value: f.string(from: NSNumber(value: value)) ?? "\(value)", pct: signedPct(pct), up: pct >= 0))
+  }
+  return rows
+}
+
+/// Regular session in local exchange minutes for a weekday (1 = Sunday ... 7 = Saturday).
+/// Same hours as src/engine/clock.ts. Holidays are not known here (design decision: only the
+/// app knows them; without shared data the widget shows weekday hours).
+func sessionMinutes(_ ny: Bool, weekday: Int) -> (Int, Int)? {
+  if weekday == 1 || weekday == 7 { return nil }
+  if ny { return (9 * 60 + 30, 16 * 60) }
+  return weekday == 6 ? (9 * 60 + 59, 13 * 60 + 50) : (9 * 60 + 59, 17 * 60 + 25)
+}
+
+/// Wall Street and Tel Aviv clocks computed on the phone (markets-only mode).
+func localClocks(at date: Date) -> [Clock] {
+  let he = phoneHebrew
+  let units = he ? Units(d: "י׳", h: "ש׳", m: "ד׳") : Units(d: "d", h: "h", m: "m")
+  let markets: [(Bool, String, String, String)] = [
+    (true, he ? "וול סטריט" : "Wall Street", "🇺🇸", "America/New_York"),
+    (false, he ? "תל אביב" : "Tel Aviv", "🇮🇱", "Asia/Jerusalem"),
+  ]
+  var out: [Clock] = []
+  for (ny, label, flag, tzId) in markets {
+    let tz = TimeZone(identifier: tzId) ?? .current
+    var cal = Calendar(identifier: .gregorian)
+    cal.timeZone = tz
+    let now = cal.component(.hour, from: date) * 60 + cal.component(.minute, from: date)
+    let today = sessionMinutes(ny, weekday: cal.component(.weekday, from: date))
+    var open = false
+    var minutes = 0
+    if let s = today, now >= s.0, now < s.1 {
+      open = true
+      minutes = s.1 - now
+    } else if let s = today, now < s.0 {
+      minutes = s.0 - now
+    } else {
+      // Rest of today, then whole closed days, then the next session's opening minute.
+      minutes = 24 * 60 - now
+      for d in 1...7 {
+        let day = cal.date(byAdding: .day, value: d, to: date) ?? date
+        if let s = sessionMinutes(ny, weekday: cal.component(.weekday, from: day)) {
+          minutes += s.0
+          break
+        }
+        minutes += 24 * 60
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+    let phase = open ? (he ? "פתוח" : "Open") : (he ? "סגור" : "Closed")
+    let tmpl = open ? (he ? "נסגר בעוד {t}" : "Closes in {t}") : (he ? "נפתח בעוד {t}" : "Opens in {t}")
+    let status = phase + " · " + tmpl.replacingOccurrences(of: "{t}", with: duration(minutes, units))
+    out.append(Clock(label: label, flag: flag, time: hhmm(date, tz), status: status, open: open))
+  }
+  return out
+}
+
+struct IndexList: View {
+  let rows: [IndexRow]
+  var showValue = true
+  var body: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      ForEach(rows) { r in
+        HStack(spacing: 6) {
+          Text(r.name).font(.caption.weight(.semibold)).foregroundColor(.white).lineLimit(1)
+          Spacer(minLength: 2)
+          if showValue { Text(r.value).font(.caption2).foregroundColor(muted).lineLimit(1) }
+          Text(r.pct).font(.caption.weight(.bold)).foregroundColor(r.up ? upColor : downColor).lineLimit(1)
+        }
+        .environment(\.layoutDirection, .leftToRight)
+      }
+    }
+    .padding(8)
+    .frame(maxWidth: .infinity, alignment: .topLeading)
+    .background(card)
+    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+  }
+}
+
+/// Markets-only widget: live indexes and USD/ILS, plus the market clocks.
+struct MarketsView: View {
+  @Environment(\.widgetFamily) var family
+  let rows: [IndexRow]
+  let date: Date
+  var title: String { phoneHebrew ? "כספלי · שווקים" : "Kesefly · Markets" }
+  var updated: String { (phoneHebrew ? "עודכן " : "Updated ") + hhmm(date) }
+  var offline: String { phoneHebrew ? "אין חיבור לרשת" : "No connection" }
+
+  var body: some View {
+    switch family {
+    case .accessoryInline:
+      Text(rows.first.map { "\($0.name) \($0.pct)" } ?? title)
+    case .accessoryRectangular:
+      VStack(alignment: .leading, spacing: 1) {
+        ForEach(Array(rows.prefix(3))) { r in
+          Text("\(r.name) \(r.pct)").font(.caption2).lineLimit(1).minimumScaleFactor(0.7)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+    case .systemSmall:
+      VStack(alignment: .leading, spacing: 6) {
+        Text(title).font(.caption2.weight(.bold)).foregroundColor(gold).lineLimit(1)
+        if rows.isEmpty {
+          Text(offline).font(.footnote).foregroundColor(.white)
+        } else {
+          ForEach(Array(rows.prefix(4))) { r in
+            HStack(spacing: 4) {
+              Text(r.name).font(.caption2.weight(.semibold)).foregroundColor(.white).lineLimit(1)
+              Spacer(minLength: 2)
+              Text(r.pct).font(.caption2.weight(.bold)).foregroundColor(r.up ? upColor : downColor).lineLimit(1)
+            }
+            .environment(\.layoutDirection, .leftToRight)
+          }
+        }
+        Spacer(minLength: 0)
+        Text(updated).font(.system(size: 10)).foregroundColor(muted).lineLimit(1)
+      }
+    default:
+      VStack(alignment: .leading, spacing: 8) {
+        HStack {
+          Text(title).font(.caption.weight(.bold)).foregroundColor(gold).lineLimit(1)
+          Spacer(minLength: 4)
+          Text(updated).font(.caption2).foregroundColor(muted).lineLimit(1)
+        }
+        if rows.isEmpty {
+          Text(offline).font(.footnote).foregroundColor(.white)
+        } else {
+          if family == .systemMedium {
+            // Two columns of two rows, so all four fit above the clocks.
+            HStack(spacing: 8) {
+              IndexList(rows: Array(rows.prefix(2)), showValue: false)
+              IndexList(rows: Array(rows.dropFirst(2).prefix(2)), showValue: false)
+            }
+          } else {
+            IndexList(rows: rows)
+          }
+        }
+        Spacer(minLength: 0)
+        ClockRow(clocks: localClocks(at: date))
+      }
     }
   }
 }
@@ -451,7 +643,7 @@ struct KeseflyWidget: Widget {
       KeseflyWidgetView(entry: entry)
     }
     .configurationDisplayName("Kesefly")
-    .description("Portfolio value, top movers and market clocks.")
+    .description("Portfolio value, top movers and market clocks. Live markets when the portfolio is not shared.")
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryInline])
   }
 }

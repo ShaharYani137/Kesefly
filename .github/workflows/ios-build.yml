@@ -12,7 +12,7 @@ name: iOS build
 on:
   workflow_dispatch:
   push:
-    branches: [main, Shavit, Shahar]
+    branches: [main, Shavit, Shahar, feature/ios-widget-sideload]
     paths:
       - 'mobile/**'
       - '.github/workflows/ios-build.yml'
@@ -91,10 +91,34 @@ jobs:
           zip -qry Kesefly.ipa Payload
           ls -lh Kesefly.ipa
 
+      # Second file for AltStore / SideStore: the same app with an ad-hoc signature that carries
+      # the App Group entitlements (app + widget). Those tools read the requested group, create
+      # one for the free team (renamed, listed in Info.plist ALTAppGroups) and the app finds it
+      # at run time (modules/kesefly-group), so the widget shows the portfolio.
+      # Kesefly.ipa above stays unsigned: a free Apple ID through Sideloadly gets no App Group
+      # anyway, and the widget then shows live markets.
+      - name: Package .ipa with entitlements (AltStore / SideStore)
+        run: |
+          APP=Payload/Kesefly.app
+          APP_ENT=$(ls ios/*/*.entitlements | head -1)
+          WIDGET_ENT=$(find ios -name generated.entitlements | head -1)
+          echo "app: $APP_ENT  widget: $WIDGET_ENT"
+          codesign --force --deep --sign - "$APP"
+          for X in "$APP"/PlugIns/*.appex; do
+            [ -d "$X" ] && [ -n "$WIDGET_ENT" ] && codesign --force --sign - --entitlements "$WIDGET_ENT" "$X"
+          done
+          codesign --force --sign - --entitlements "$APP_ENT" "$APP"
+          codesign -d --entitlements - "$APP"
+          for X in "$APP"/PlugIns/*.appex; do codesign -d --entitlements - "$X" || true; done
+          zip -qry Kesefly-AltStore.ipa Payload
+          ls -lh Kesefly-AltStore.ipa
+
       - uses: actions/upload-artifact@v4
         with:
           name: Kesefly-ios
-          path: mobile/Kesefly.ipa
+          path: |
+            mobile/Kesefly.ipa
+            mobile/Kesefly-AltStore.ipa
           retention-days: 30
 
       # main only: also publish the .ipa as a GitHub Release, so it has a permanent public
@@ -108,10 +132,16 @@ jobs:
           name: Kesefly iPhone build ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: mobile/Kesefly.ipa
+          files: |
+            mobile/Kesefly.ipa
+            mobile/Kesefly-AltStore.ipa
           body: |
             Unsigned iPhone app. Install from Windows with Sideloadly and a free Apple ID
             (see README, "Run on an iPhone (Windows, no Mac)").
+            Kesefly.ipa: Sideloadly. The widget shows live markets (a free Apple ID through
+            Sideloadly gets no App Group, so the app cannot share the portfolio with it).
+            Kesefly-AltStore.ipa: AltStore / SideStore (free) or a paid account. The widget
+            shows the portfolio, like on Android.
 
       - name: Upload build log on failure
         if: failure()

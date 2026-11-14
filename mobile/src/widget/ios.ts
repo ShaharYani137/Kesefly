@@ -12,6 +12,10 @@
  *   and early closes; Swift only looks up the current segment);
  * - every label in the app language.
  * Android: ExtensionStorage is a no-op there (the native module is iOS only).
+ *
+ * Sideloading renames or drops the App Group, so the group comes from the local module
+ * `modules/kesefly-group` (the group this install was really signed with). With no group
+ * (free Apple ID through Sideloadly) nothing can be shared: the widget then shows markets only.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExtensionStorage } from '@bacons/apple-targets';
@@ -22,6 +26,8 @@ import { getQuotes, getUsdIls } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
 import { STORAGE_KEY } from '@/state/app-store';
+
+import { appGroup } from '../../modules/kesefly-group';
 
 import { widgetData } from './data';
 
@@ -82,13 +88,17 @@ export async function syncIosWidget(): Promise<void> {
   const s = STRINGS[lang];
   const now = Date.now();
 
-  // Snapshot first: it fetches quotes and refreshes the shared quote cache.
-  const snap = await widgetData();
+  // Snapshot first: it fetches quotes and refreshes the shared quote cache. A failed fetch must
+  // not stop the write below, so the widget still gets the positions.
+  const snap = await widgetData().catch(() => null);
   const lots = bySymbol(saved.holdings ?? []);
   const sold = bySymbol(saved.sales ?? []);
   const divs = bySymbol(saved.dividends ?? []);
   const symbols = [...new Set([...lots.keys(), ...sold.keys(), ...divs.keys()])];
-  const [quotes, rate] = await Promise.all([getQuotes(symbols).catch(() => ({}) as Awaited<ReturnType<typeof getQuotes>>), getUsdIls()]);
+  const [quotes, rate] = await Promise.all([
+    getQuotes(symbols).catch(() => ({}) as Awaited<ReturnType<typeof getQuotes>>),
+    getUsdIls().catch(() => null),
+  ]);
 
   const positions: IosPosition[] = symbols.map((symbol) => {
     const mine = lots.get(symbol) ?? [];
@@ -129,10 +139,12 @@ export async function syncIosWidget(): Promise<void> {
       { label: s.clock.wallStreet, flag: '🇺🇸', tz: 'America/New_York', segments: segments('NY', lang, now) },
       { label: s.clock.telAviv, flag: '🇮🇱', tz: 'Asia/Jerusalem', segments: segments('TLV', lang, now) },
     ],
-    snapshot: { value: snap.value, day: snap.day, dayUp: snap.dayUp, gain: snap.gain, gainUp: snap.gainUp, movers: snap.movers.map(({ symbol, price, pct, up }) => ({ symbol, price, pct, up })), rate: snap.rate, updated: snap.updated },
+    snapshot: snap
+      ? { value: snap.value, day: snap.day, dayUp: snap.dayUp, gain: snap.gain, gainUp: snap.gainUp, movers: snap.movers.map(({ symbol, price, pct, up }) => ({ symbol, price, pct, up })), rate: snap.rate, updated: snap.updated }
+      : { value: null, day: '', dayUp: true, gain: '', gainUp: true, movers: [], rate: null, updated: '' },
   };
 
-  const storage = new ExtensionStorage(APP_GROUP);
+  const storage = new ExtensionStorage(appGroup() ?? APP_GROUP);
   storage.set(KEY, JSON.stringify(payload));
   ExtensionStorage.reloadWidget();
 }
