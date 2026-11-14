@@ -5,13 +5,13 @@
  */
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { EventCategory } from '@/engine/news';
 import { useApp } from '@/state/app-store';
-import { BackButton, Card, Chip, LiveDot, Row, Txt } from '@/ui/components';
+import { BackButton, Card, Chip, KeyboardScrollView, LiveDot, Row, Txt } from '@/ui/components';
 import { EventCard, useEvents } from '@/ui/events';
 import { enterItem, Springs } from '@/ui/motion';
 import { Metrics, useTokens } from '@/ui/theme';
@@ -48,7 +48,7 @@ export default function EventsScreen() {
       <View style={{ flexDirection: 'row', paddingHorizontal: 4, paddingTop: 4 }}>
         <BackButton onPress={() => router.back()} />
       </View>
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={{ padding: Metrics.margin, paddingBottom: Metrics.margin * 3, gap: Metrics.gap }}
         refreshControl={<RefreshControl refreshing={loading && events !== null} onRefresh={refresh} tintColor={colors.accent} colors={[colors.accent]} />}>
         <View style={{ gap: 4 }}>
@@ -85,7 +85,7 @@ export default function EventsScreen() {
         <Txt variant="footnote" color="textSecondary">
           {s.disclaimer}
         </Txt>
-      </ScrollView>
+      </KeyboardScrollView>
     </SafeAreaView>
   );
 }

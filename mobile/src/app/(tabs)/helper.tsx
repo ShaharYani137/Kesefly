@@ -21,7 +21,7 @@
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
@@ -80,6 +80,7 @@ export default function HelperScreen() {
   const [busy, setBusy] = useState(false);
   const [usual, setUsual] = useState<{ tickers: string[]; learned: number }>({ tickers: [], learned: 0 });
   const list = useRef<FlatList<Msg>>(null);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   // True while the user is reading older messages (scrolled up): auto-scroll then leaves the
   // screen alone, so touching and scrolling feel free. Back near the bottom, it follows again.
   const reading = useRef(false);
@@ -231,7 +232,10 @@ export default function HelperScreen() {
             ))}
           </HScroll>
 
-          <View
+          {/* A tap anywhere on the bar (not only on the text line) opens the keyboard. */}
+          <Pressable
+            accessible={false}
+            onPress={() => input.current?.focus()}
             style={{
               marginHorizontal: Metrics.margin,
               flexDirection: 'row',
@@ -247,6 +251,7 @@ export default function HelperScreen() {
               paddingVertical: 4,
             }}>
             <TextInput
+              ref={input}
               accessibilityLabel={s.helper.placeholder}
               value={draft}
               onChangeText={setDraft}
@@ -273,7 +278,7 @@ export default function HelperScreen() {
             <View style={{ transform: [{ scaleX: isRTL ? -1 : 1 }], opacity: busy || !draft.trim() ? 0.4 : 1 }}>
               <IconButton sf="arrow.up" md="send" tone="filled" label={s.helper.send} onPress={send} />
             </View>
-          </View>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

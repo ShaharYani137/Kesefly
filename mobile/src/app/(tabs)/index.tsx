@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import * as Haptics from 'expo-haptics';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
@@ -17,6 +18,7 @@ import {
   HelperAvatar,
   Icon,
   IconButton,
+  NumberField,
   ProgressBar,
   Row,
   Screen,
@@ -135,13 +137,7 @@ export default function HomeScreen() {
       </Appear>
 
       <Appear index={5}>
-        <Card>
-          <Txt variant="footnote" color="textSecondary">
-            {s.home.netWorth}
-          </Txt>
-          <Txt variant="title">{money(p.cashSavings + p.investments)}</Txt>
-          <Button kind="plain" label={s.finances.edit} onPress={() => router.push('/finances')} />
-        </Card>
+        <NetWorthCard />
       </Appear>
 
       {p.goalAmount > 0 ? (
@@ -217,5 +213,65 @@ export default function HomeScreen() {
       </View>
       <Disclaimer />
     </Screen>
+  );
+}
+
+/**
+ * "Savings + investments" card. Tap Edit (or the amount) to change cash savings and current
+ * investments right here; Save writes the profile. "All my numbers" opens the full editor
+ * (app/finances.tsx) for debt, income, expenses and monthly investing.
+ */
+function NetWorthCard() {
+  const { s, profile: p, lang, updateProfile } = useApp();
+  const [edit, setEdit] = useState<{ cashSavings: number; investments: number } | null>(null);
+  const money = (v: number) => formatMoney(v, p.currency, lang);
+  const sym = p.currency === 'ILS' ? '₪' : '$';
+  const open = () => setEdit({ cashSavings: p.cashSavings, investments: p.investments });
+  const save = () => {
+    if (edit) updateProfile(edit);
+    setEdit(null);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+  };
+
+  if (!edit) {
+    return (
+      <Card>
+        <Pressable accessibilityRole="button" accessibilityHint={s.finances.edit} onPress={open}>
+          <Txt variant="footnote" color="textSecondary">
+            {s.home.netWorth}
+          </Txt>
+          <Txt variant="title">{money(p.cashSavings + p.investments)}</Txt>
+          <Txt variant="subhead" color="textSecondary">
+            {`${s.fields.cashSavings}: ${money(p.cashSavings)} · ${s.fields.investments}: ${money(p.investments)}`}
+          </Txt>
+        </Pressable>
+        <Row>
+          <View style={{ flex: 1 }}>
+            <Button kind="tonal" label={s.finances.edit} onPress={open} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Button kind="plain" label={s.finances.all} onPress={() => router.push('/finances')} />
+          </View>
+        </Row>
+      </Card>
+    );
+  }
+  return (
+    <Card style={{ gap: 16 }}>
+      <Txt variant="headline">{s.home.netWorth}</Txt>
+      <NumberField label={s.fields.cashSavings} prefix={sym} value={edit.cashSavings} onChange={(cashSavings) => setEdit({ ...edit, cashSavings })} />
+      <NumberField label={s.fields.investments} prefix={sym} value={edit.investments} onChange={(investments) => setEdit({ ...edit, investments })} hint={s.finances.investmentsHint} />
+      <Txt variant="subhead" color="textSecondary">
+        {fill(s.finances.total, { v: money(edit.cashSavings + edit.investments) })}
+      </Txt>
+      <Row>
+        <View style={{ flex: 1 }}>
+          <Button kind="tonal" label={s.settings.cancel} onPress={() => setEdit(null)} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button label={s.common.save} onPress={save} />
+        </View>
+      </Row>
+    </Card>
   );
 }

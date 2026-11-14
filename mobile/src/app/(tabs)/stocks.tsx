@@ -7,7 +7,7 @@
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ import {
   Disclaimer,
   Icon,
   IconButton,
+  KeyboardScrollView,
   Row,
   SectionHeader,
   Segmented,
@@ -64,9 +65,8 @@ export default function StocksScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={{ paddingVertical: Metrics.margin, paddingBottom: Metrics.margin * 3, gap: Metrics.gap }}
-        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={pf.loading} onRefresh={pf.refresh} tintColor={colors.accent} colors={[colors.accent]} />}>
         <Row style={{ alignItems: 'flex-start', marginTop: 8, paddingHorizontal: Metrics.margin }}>
           <View style={{ flex: 1, gap: 4 }}>
@@ -267,7 +267,7 @@ export default function StocksScreen() {
 
           <Disclaimer />
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </SafeAreaView>
   );
 }

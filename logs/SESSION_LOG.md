@@ -236,6 +236,8 @@ One section per working session. Newest at bottom.
 **Work done:**
 - New "Savings and investments" screen (`app/finances.tsx`): cash savings, current investments, high-interest debt, monthly income, expenses and planned investing on one page. Opened from the Home net-worth card (Edit) and the Plan tab tools card.
 - Chat keyboard (iPhone): composer was under the native iOS tab bar. Bottom safe-area edge added to the helper screen; keyboard inset hook animates with the keyboard and re-measures on keyboard frame changes.
+- Home "Savings + investments" card edits cash savings and investments in place (Edit, Save / Cancel), with a link to all numbers.
+- Keyboard on every page: shared `KeyboardScrollView` keeps the focused field above the keyboard and content above the iOS tab bar (Screen, Stocks, Events); onboarding uses the measured inset; tap anywhere on the chat bar opens the keyboard.
 
 **Decisions:**
 - JS-only keyboard fix (no new native dependency), so the GitHub iOS build only rebuilds the bundle.

@@ -332,6 +332,8 @@ const en = {
     balances: 'What you have',
     monthly: 'Every month',
     investmentsHint: 'Funds and stocks. Pension and study funds go in Pension and savings.',
+    all: 'All my numbers',
+    total: 'Total: {v}',
   },
   holding: {
     title: 'Edit {symbol}',
@@ -745,6 +747,8 @@ const he: ExtraStrings = {
     balances: 'מה יש לכם',
     monthly: 'בכל חודש',
     investmentsHint: 'קרנות ומניות. פנסיה וקרן השתלמות נכנסות בפנסיה וחסכונות.',
+    all: 'כל המספרים שלי',
+    total: 'סה״כ: {v}',
   },
   holding: {
     title: 'עריכת {symbol}',

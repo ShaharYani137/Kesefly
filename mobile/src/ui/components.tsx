@@ -1,11 +1,12 @@
 import { Children, type ReactNode, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, type TextProps, TextInput, View, type ViewStyle } from 'react-native';
+import { Platform, Pressable, ScrollView, type ScrollViewProps, StyleSheet, Text, type TextProps, TextInput, View, type ViewStyle } from 'react-native';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useApp } from '@/state/app-store';
 import { bidi, ltr } from '@/ui/bidi';
+import { useKeyboardInset } from '@/ui/keyboard';
 import { enterItem, Springs } from '@/ui/motion';
 import { Fonts, Metrics, type TypeRole, useTokens } from '@/ui/theme';
 
@@ -157,14 +158,12 @@ export function Screen({
           <BackButton onPress={onBack} />
         </View>
       ) : null}
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
+      <KeyboardScrollView
         contentContainerStyle={{
           padding: Metrics.margin,
           paddingBottom: Metrics.margin * 3,
           gap: Metrics.gap,
-        }}
-        keyboardShouldPersistTaps="handled">
+        }}>
         {title ? (
           <View
             style={{
@@ -187,8 +186,33 @@ export function Screen({
           </View>
         ) : null}
         {children}
-      </ScrollView>
+      </KeyboardScrollView>
     </SafeAreaView>
+  );
+}
+
+/**
+ * Scroll view that keeps typed-in fields above the keyboard and page content above the tab bar.
+ * iOS: the native tab bar lies over the screen, so content insets follow it ("automatic"), and
+ * the scroll view insets itself by the keyboard and scrolls the focused field into view
+ * (automaticallyAdjustKeyboardInsets). Android (edge-to-edge, window does not resize): the
+ * wrapper is padded by the keyboard overlap (ui/keyboard.ts); the shrinking ScrollView keeps the
+ * focused field visible.
+ */
+export function KeyboardScrollView({ children, ...rest }: ScrollViewProps) {
+  const { ref, inset } = useKeyboardInset();
+  const android = Platform.OS === 'android';
+  return (
+    <View ref={ref} style={{ flex: 1, paddingBottom: android ? inset : 0 }}>
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode={android ? 'on-drag' : 'interactive'}
+        {...rest}>
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 
