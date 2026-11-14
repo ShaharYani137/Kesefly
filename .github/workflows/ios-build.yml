@@ -21,6 +21,9 @@ concurrency:
   group: ios-build-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write # publish the release on main
+
 jobs:
   ios:
     runs-on: macos-latest
@@ -93,6 +96,22 @@ jobs:
           name: Kesefly-ios
           path: mobile/Kesefly.ipa
           retention-days: 30
+
+      # main only: also publish the .ipa as a GitHub Release, so it has a permanent public
+      # link that needs no GitHub login:
+      # https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa
+      - name: Publish release (main)
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-build-${{ github.run_number }}
+          name: Kesefly iPhone build ${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          files: mobile/Kesefly.ipa
+          body: |
+            Unsigned iPhone app. Install from Windows with Sideloadly and a free Apple ID
+            (see README, "Run on an iPhone (Windows, no Mac)").
 
       - name: Upload build log on failure
         if: failure()

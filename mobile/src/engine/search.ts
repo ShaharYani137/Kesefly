@@ -1,7 +1,7 @@
 /**
  * Find a stock by ticker, company name (English or Hebrew) or Tel Aviv security number
  * (מספר נייר ערך). Two sources:
- * - Every tradable Tel Aviv security (shares, ETFs, bonds, warrants), bundled from the TASE
+ * - Every tradable Tel Aviv security (shares, ETFs, mutual funds, bonds, warrants), bundled from the TASE
  *   public list (`src/data/tase-securities.json`, rebuilt by `scripts/make_tase_list.py`).
  *   Works offline, in Hebrew and by security number.
  * - Yahoo Finance search for all other markets (Latin names and tickers).
@@ -9,7 +9,7 @@
  */
 import TASE from '@/data/tase-securities.json';
 
-export type SecurityKind = 'share' | 'etf' | 'bond' | 'warrant';
+export type SecurityKind = 'share' | 'etf' | 'fund' | 'bond' | 'warrant';
 
 export type SymbolMatch = {
   symbol: string;
@@ -45,7 +45,7 @@ const HEBREW = /[֐-׿]/;
 const LIMIT = 10;
 
 /** Lower score = better: exact number/symbol, then name starts with the query, then contains; shares before ETFs, bonds, warrants. */
-const KIND_RANK: Record<SecurityKind, number> = { share: 0, etf: 1, bond: 2, warrant: 3 };
+const KIND_RANK: Record<SecurityKind, number> = { share: 0, etf: 1, fund: 2, bond: 3, warrant: 4 };
 
 function localMatches(q: string): SymbolMatch[] {
   const n = norm(q);
@@ -69,7 +69,7 @@ function localMatches(q: string): SymbolMatch[] {
       else continue;
     }
     const name = he && en ? `${he} · ${en}` : he || en;
-    scored.push({ score: score + KIND_RANK[kind], m: { symbol, name, exchange: 'Tel Aviv', taseId: id, kind } });
+    scored.push({ score: score + KIND_RANK[kind], m: { symbol, name, exchange: kind === 'fund' ? 'Tel Aviv · Fund' : 'Tel Aviv', taseId: id, kind } });
   }
   if (!digits) {
     for (const a of HEBREW_ALIASES) {

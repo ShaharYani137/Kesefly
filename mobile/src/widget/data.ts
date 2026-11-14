@@ -5,6 +5,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { bySymbol, type DividendIn, type LotIn, position, type SaleIn } from '@/engine/positions';
 import { marketStatus, formatDuration } from '@/engine/clock';
 import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
@@ -57,7 +58,13 @@ export type WidgetData = {
   updated: string;
 };
 
-type Saved = { lang?: Lang; holdings?: { symbol: string; shares: number; buyPrice: number }[]; profile?: { currency?: 'USD' | 'ILS' } };
+type Saved = {
+  lang?: Lang;
+  holdings?: (LotIn & { symbol: string })[];
+  sales?: (SaleIn & { symbol: string })[];
+  dividends?: (DividendIn & { symbol: string })[];
+  profile?: { currency?: 'USD' | 'ILS' };
+};
 
 const two = (n: number) => String(n).padStart(2, '0');
 
@@ -97,6 +104,9 @@ export async function widgetData(): Promise<WidgetData> {
   const s = STRINGS[lang];
   const cur = saved.profile?.currency ?? 'USD';
   const holdings = saved.holdings ?? [];
+  const lotsBy = bySymbol(holdings);
+  const salesBy = bySymbol(saved.sales ?? []);
+  const divsBy = bySymbol(saved.dividends ?? []);
 
   let value: string | null = null;
   let day = '';
@@ -104,7 +114,7 @@ export async function widgetData(): Promise<WidgetData> {
   let dayUp = true;
   let gainUp = true;
   let movers: MoverLine[] = [];
-  const symbols = [...new Set(holdings.map((h) => h.symbol.toUpperCase()))];
+  const symbols = [...new Set([...holdings, ...(saved.sales ?? [])].map((h) => h.symbol.toUpperCase()))];
   const [fresh, freshRate, cache] = await Promise.all([
     symbols.length ? withTimeout(getQuotes(symbols, true), {} as Record<string, Quote>) : Promise.resolve<Record<string, Quote>>({}),
     withTimeout(getUsdIls(), null),
@@ -116,24 +126,33 @@ export async function widgetData(): Promise<WidgetData> {
   const stale = symbols.some((sym) => !fresh[sym]) || (freshRate == null && rate != null);
   const charts: Record<string, Spark> = { ...cache?.charts };
   if (holdings.length) {
+    // Same math as the app (engine/positions.ts): sales, dividends and fees count in the gain.
     let total = 0;
-    let cost = 0;
+    let gainSum = 0;
+    let invested = 0;
     let dayChange = 0;
-    for (const h of holdings) {
-      const q = quotes[h.symbol.toUpperCase()];
+    const held = new Set<string>();
+    for (const sym of new Set([...lotsBy.keys(), ...salesBy.keys(), ...divsBy.keys()])) {
+      const q = quotes[sym];
       if (!q) continue;
-      total += convert(q.price * h.shares, q.currency, cur, rate);
-      cost += convert(h.buyPrice * h.shares, q.currency, cur, rate);
-      dayChange += convert(q.change * h.shares, q.currency, cur, rate);
+      const lots = lotsBy.get(sym) ?? [];
+      const p = position(lots, salesBy.get(sym) ?? [], divsBy.get(sym) ?? []);
+      const conv = (v: number) => convert(v, q.currency, cur, rate);
+      if (p.shares > 0) held.add(sym);
+      total += conv(q.price * p.shares);
+      dayChange += conv(q.change * p.shares);
+      gainSum += conv(q.price * p.shares - p.cost + p.realized + p.dividends);
+      invested += conv(lots.reduce((a, l) => a + l.shares * l.buyPrice + (l.fee ?? 0), 0));
     }
     if (total > 0) {
       value = formatPrice(total, cur, lang);
       day = `${s.stock.dayChange} ${formatSigned(dayChange, cur, lang)}`;
       dayUp = dayChange >= 0;
-      gain = `${s.stock.totalGain} ${formatSigned(cost ? total / cost - 1 : 0, cur, lang, true)}`;
-      gainUp = total >= cost;
+      gain = `${s.stock.totalGain} ${formatSigned(invested ? gainSum / invested : 0, cur, lang, true)}`;
+      gainUp = gainSum >= 0;
     }
     const top = symbols
+      .filter((sym) => held.has(sym))
       .map((sym) => quotes[sym])
       .filter((q) => !!q)
       .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))

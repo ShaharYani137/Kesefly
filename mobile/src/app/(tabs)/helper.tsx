@@ -29,6 +29,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { netHoldings } from '@/engine/positions';
 import { type Action, ask as assistantAsk, type Memory, type ThinkStep, thinkingSteps } from '@/engine/assistant';
 import { type AnswerSource, favorites, feedback, getBrain, loadBrain } from '@/engine/brain';
 import { fill, useApp } from '@/state/app-store';
@@ -61,7 +62,9 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 let nextId = 1;
 
 export default function HelperScreen() {
-  const { s, lang, isRTL, profile, watchlist, holdings, academy } = useApp();
+  const { s, lang, isRTL, profile, watchlist, holdings: lots, sales, academy } = useApp();
+  // The assistant sees open positions only: sold shares are subtracted (engine/positions.ts).
+  const holdings = useMemo(() => netHoldings(lots, sales), [lots, sales]);
   const memory = useRef<Memory>({});
   const { ref: kbRef, inset: kbInset, open: kbOpen } = useKeyboardInset();
   const { colors, type, isIOS } = useTokens();

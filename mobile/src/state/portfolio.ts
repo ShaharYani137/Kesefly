@@ -4,9 +4,10 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { bySymbol, position } from '@/engine/positions';
 import { convert, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote, type RangeKey } from '@/engine/stocks';
 
-import { type Holding, useApp } from './app-store';
+import { type Dividend, type Holding, type Sale, useApp } from './app-store';
 
 export type PositionRow = {
   symbol: string;
@@ -16,14 +17,24 @@ export type PositionRow = {
   quote?: Quote;
   /** In the user's currency. */
   value: number;
+  /** Cost basis of the shares held now, fees included. */
   cost: number;
   day: number;
+  /** Profit locked in by sales, dividends after tax, and all fees paid (user's currency). */
+  realized: number;
+  dividends: number;
+  fees: number;
+  /** Unrealized + realized + dividends (user's currency). */
+  gain: number;
   weight: number;
   ids: string[];
 };
 
+/** Currency of a symbol before its quote arrives: Tel Aviv (incl. funds) is ILS, the rest USD. */
+export const guessCurrency = (symbol: string) => (symbol.endsWith('.TA') ? 'ILS' : 'USD');
+
 export function usePortfolio(extraSymbols: string[] = []) {
-  const { holdings, profile } = useApp();
+  const { holdings, sales, dividends, profile } = useApp();
   const cur = profile.currency;
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
   const [rate, setRate] = useState<number | null>(null);
@@ -33,8 +44,8 @@ export function usePortfolio(extraSymbols: string[] = []) {
 
   const extraKey = extraSymbols.join(',');
   const symbols = useMemo(
-    () => [...new Set([...holdings.map((h) => h.symbol), ...extraKey.split(',').filter(Boolean)])],
-    [holdings, extraKey],
+    () => [...new Set([...holdings.map((h) => h.symbol), ...sales.map((x) => x.symbol), ...extraKey.split(',').filter(Boolean)])],
+    [holdings, sales, extraKey],
   );
 
   const fetchAll = useCallback((force: boolean) => Promise.all([getQuotes(symbols, force), getUsdIls()]), [symbols]);
@@ -62,14 +73,23 @@ export function usePortfolio(extraSymbols: string[] = []) {
     fetchAll(true).then(apply);
   };
 
+  const all = useMemo(() => groupRows(holdings, sales, dividends, quotes, cur, rate), [holdings, sales, dividends, quotes, cur, rate]);
+  // Open positions only; fully sold symbols still count in realized / dividends / fees.
   const rows = useMemo(() => {
-    const list = groupRows(holdings, quotes, cur, rate);
-    const sum = list.reduce((a, r) => a + r.value, 0);
-    return list.map((r) => ({ ...r, weight: sum ? r.value / sum : 0 }));
-  }, [holdings, quotes, cur, rate]);
+    const open = all.filter((r) => r.shares > 0);
+    const sum = open.reduce((a, r) => a + r.value, 0);
+    return open.map((r) => ({ ...r, weight: sum ? r.value / sum : 0 }));
+  }, [all]);
   const total = rows.reduce((a, r) => a + r.value, 0);
   const cost = rows.reduce((a, r) => a + r.cost, 0);
   const day = rows.reduce((a, r) => a + r.day, 0);
+  const realized = all.reduce((a, r) => a + r.realized, 0);
+  const income = all.reduce((a, r) => a + r.dividends, 0);
+  const fees = all.reduce((a, r) => a + r.fees, 0);
+  /** Total gain: unrealized on held shares + realized from sales + dividends. Fees are already inside cost and realized. */
+  const gain = total - cost + realized + income;
+  /** Base for the gain %: cost of held shares plus cost of shares already sold. */
+  const invested = all.reduce((a, r) => a + r.invested, 0);
 
   /** Daily portfolio value over a range, in the user's currency (holdings forward-filled by date). */
   const history = useCallback(
@@ -106,28 +126,50 @@ export function usePortfolio(extraSymbols: string[] = []) {
     [rows, cur, rate],
   );
 
-  return { rows, total, cost, day, cur, rate, quotes, loading, updated, failed, refresh, history };
+  return { rows, all, total, cost, day, realized, income, fees, gain, invested, cur, rate, quotes, loading, updated, failed, refresh, history };
 }
 
-function groupRows(holdings: Holding[], quotes: Record<string, Quote>, cur: string, rate: number | null): PositionRow[] {
-  const map = new Map<string, PositionRow>();
-  for (const h of holdings) {
-    const q = quotes[h.symbol];
-    const qc = q?.currency ?? (h.symbol.endsWith('.TA') ? 'ILS' : 'USD');
-    const prev = map.get(h.symbol);
-    const shares = (prev?.shares ?? 0) + h.shares;
-    const costNative = (prev ? prev.avgCost * prev.shares : 0) + h.buyPrice * h.shares;
-    map.set(h.symbol, {
-      symbol: h.symbol,
-      shares,
-      avgCost: costNative / shares,
+function groupRows(
+  holdings: Holding[],
+  sales: Sale[],
+  dividends: Dividend[],
+  quotes: Record<string, Quote>,
+  cur: string,
+  rate: number | null,
+): (PositionRow & { invested: number })[] {
+  const lots = bySymbol(holdings);
+  const sold = bySymbol(sales);
+  const divs = bySymbol(dividends);
+  const symbols = new Set([...lots.keys(), ...sold.keys(), ...divs.keys()]);
+  const out: (PositionRow & { invested: number })[] = [];
+  for (const symbol of symbols) {
+    const q = quotes[symbol];
+    const qc = q?.currency ?? guessCurrency(symbol);
+    const myLots = lots.get(symbol) ?? [];
+    const p = position(myLots, sold.get(symbol) ?? [], divs.get(symbol) ?? []);
+    const conv = (v: number) => convert(v, qc, cur, rate);
+    const value = q ? conv(q.price * p.shares) : 0;
+    const cost = conv(p.cost);
+    const realized = conv(p.realized);
+    const dividends = conv(p.dividends);
+    // Money put in: every purchase plus its fee.
+    const invested = conv(myLots.reduce((a, l) => a + l.shares * l.buyPrice + (l.fee ?? 0), 0));
+    out.push({
+      symbol,
+      shares: p.shares,
+      avgCost: p.avgCost,
       quote: q,
-      value: q ? convert(q.price * shares, qc, cur, rate) : 0,
-      cost: convert(costNative, qc, cur, rate),
-      day: q ? convert(q.change * shares, qc, cur, rate) : 0,
+      value,
+      cost,
+      day: q ? conv(q.change * p.shares) : 0,
+      realized,
+      dividends,
+      fees: conv(p.fees),
+      gain: (q ? value - cost : 0) + realized + dividends,
+      invested,
       weight: 0,
-      ids: [...(prev?.ids ?? []), h.id],
+      ids: myLots.map((l) => l.id),
     });
   }
-  return [...map.values()].sort((a, b) => b.value - a.value);
+  return out.sort((a, b) => b.value - a.value);
 }

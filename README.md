@@ -53,7 +53,9 @@ The release build is signed with the debug key. Create a real upload key before 
 
 The app runs on its own, like the Android APK: no Expo Go, no PC, no Metro. GitHub builds it on a Mac for free (`.github/workflows/ios-build.yml`), and Sideloadly installs it from Windows with a free Apple ID.
 
-1. **Get the build.** Every push to `main`, `Shavit` or `Shahar` that changes `mobile/` starts a build (about 20–30 minutes). To start one by hand: repo > **Actions** > **iOS build** > **Run workflow**. When it is green, open the run and download **Kesefly-ios** under **Artifacts**. Unzip it to get `Kesefly.ipa`.
+1. **Get the build.** Every push to `main`, `Shavit` or `Shahar` that changes `mobile/` starts a build (about 20–30 minutes). To start one by hand: repo > **Actions** > **iOS build** > **Run workflow**.
+   - Latest `main` build, no login needed: [Kesefly.ipa](https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa) (also on the repo's **Releases** page).
+   - Other branches: open the green run and download **Kesefly-ios** under **Artifacts** (GitHub login needed), then unzip it to get `Kesefly.ipa`.
 2. **Install the tools on Windows.** Install [Sideloadly](https://sideloadly.io) and Apple's **Apple Devices** app (Microsoft Store), which has the iPhone USB driver.
 3. **Install the app.** Connect the iPhone with a cable and tap **Trust**. In Sideloadly, drag in `Kesefly.ipa`, enter your Apple ID, and click **Start**.
 4. **Trust it on the iPhone (first time only).** Settings > General > **VPN & Device Management** > your Apple ID > **Trust**. iOS 16 and later also needs Settings > Privacy & Security > **Developer Mode** on (the phone restarts).
