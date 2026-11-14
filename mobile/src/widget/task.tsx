@@ -20,7 +20,7 @@ export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {
     case 'WIDGET_UPDATE':
     case 'WIDGET_RESIZED': {
       const data = await widgetData();
-      props.renderWidget(<KeseflyWidget data={data} />);
+      props.renderWidget(<KeseflyWidget data={data} size={props.widgetInfo} />);
       break;
     }
     default:
@@ -33,7 +33,7 @@ export async function refreshWidget() {
   const data = await widgetData();
   await requestWidgetUpdate({
     widgetName: WIDGET_NAME,
-    renderWidget: () => <KeseflyWidget data={data} />,
+    renderWidget: (info) => <KeseflyWidget data={data} size={info} />,
     widgetNotFound: () => {},
   });
 }

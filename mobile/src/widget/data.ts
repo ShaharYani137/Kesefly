@@ -6,12 +6,38 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { marketStatus, formatDuration } from '@/engine/clock';
-import { convert, formatPrice, formatSigned, getQuotes, getUsdIls } from '@/engine/stocks';
+import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
 import { STORAGE_KEY } from '@/state/app-store';
 
 export type ClockLine = { label: string; flag: 'US' | 'IL'; time: string; status: string; open: boolean };
+
+/** One holding line for the widget's movers list: biggest moves today first. */
+export type MoverLine = {
+  symbol: string;
+  price: string;
+  pct: string;
+  up: boolean;
+  /** Last session's prices scaled to 0..1 (oldest first, at most 48 points). Only for the first 2 movers. */
+  spark?: number[];
+  /** Previous close on the same 0..1 scale, for the chart's baseline. */
+  base?: number;
+};
+
+/** Number of movers that get a sparkline (the widget shows charts only when it lists 1-2 holdings). */
+const SPARK_COUNT = 2;
+
+/** Downsamples a price series and scales it (with the previous close) to 0..1. */
+function sparkline(points: HistoryPoint[], prevClose: number): { spark: number[]; base: number } | null {
+  if (points.length < 2) return null;
+  const step = Math.max(1, Math.ceil(points.length / 48));
+  const closes = points.filter((_, i) => i % step === 0 || i === points.length - 1).map((p) => p.close);
+  const all = prevClose > 0 ? [...closes, prevClose] : closes;
+  const lo = Math.min(...all);
+  const span = Math.max(...all) - lo || 1;
+  return { spark: closes.map((c) => (c - lo) / span), base: prevClose > 0 ? (prevClose - lo) / span : 0.5 };
+}
 
 export type WidgetData = {
   lang: Lang;
@@ -24,6 +50,10 @@ export type WidgetData = {
   gainUp: boolean;
   empty: string;
   clocks: ClockLine[];
+  /** Holdings sorted by size of today's move (largest first), at most 6. */
+  movers: MoverLine[];
+  /** USD/ILS rate text, e.g. "USD/ILS 3.712", or null when the rate is unavailable. */
+  rate: string | null;
   updated: string;
 };
 
@@ -49,8 +79,13 @@ export async function widgetData(): Promise<WidgetData> {
   let gain = '';
   let dayUp = true;
   let gainUp = true;
+  let movers: MoverLine[] = [];
+  const symbols = [...new Set(holdings.map((h) => h.symbol.toUpperCase()))];
+  const [quotes, rate] = await Promise.all([
+    symbols.length ? getQuotes(symbols, true) : Promise.resolve<Record<string, Quote>>({}),
+    getUsdIls(),
+  ]);
   if (holdings.length) {
-    const [quotes, rate] = await Promise.all([getQuotes([...new Set(holdings.map((h) => h.symbol))], true), getUsdIls()]);
     let total = 0;
     let cost = 0;
     let dayChange = 0;
@@ -68,6 +103,23 @@ export async function widgetData(): Promise<WidgetData> {
       gain = `${s.stock.totalGain} ${formatSigned(cost ? total / cost - 1 : 0, cur, lang, true)}`;
       gainUp = total >= cost;
     }
+    const top = symbols
+      .map((sym) => quotes[sym])
+      .filter((q) => !!q)
+      .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
+      .slice(0, 6);
+    // Charts only when the list is short enough to show them (1-2 holdings).
+    const charts =
+      top.length <= SPARK_COUNT
+        ? await Promise.all(top.map((q) => getHistory(q.symbol, '1D').then((pts) => sparkline(pts, q.prevClose)).catch(() => null)))
+        : [];
+    movers = top.map((q, i) => ({
+      symbol: q.symbol.toUpperCase(),
+      price: formatPrice(q.price, q.currency, lang),
+      pct: formatSigned(q.changePct, q.currency, lang, true),
+      up: q.changePct >= 0,
+      ...(charts[i] ?? {}),
+    }));
   }
 
   const now = Date.now();
@@ -99,6 +151,8 @@ export async function widgetData(): Promise<WidgetData> {
     gainUp,
     empty: s.widget.empty,
     clocks,
+    movers,
+    rate: rate ? `USD/ILS ${rate.toFixed(3)}` : null,
     updated: s.widget.updated.replace('{time}', `${two(d.getHours())}:${two(d.getMinutes())}`),
   };
 }
