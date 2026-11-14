@@ -501,8 +501,14 @@ func fetchIndexes() async -> [IndexRow] {
 /// app knows them; without shared data the widget shows weekday hours).
 func sessionMinutes(_ ny: Bool, weekday: Int) -> (Int, Int)? {
   if weekday == 1 || weekday == 7 { return nil }
-  if ny { return (9 * 60 + 30, 16 * 60) }
-  return weekday == 6 ? (9 * 60 + 59, 13 * 60 + 50) : (9 * 60 + 59, 17 * 60 + 25)
+  // Minutes after midnight, written out (inline arithmetic in a ternary is too slow to type-check).
+  let nyOpen = 570, nyClose = 960 // 09:30-16:00
+  let tlvOpen = 599 // 09:59
+  let tlvClose = 1045 // 17:25
+  let tlvFridayClose = 830 // 13:50
+  if ny { return (nyOpen, nyClose) }
+  if weekday == 6 { return (tlvOpen, tlvFridayClose) }
+  return (tlvOpen, tlvClose)
 }
 
 /// Wall Street and Tel Aviv clocks computed on the phone (markets-only mode).
@@ -518,7 +524,9 @@ func localClocks(at date: Date) -> [Clock] {
     let tz = TimeZone(identifier: tzId) ?? .current
     var cal = Calendar(identifier: .gregorian)
     cal.timeZone = tz
-    let now = cal.component(.hour, from: date) * 60 + cal.component(.minute, from: date)
+    let hour: Int = cal.component(.hour, from: date)
+    let minute: Int = cal.component(.minute, from: date)
+    let now: Int = hour * 60 + minute
     let today = sessionMinutes(ny, weekday: cal.component(.weekday, from: date))
     var open = false
     var minutes = 0
@@ -529,14 +537,15 @@ func localClocks(at date: Date) -> [Clock] {
       minutes = s.0 - now
     } else {
       // Rest of today, then whole closed days, then the next session's opening minute.
-      minutes = 24 * 60 - now
+      let day: Int = 1440
+      minutes = day - now
       for d in 1...7 {
-        let day = cal.date(byAdding: .day, value: d, to: date) ?? date
-        if let s = sessionMinutes(ny, weekday: cal.component(.weekday, from: day)) {
+        let next = cal.date(byAdding: .day, value: d, to: date) ?? date
+        if let s = sessionMinutes(ny, weekday: cal.component(.weekday, from: next)) {
           minutes += s.0
           break
         }
-        minutes += 24 * 60
+        minutes += day
       }
     }
     let phase = open ? (he ? "פתוח" : "Open") : (he ? "סגור" : "Closed")
