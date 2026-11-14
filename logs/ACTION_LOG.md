@@ -185,3 +185,4 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-14 | Chat: a tap anywhere on the input bar focuses the text field (opens the keyboard) | `mobile/src/app/(tabs)/helper.tsx` | tsc 0, eslint 0; needs iPhone test |
 | 2026-11-14 | Scanned changes (no keys, emails, device serial, local paths); committed on `feature/edit-savings-chat-keyboard` (not pushed yet) | git | See git |
 | 2026-11-14 | User said push: pushed `feature/edit-savings-chat-keyboard` to origin (not merged). User runs Actions > iOS build on this branch for the new .ipa | git | See git |
+| 2026-11-14 | User asked for the .ipa link; no build had run (gh not installed, cannot dispatch). Added `feature/edit-savings-chat-keyboard` to the iOS build push trigger so pushing starts the build; pushed | `.github/workflows/ios-build.yml` | Build started |
