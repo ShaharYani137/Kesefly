@@ -61,6 +61,30 @@ type Saved = { lang?: Lang; holdings?: { symbol: string; shares: number; buyPric
 
 const two = (n: number) => String(n).padStart(2, '0');
 
+/**
+ * Last good widget numbers. Android runs the widget task with the phone locked or the app
+ * closed, often with no network (Doze), so fetches fail; the widget then shows these instead
+ * of falling back to the empty message.
+ */
+const CACHE_KEY = 'investapp/widget-cache/v1';
+type Spark = { spark: number[]; base: number };
+type Cache = { at: number; quotes: Record<string, Quote>; rate: number | null; charts: Record<string, Spark> };
+
+/** Network calls in the widget task give up after this, so the task always renders. */
+const FETCH_TIMEOUT_MS = 10_000;
+function withTimeout<T>(p: Promise<T>, fallback: T): Promise<T> {
+  return Promise.race([p, new Promise<T>((resolve) => setTimeout(() => resolve(fallback), FETCH_TIMEOUT_MS))]);
+}
+
+async function readCache(): Promise<Cache | null> {
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Cache) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function widgetData(): Promise<WidgetData> {
   let saved: Saved = {};
   try {
@@ -81,10 +105,16 @@ export async function widgetData(): Promise<WidgetData> {
   let gainUp = true;
   let movers: MoverLine[] = [];
   const symbols = [...new Set(holdings.map((h) => h.symbol.toUpperCase()))];
-  const [quotes, rate] = await Promise.all([
-    symbols.length ? getQuotes(symbols, true) : Promise.resolve<Record<string, Quote>>({}),
-    getUsdIls(),
+  const [fresh, freshRate, cache] = await Promise.all([
+    symbols.length ? withTimeout(getQuotes(symbols, true), {} as Record<string, Quote>) : Promise.resolve<Record<string, Quote>>({}),
+    withTimeout(getUsdIls(), null),
+    readCache(),
   ]);
+  // Missing quotes (offline, locked phone, timeout) come from the last good fetch.
+  const quotes: Record<string, Quote> = { ...cache?.quotes, ...fresh };
+  const rate = freshRate ?? cache?.rate ?? null;
+  const stale = symbols.some((sym) => !fresh[sym]) || (freshRate == null && rate != null);
+  const charts: Record<string, Spark> = { ...cache?.charts };
   if (holdings.length) {
     let total = 0;
     let cost = 0;
@@ -108,18 +138,33 @@ export async function widgetData(): Promise<WidgetData> {
       .filter((q) => !!q)
       .sort((a, b) => Math.abs(b.changePct) - Math.abs(a.changePct))
       .slice(0, 6);
-    // Charts only when the list is short enough to show them (1-2 holdings).
-    const charts =
-      top.length <= SPARK_COUNT
-        ? await Promise.all(top.map((q) => getHistory(q.symbol, '1D').then((pts) => sparkline(pts, q.prevClose)).catch(() => null)))
-        : [];
-    movers = top.map((q, i) => ({
+    // Charts only when the list is short enough to show them (1-2 holdings). A failed fetch keeps the cached chart.
+    if (top.length <= SPARK_COUNT) {
+      const got = await withTimeout(
+        Promise.all(top.map((q) => getHistory(q.symbol, '1D').then((pts) => sparkline(pts, q.prevClose)).catch(() => null))),
+        [] as (Spark | null)[],
+      );
+      top.forEach((q, i) => {
+        const c = got[i];
+        if (c) charts[q.symbol.toUpperCase()] = c;
+      });
+    }
+    movers = top.map((q) => ({
       symbol: q.symbol.toUpperCase(),
       price: formatPrice(q.price, q.currency, lang),
       pct: formatSigned(q.changePct, q.currency, lang, true),
       up: q.changePct >= 0,
-      ...(charts[i] ?? {}),
+      ...(charts[q.symbol.toUpperCase()] ?? {}),
     }));
+  }
+
+  // Save what this run has, for the next run that cannot reach the network.
+  // Stale run: keep the older fetch time, so "Updated" never claims numbers are newer than they are.
+  const at = stale && cache ? cache.at : Date.now();
+  const keep = Object.fromEntries(symbols.filter((sym) => quotes[sym]).map((sym) => [sym, quotes[sym]]));
+  const keepCharts = Object.fromEntries(symbols.filter((sym) => charts[sym]).map((sym) => [sym, charts[sym]]));
+  if (Object.keys(keep).length || rate != null) {
+    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ at, quotes: keep, rate, charts: keepCharts } satisfies Cache)).catch(() => {});
   }
 
   const now = Date.now();
@@ -140,7 +185,8 @@ export async function widgetData(): Promise<WidgetData> {
     };
   });
 
-  const d = new Date();
+  // "Updated" shows when the numbers were fetched, not when the widget was redrawn.
+  const d = new Date(at);
   return {
     lang,
     title: s.widget.title,

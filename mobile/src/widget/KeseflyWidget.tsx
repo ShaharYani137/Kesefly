@@ -76,13 +76,13 @@ export function KeseflyWidget({ data, size }: { data: WidgetData; size?: { width
   const valueSize = height >= 220 ? 32 : 26;
 
   const valueBlock = data.value ? (
-    <FlexWidget key="v" style={{ flex: 1, height: 'match_parent', flexDirection: 'column', justifyContent: 'center', alignItems: align }}>
+    <FlexWidget key="v" style={{ width: 0, flex: 1, height: 'match_parent', flexDirection: 'column', justifyContent: 'center', alignItems: align }}>
       <TextWidget text={data.value} maxLines={1} style={{ adjustsFontSizeToFit: true, fontSize: valueSize, color: '#FFFFFF', fontWeight: '700' }} />
       <TextWidget text={data.day} maxLines={1} style={{ fontSize: 12, color: data.dayUp ? UP : DOWN }} />
       <TextWidget text={data.gain} maxLines={1} style={{ fontSize: 12, color: data.gainUp ? UP : DOWN }} />
     </FlexWidget>
   ) : (
-    <FlexWidget key="v" style={{ flex: 1, height: 'match_parent', flexDirection: 'column', justifyContent: 'center', alignItems: align }}>
+    <FlexWidget key="v" style={{ width: 0, flex: 1, height: 'match_parent', flexDirection: 'column', justifyContent: 'center', alignItems: align }}>
       <TextWidget text={data.empty} maxLines={3} style={{ fontSize: 13, color: '#FFFFFF' }} />
     </FlexWidget>
   );
@@ -110,7 +110,7 @@ export function KeseflyWidget({ data, size }: { data: WidgetData; size?: { width
   const moversBlock = (
     <FlexWidget
       key="m"
-      style={{ flex: 1, height: 'match_parent', backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'column', justifyContent: 'space-around' }}>
+      style={{ width: 0, flex: 1, height: 'match_parent', backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'column', justifyContent: 'space-around' }}>
       {movers.map((m) =>
         rich ? (
           <FlexWidget key={m.symbol} style={{ width: 'match_parent', flexDirection: 'column', alignItems: align }}>
@@ -151,7 +151,7 @@ export function KeseflyWidget({ data, size }: { data: WidgetData; size?: { width
         {order(data.clocks).map((c) => (
           <FlexWidget
             key={c.label}
-            style={{ flex: 1, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'column', alignItems: align }}>
+            style={{ width: 0, flex: 1, backgroundColor: CARD, borderRadius: 14, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'column', alignItems: align }}>
             <FlexWidget style={{ width: 'match_parent', flexDirection: row, justifyContent: 'space-between', alignItems: 'center' }}>
               {order([
                 <FlexWidget key="n" style={{ flexDirection: row, alignItems: 'center' }}>

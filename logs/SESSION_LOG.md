@@ -154,6 +154,8 @@ One section per working session. Newest at bottom.
 - Android home-screen widget (portfolio value, Wall Street / Tel Aviv clocks with flags), verified on the phone after a React Compiler opt-out fix.
 - Wrapped up with DONE: logs redacted, changes scanned, committed and pushed to origin/Shahar.
 - Widget space use: full-width clock tiles, movers column beside the value (row count follows widget height), USD/ILS rate in header; with 1-2 holdings the movers card shows price + today's sparkline. Built, installed and checked on the phone.
+- Widget keeps its numbers when the phone is locked or offline (last good quotes cached). Add holding by ticker, company name (English/Hebrew) or TASE security number. Built and installed; user to test search and locked-phone widget.
+- Search covers every Tel Aviv security (2,239 from the TASE public list, by number / Hebrew / English) plus Yahoo for global stocks; mutual funds not included (no price source). Widget stocks card widened to half width.
 
 **Open items / next steps:**
 - Verify on phone: sound picker previews, "What is coming up?" chip.
