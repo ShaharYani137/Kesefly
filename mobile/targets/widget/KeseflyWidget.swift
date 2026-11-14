@@ -320,7 +320,7 @@ struct ValueBlock: View {
     VStack(alignment: .leading, spacing: 2) {
       if let v = n.value {
         Text(v)
-          .font(.system(size: big ? 30 : 24, weight: .bold))
+          .font(.system(size: big ? 30 : 26, weight: .bold))
           .foregroundColor(.white)
           .minimumScaleFactor(0.5)
           .lineLimit(1)
@@ -348,22 +348,24 @@ struct Header: View {
   }
 }
 
+/// Holdings that moved most today. Rows follow the layout direction, like the Android widget:
+/// in Hebrew the symbol sits on the right and the percent on the left.
 struct MoversList: View {
   let movers: [Mover]
   let showPrice: Bool
+  var compact = false
   var body: some View {
-    VStack(alignment: .leading, spacing: 3) {
+    VStack(alignment: .leading, spacing: compact ? 1 : 3) {
       ForEach(movers) { m in
         HStack(spacing: 6) {
-          Text(m.symbol).font(.caption.weight(.semibold)).foregroundColor(.white).lineLimit(1)
+          Text(m.symbol).font((compact ? Font.caption2 : Font.caption).weight(.semibold)).foregroundColor(.white).lineLimit(1)
           Spacer(minLength: 2)
-          if showPrice { Text(m.price).font(.caption2).foregroundColor(muted).lineLimit(1) }
-          Text(m.pct).font(.caption.weight(.bold)).foregroundColor(m.up ? upColor : downColor).lineLimit(1)
+          if showPrice { Text(m.price).font(.caption2).foregroundColor(muted).lineLimit(1).minimumScaleFactor(0.8) }
+          Text(m.pct).font((compact ? Font.caption2 : Font.caption).weight(.bold)).foregroundColor(m.up ? upColor : downColor).lineLimit(1)
         }
-        .environment(\.layoutDirection, .leftToRight)
       }
     }
-    .padding(8)
+    .padding(compact ? 6 : 8)
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .background(card)
     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -372,6 +374,7 @@ struct MoversList: View {
 
 struct ClockRow: View {
   let clocks: [Clock]
+  var compact = false
   var body: some View {
     HStack(spacing: 8) {
       ForEach(clocks) { c in
@@ -384,7 +387,7 @@ struct ClockRow: View {
           Text(c.status).font(.system(size: 10)).foregroundColor(c.open ? upColor : muted).lineLimit(1).minimumScaleFactor(0.7)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.vertical, compact ? 4 : 5)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(card)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -397,8 +400,18 @@ struct KeseflyWidgetView: View {
   @Environment(\.widgetFamily) var family
   let entry: Entry
 
+  /// HIG (widgets.md, margins): 11 pt suits content grouped in shapes like these cards; the
+  /// lock screen keeps the system margins.
+  var margin: CGFloat {
+    switch family {
+    case .accessoryInline, .accessoryRectangular, .accessoryCircular: return 0
+    default: return 11
+    }
+  }
+
   var body: some View {
     content
+      .padding(margin)
       .environment(\.layoutDirection, (entry.payload?.lang ?? (phoneHebrew ? "he" : "en")) == "he" ? .rightToLeft : .leftToRight)
       .containerBackground(for: .widget) { bg }
       .widgetURL(URL(string: "kesefly://"))
@@ -432,13 +445,16 @@ struct KeseflyWidgetView: View {
           ClockRow(clocks: clocks(p, at: entry.date))
         }
       default:
-        VStack(alignment: .leading, spacing: 8) {
-          Header(p: p, n: n, showRate: false)
-          HStack(spacing: 10) {
+        // Same layout as the Android widget: header with USD/ILS and update time, value block
+        // beside the 4 biggest movers (with price), market clocks underneath.
+        VStack(alignment: .leading, spacing: 6) {
+          Header(p: p, n: n, showRate: true)
+          HStack(spacing: 8) {
             ValueBlock(p: p, n: n, big: false)
-            if !n.movers.isEmpty { MoversList(movers: Array(n.movers.prefix(3)), showPrice: false) }
+            if !n.movers.isEmpty { MoversList(movers: Array(n.movers.prefix(4)), showPrice: true, compact: true) }
           }
-          ClockRow(clocks: clocks(p, at: entry.date))
+          .frame(maxHeight: .infinity)
+          ClockRow(clocks: clocks(p, at: entry.date), compact: true)
         }
       }
     } else {
@@ -568,7 +584,6 @@ struct IndexList: View {
           if showValue { Text(r.value).font(.caption2).foregroundColor(muted).lineLimit(1) }
           Text(r.pct).font(.caption.weight(.bold)).foregroundColor(r.up ? upColor : downColor).lineLimit(1)
         }
-        .environment(\.layoutDirection, .leftToRight)
       }
     }
     .padding(8)
@@ -654,6 +669,7 @@ struct KeseflyWidget: Widget {
     .configurationDisplayName("Kesefly")
     .description("Portfolio value, top movers and market clocks. Live markets when the portfolio is not shared.")
     .supportedFamilies([.systemSmall, .systemMedium, .systemLarge, .accessoryRectangular, .accessoryInline])
+    .contentMarginsDisabled()
   }
 }
 
