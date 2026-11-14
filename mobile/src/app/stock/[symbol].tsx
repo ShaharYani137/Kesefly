@@ -31,7 +31,7 @@ const PERF: { key: '1W' | '1M' | '6M' | '1Y'; days: number }[] = [
 export default function StockPage() {
   const { symbol: raw } = useLocalSearchParams<{ symbol: string }>();
   const symbol = decodeURIComponent(raw ?? '').toUpperCase();
-  const { s, lang, watchlist, addSymbol, removeSymbol, addHolding, removeHolding } = useApp();
+  const { s, lang, watchlist, addSymbol, removeSymbol, addHolding, removeSymbolRecords } = useApp();
   const { colors } = useTokens();
   const pf = usePortfolio();
   const [q, setQ] = useState<Quote | null>(null);
@@ -198,12 +198,15 @@ export default function StockPage() {
                 <Stat label={s.stock.marketValue} value={formatPrice(pos.value, pf.cur, lang)} />
                 <Stat
                   label={s.stock.totalGain}
-                  value={`${formatSigned(pos.value - pos.cost, pf.cur, lang)} (${formatSigned(pos.cost ? pos.value / pos.cost - 1 : 0, 'USD', lang, true)})`}
-                  color={pos.value >= pos.cost ? colors.positive : colors.danger}
+                  value={`${formatSigned(pos.gain, pf.cur, lang)} (${formatSigned(pos.invested ? pos.gain / pos.invested : 0, 'USD', lang, true)})`}
+                  color={pos.gain >= 0 ? colors.positive : colors.danger}
                 />
+                {pos.realized ? <Stat label={s.ledger.realized} value={formatSigned(pos.realized, pf.cur, lang)} color={pos.realized >= 0 ? colors.positive : colors.danger} /> : null}
+                {pos.dividends ? <Stat label={s.ledger.dividendsNet} value={formatSigned(pos.dividends, pf.cur, lang)} color={colors.positive} /> : null}
+                {pos.fees ? <Stat label={s.ledger.feesPaid} value={formatPrice(pos.fees, pf.cur, lang)} /> : null}
                 <Stat label={s.stock.weight} value={`${Math.round(pos.weight * 100)}%`} />
                 <Button kind="tonal" label={s.holding.edit} onPress={() => router.push({ pathname: '/holding/[symbol]', params: { symbol } })} />
-                <Button kind="destructive" label={s.stock.removeHolding} onPress={() => pos.ids.forEach(removeHolding)} />
+                <Button kind="destructive" label={s.stock.removeHolding} onPress={() => removeSymbolRecords(symbol)} />
               </Card>
             </>
           ) : null}

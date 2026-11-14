@@ -5,7 +5,8 @@ Yahoo Finance symbol the app uses for prices.
 
 Source: the public search list behind tase.co.il (api.tase.co.il/api/content/searchentities),
 lang=0 Hebrew, lang=1 English. Yahoo symbol rule: TASE symbol with "." replaced by "-",
-plus ".TA" (KSM.F51 -> KSM-F51.TA). Mutual funds are left out: Yahoo has no prices for them.
+plus ".TA" (KSM.F51 -> KSM-F51.TA). Mutual funds (Type 4) get fund number + ".TA"
+(5117957.TA); the app prices them from Maya (maya.tase.co.il), as Yahoo has none.
 
 Run from the repo root:  python mobile/scripts/make_tase_list.py
 Re-run now and then to pick up new listings.
@@ -48,9 +49,17 @@ def fetch(lang: int) -> list:
 
 
 def main() -> None:
-    he = {x["Id"]: x for x in fetch(0) if x.get("Type") == 1}
+    he_all = fetch(0)
+    he = {x["Id"]: x for x in he_all if x.get("Type") == 1}
+    he_funds = {x["Id"]: x for x in he_all if x.get("Type") == 4}
+    en_all = fetch(1)
     rows = []
-    for x in fetch(1):
+    for x in en_all:
+        if x.get("Type") == 4 and x.get("SubTypeDesc") == "Mutual Fund" and str(x.get("Id", "")).isdigit():
+            fid = str(int(x["Id"]))
+            h = he_funds.get(x["Id"], {})
+            rows.append([fid, fid + ".TA", (h.get("Name") or "").strip(), (x.get("Name") or "").strip(), "fund"])
+    for x in en_all:
         if x.get("Type") != 1 or not x.get("Smb"):
             continue
         kind = KINDS.get(x.get("SubTypeDesc") or "")
@@ -59,8 +68,8 @@ def main() -> None:
         h = he.get(x["Id"], {})
         yahoo = x["Smb"].strip().upper().replace(".", "-") + ".TA"
         rows.append([x["Id"], yahoo, (h.get("Name") or "").strip(), (x.get("Name") or "").strip(), kind])
-    # Shares first, then ETFs, bonds, warrants; alphabetical inside each kind.
-    order = {"share": 0, "etf": 1, "bond": 2, "warrant": 3}
+    # Shares first, then ETFs, mutual funds, bonds, warrants; alphabetical inside each kind.
+    order = {"share": 0, "etf": 1, "fund": 2, "bond": 3, "warrant": 4}
     rows.sort(key=lambda r: (order[r[4]], r[3]))
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     with open(OUT, "w", encoding="utf-8") as f:

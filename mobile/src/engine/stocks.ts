@@ -75,10 +75,84 @@ type ChartResponse = {
   };
 };
 
+// ---------- Israeli mutual funds (קרנות נאמנות) ----------
+// Yahoo has no prices for them. Maya (maya.tase.co.il, the exchange's disclosure site) has the
+// daily unit price in agorot and the last ~21 trading days. In the app a fund's symbol is its
+// fund number + ".TA" (e.g. 5117957.TA); share symbols on Yahoo are letters, so no clash.
+const MAYA = 'https://maya.tase.co.il/api/v1/funds/mutual/';
+
+/** True for a mutual fund symbol: fund number + ".TA". */
+export const isFund = (symbol: string) => /^\d{5,9}\.TA$/i.test(symbol);
+
+type MayaFund = {
+  name?: string;
+  longName?: string;
+  purchasePrice?: number;
+  ratesAsOf?: string;
+  yields?: { dayYield?: number | null };
+};
+type MayaHistoryRow = { tradeDate: string; purchasePrice: number };
+
+async function maya<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${MAYA}${path}`, { ...init, headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json', 'Content-Type': 'application/json' } });
+  } catch {
+    throw new StockError('network');
+  }
+  if (res.status === 404) throw new StockError('notFound');
+  if (!res.ok) throw new StockError('network', `HTTP ${res.status}`);
+  return (await res.json()) as T;
+}
+
+/** Fund daily prices, oldest first, in shekels (Maya publishes agorot). About one month. */
+async function fundHistory(symbol: string): Promise<HistoryPoint[]> {
+  const id = symbol.split('.')[0];
+  const rows = await maya<MayaHistoryRow[]>(`${id}/history`, { method: 'POST', body: '{}' });
+  const points = rows
+    .filter((r) => r.purchasePrice > 0)
+    .map((r) => ({ t: Date.parse(r.tradeDate), close: r.purchasePrice / 100 }))
+    .sort((a, b) => a.t - b.t);
+  if (points.length < 2) throw new StockError('notFound');
+  return points;
+}
+
+async function fundQuote(sym: string): Promise<Quote> {
+  const id = sym.split('.')[0];
+  const f = await maya<MayaFund>(id);
+  if (!f.purchasePrice) throw new StockError('notFound');
+  const price = f.purchasePrice / 100;
+  const dy = f.yields?.dayYield ?? 0;
+  const prev = dy ? price / (1 + dy / 100) : price;
+  const quote: Quote = {
+    symbol: sym,
+    name: f.name?.trim() || f.longName?.trim() || sym,
+    currency: 'ILS',
+    price,
+    change: price - prev,
+    changePct: prev ? (price - prev) / prev : 0,
+    high: price,
+    low: price,
+    open: prev,
+    prevClose: prev,
+    time: f.ratesAsOf ? Date.parse(f.ratesAsOf) : Date.now(),
+    yearHigh: price,
+    yearLow: price,
+    volume: 0,
+    exchange: 'Tel Aviv · Fund',
+  };
+  return quote;
+}
+
 export async function getQuote(symbol: string, force = false): Promise<Quote> {
   const sym = symbol.toUpperCase();
   const hit = cache.get(sym);
   if (!force && hit && Date.now() - hit.at < CACHE_MS) return hit.quote;
+  if (isFund(sym)) {
+    const quote = await fundQuote(sym);
+    cache.set(sym, { at: Date.now(), quote });
+    return quote;
+  }
 
   let res: Response;
   try {
@@ -192,6 +266,12 @@ export async function getHistory(symbol: string, key: RangeKey): Promise<History
   const cacheKey = `${sym}|${key}`;
   const hit = histCache.get(cacheKey);
   if (hit && Date.now() - hit.at < HIST_CACHE_MS) return hit.points;
+  if (isFund(sym)) {
+    // Funds have one price a day and about a month of history, whatever the range.
+    const points = await fundHistory(sym);
+    histCache.set(cacheKey, { at: Date.now(), points });
+    return points;
+  }
 
   const { range, interval } = RANGES[key];
   let res: Response;

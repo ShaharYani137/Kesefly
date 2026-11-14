@@ -19,8 +19,26 @@ export const STORAGE_KEY = 'investapp/state/v1';
 
 export const DEFAULT_WATCHLIST = ['SPY', 'VT', '^TA125.TA', 'AAPL', 'MSFT', 'NVDA', 'TEVA.TA', 'CHKP'];
 
-/** One position in the user's portfolio (תיק השקעות). Price is per share, in the stock's own currency. */
-export type Holding = { id: string; symbol: string; shares: number; buyPrice: number };
+/**
+ * One purchase (lot) in the user's portfolio (תיק השקעות). Prices and fees are in the stock's
+ * own currency. `date` is YYYY-MM-DD; lots saved before dates existed have none.
+ */
+export type Holding = { id: string; symbol: string; shares: number; buyPrice: number; date?: string; fee?: number };
+
+/** One sale of shares. Price per share and fee in the stock's currency; date YYYY-MM-DD. */
+export type Sale = { id: string; symbol: string; shares: number; price: number; date?: string; fee?: number };
+
+/** One dividend received. Gross amount and tax withheld, totals in the stock's currency. */
+export type Dividend = { id: string; symbol: string; amount: number; tax?: number; date?: string };
+
+/** Everything recorded for one symbol, as edited together on the holding screen. */
+export type SymbolRecords = {
+  lots: Omit<Holding, 'symbol'>[];
+  sales: Omit<Sale, 'symbol'>[];
+  dividends: Omit<Dividend, 'symbol'>[];
+};
+
+export const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 /** User preferences from Settings. Also read by the background alert task. */
 export type Prefs = {
@@ -46,6 +64,8 @@ type Persisted = {
   onboarded: boolean;
   watchlist: string[];
   holdings: Holding[];
+  sales: Sale[];
+  dividends: Dividend[];
   /** Weekly advice notifications on/off. */
   notify: boolean;
   /** World / economy event alerts on/off. */
@@ -69,6 +89,10 @@ type AppState = Persisted & {
   removeHolding: (id: string) => void;
   /** Edit one purchase lot (shares and/or buy price). */
   updateHolding: (id: string, patch: Partial<Omit<Holding, 'id' | 'symbol'>>) => void;
+  /** Replace every lot, sale and dividend of one symbol (holding editor Save). */
+  saveSymbolRecords: (symbol: string, records: SymbolRecords) => void;
+  /** Remove a symbol's lots, sales and dividends. */
+  removeSymbolRecords: (symbol: string) => void;
   setNotify: (on: boolean) => void;
   setEventAlerts: (on: boolean) => void;
   savePlacement: (p: Placement) => void;
@@ -96,6 +120,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     onboarded: false,
     watchlist: DEFAULT_WATCHLIST,
     holdings: [],
+    sales: [],
+    dividends: [],
     notify: false,
     eventAlerts: false,
     academy: EMPTY_PROGRESS,
@@ -113,6 +139,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           onboarded: saved.onboarded ?? false,
           watchlist: Array.isArray(saved.watchlist) ? saved.watchlist : DEFAULT_WATCHLIST,
           holdings: Array.isArray(saved.holdings) ? saved.holdings : [],
+          sales: Array.isArray(saved.sales) ? saved.sales : [],
+          dividends: Array.isArray(saved.dividends) ? saved.dividends : [],
           notify: saved.notify ?? false,
           eventAlerts: saved.eventAlerts ?? false,
           academy: { ...EMPTY_PROGRESS, ...saved.academy },
@@ -144,6 +172,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         onboarded: false,
         watchlist: DEFAULT_WATCHLIST,
         holdings: [],
+        sales: [],
+        dividends: [],
         notify: false,
         eventAlerts: false,
         academy: EMPTY_PROGRESS,
@@ -172,7 +202,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (h: Omit<Holding, 'id'>) =>
       setState((p) => ({
         ...p,
-        holdings: [...p.holdings, { ...h, symbol: h.symbol.trim().toUpperCase(), id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }],
+        holdings: [...p.holdings, { ...h, symbol: h.symbol.trim().toUpperCase(), id: newId() }],
       })),
     [],
   );
@@ -180,6 +210,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const updateHolding = useCallback(
     (id: string, patch: Partial<Omit<Holding, 'id' | 'symbol'>>) =>
       setState((p) => ({ ...p, holdings: p.holdings.map((h) => (h.id === id ? { ...h, ...patch } : h)) })),
+    [],
+  );
+  const saveSymbolRecords = useCallback(
+    (symbol: string, rec: SymbolRecords) =>
+      setState((p) => ({
+        ...p,
+        holdings: [...p.holdings.filter((h) => h.symbol !== symbol), ...rec.lots.map((x) => ({ ...x, symbol }))],
+        sales: [...p.sales.filter((x) => x.symbol !== symbol), ...rec.sales.map((x) => ({ ...x, symbol }))],
+        dividends: [...p.dividends.filter((x) => x.symbol !== symbol), ...rec.dividends.map((x) => ({ ...x, symbol }))],
+      })),
+    [],
+  );
+  const removeSymbolRecords = useCallback(
+    (symbol: string) =>
+      setState((p) => ({
+        ...p,
+        holdings: p.holdings.filter((h) => h.symbol !== symbol),
+        sales: p.sales.filter((x) => x.symbol !== symbol),
+        dividends: p.dividends.filter((x) => x.symbol !== symbol),
+      })),
     [],
   );
   const setNotify = useCallback((notify: boolean) => setState((p) => ({ ...p, notify })), []);
@@ -211,6 +261,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addHolding,
       removeHolding,
       updateHolding,
+      saveSymbolRecords,
+      removeSymbolRecords,
       setNotify,
       setEventAlerts,
       savePlacement,
@@ -230,6 +282,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addHolding,
       removeHolding,
       updateHolding,
+      saveSymbolRecords,
+      removeSymbolRecords,
       setNotify,
       setEventAlerts,
       savePlacement,

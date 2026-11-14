@@ -2,20 +2,77 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 
-import { isTicker } from '@/engine/stocks';
+import { formatPrice, getQuote, isTicker, type Quote } from '@/engine/stocks';
 import { searchSymbols, type SymbolMatch } from '@/engine/search';
-import { type Holding, useApp } from '@/state/app-store';
+import { fill, type Holding, useApp } from '@/state/app-store';
+import { guessCurrency } from '@/state/portfolio';
 import { Button, Card, Row, SymbolBadge, Txt } from '@/ui/components';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const HEBREW = /[֐-׿]/;
+
+/** Today as YYYY-MM-DD in local time: default date for new records. */
+export const today = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+/** Empty (no date) or a real YYYY-MM-DD date. */
+export const validDate = (t: string) => !t || (/^\d{4}-\d{2}-\d{2}$/.test(t) && !Number.isNaN(Date.parse(t)));
+/** Digits only, dashes added as you type (20250314 becomes 2025-03-14), so the number pad works. */
+export const cleanDate = (t: string) => {
+  const d = t.replace(/\D/g, '').slice(0, 8);
+  return d.length > 6 ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d;
+};
+/** Keeps digits and one decimal point. */
+export const cleanNum = (t: string) => t.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+
+/** Live quote for a symbol, fetched 400 ms after it stops changing. Null until it arrives or when not found. */
+export function useQuote(symbol: string): Quote | null {
+  const [got, setGot] = useState<{ symbol: string; quote: Quote | null }>({ symbol: '', quote: null });
+  useEffect(() => {
+    if (!symbol) return;
+    let alive = true;
+    const t = setTimeout(() => {
+      getQuote(symbol)
+        .then((quote) => alive && setGot({ symbol, quote }))
+        .catch(() => alive && setGot({ symbol, quote: null }));
+    }, 400);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [symbol]);
+  return got.symbol === symbol ? got.quote : null;
+}
+
+/**
+ * Warns when a typed price is far from today's price: more than 3x off. Between 30x and 300x
+ * above a shekel price it is most likely agorot. Shown under the field; does not block Save.
+ * The 3x / agorot bands are a design decision.
+ */
+export function PriceCheck({ price, quote }: { price: number; quote: Quote | null }) {
+  const { s, lang } = useApp();
+  if (!quote || !(price > 0) || !(quote.price > 0)) return null;
+  const ratio = price / quote.price;
+  if (ratio <= 3 && ratio >= 1 / 3) return null;
+  const now = formatPrice(quote.price, quote.currency, lang);
+  const text =
+    quote.currency === 'ILS' && ratio >= 30 && ratio <= 300
+      ? fill(s.ledger.agorotWarn, { price: now })
+      : fill(s.ledger.farWarn, { price: now, cur: quote.currency });
+  return (
+    <Txt variant="footnote" color="danger">
+      {text}
+    </Txt>
+  );
+}
 
 /**
  * Inline form: stock (search by ticker, company name in English or Hebrew, or TASE security
  * number), number of shares, buy price per share.
  */
 export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave: (h: Omit<Holding, 'id'>) => void; onCancel: () => void; symbol?: string }) {
-  const { s } = useApp();
+  const { s, lang } = useApp();
   const { colors } = useTokens();
   const [query, setQuery] = useState(initial);
   const [picked, setPicked] = useState<SymbolMatch | null>(initial ? { symbol: initial, name: '', exchange: '' } : null);
@@ -23,6 +80,8 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
   const [results, setResults] = useState<{ q: string; list: SymbolMatch[] }>({ q: '', list: [] });
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
+  const [date, setDate] = useState(today);
+  const [fee, setFee] = useState('');
 
   // Search 350 ms after typing stops; a newer query cancels the older request.
   useEffect(() => {
@@ -45,7 +104,9 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
   const symbol = picked?.symbol ?? (isTicker(typed) ? typed : '');
   const n = Number(shares);
   const p = Number(price);
-  const valid = symbol.length > 0 && n > 0 && p > 0;
+  const valid = symbol.length > 0 && n > 0 && p > 0 && validDate(date);
+  const quote = useQuote(symbol);
+  const cur = quote?.currency ?? (symbol ? guessCurrency(symbol) : '');
   const showList = !picked && query.trim().length >= 2;
   const busy = results.q !== query.trim();
   const matches = busy ? [] : results.list;
@@ -111,18 +172,30 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
         </View>
       ) : null}
       <Row>
-        <Field value={shares} onChange={(t) => setShares(t.replace(/[^\d.]/g, ''))} placeholder={s.stocks.shares} numeric />
-        <Field value={price} onChange={(t) => setPrice(t.replace(/[^\d.]/g, ''))} placeholder={s.stocks.buyPrice} numeric />
+        <Field value={shares} onChange={(t) => setShares(cleanNum(t))} placeholder={s.stocks.shares} numeric />
+        <Field value={price} onChange={(t) => setPrice(cleanNum(t))} placeholder={cur ? `${s.stocks.buyPrice} (${cur})` : s.stocks.buyPrice} numeric />
+      </Row>
+      <Row>
+        <Field value={date} onChange={(t) => setDate(cleanDate(t))} placeholder={s.ledger.date} numeric />
+        <Field value={fee} onChange={(t) => setFee(cleanNum(t))} placeholder={cur ? `${s.ledger.fee} (${cur})` : s.ledger.fee} numeric />
       </Row>
       <Txt variant="footnote" color="textSecondary">
-        {s.stocks.buyPriceHint}
+        {quote
+          ? `${fill(s.ledger.inCurrency, { cur: quote.currency })} · ${fill(s.ledger.priceNow, { price: formatPrice(quote.price, quote.currency, lang) })}`
+          : s.stocks.buyPriceHint}
       </Txt>
+      <PriceCheck price={p} quote={quote} />
+      {!validDate(date) ? (
+        <Txt variant="footnote" color="danger">
+          {s.ledger.badDate}
+        </Txt>
+      ) : null}
       <Row>
         <View style={{ flex: 1 }}>
           <Button kind="tonal" label={s.settings.cancel} onPress={onCancel} />
         </View>
         <View style={{ flex: 1 }}>
-          <Button label={s.common.save} disabled={!valid} onPress={() => onSave({ symbol, shares: n, buyPrice: p })} />
+          <Button label={s.common.save} disabled={!valid} onPress={() => onSave({ symbol, shares: n, buyPrice: p, ...(date ? { date } : {}), ...(Number(fee) > 0 ? { fee: Number(fee) } : {}) })} />
         </View>
       </Row>
     </Card>

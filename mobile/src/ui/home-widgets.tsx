@@ -195,7 +195,7 @@ const GLANCE = ['^GSPC', '^IXIC', '^TA125.TA', 'ILS=X'] as const;
 export function PortfolioCard({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
   const { s, lang, holdings } = useApp();
   const { colors } = useTokens();
-  const gain = pf.total - pf.cost;
+  const gain = pf.gain;
   const money = (v: number) => formatPrice(v, pf.cur, lang);
   const muted = 'rgba(255,255,255,0.72)';
   if (!holdings.length) {
@@ -227,7 +227,7 @@ export function PortfolioCard({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
             {`${s.stock.dayChange} ${formatSigned(pf.day, pf.cur, lang)}`}
           </Txt>
           <Txt variant="subhead" style={{ color: gain >= 0 ? '#7EE2A8' : '#FF8A80', writingDirection: 'ltr' }}>
-            {`${s.stock.totalGain} ${formatSigned(pf.cost ? gain / pf.cost : 0, pf.cur, lang, true)}`}
+            {`${s.stock.totalGain} ${formatSigned(pf.invested ? gain / pf.invested : 0, pf.cur, lang, true)}`}
           </Txt>
         </Row>
         {pf.rows.slice(0, 3).map((r) => (

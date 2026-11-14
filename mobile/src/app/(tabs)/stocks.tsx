@@ -136,7 +136,7 @@ export default function StocksScreen() {
                             <Txt variant="headline" style={{ writingDirection: 'ltr' }}>
                               {formatPrice(r.value, pf.cur, lang)}
                             </Txt>
-                            <ChangeBadge pct={r.value - r.cost} text={formatSigned(r.cost ? r.value / r.cost - 1 : 0, 'USD', lang, true)} />
+                            <ChangeBadge pct={r.gain} text={formatSigned(r.invested ? r.gain / r.invested : 0, 'USD', lang, true)} />
                           </>
                         ) : (
                           <ActivityIndicator color={colors.accent} />
@@ -298,8 +298,14 @@ function MarketStrip({ quotes, onOpen }: { quotes: Record<string, Quote>; onOpen
 function PortfolioHero({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
   const { s, lang } = useApp();
   const { colors } = useTokens();
-  const gain = pf.total - pf.cost;
+  const gain = pf.gain;
   const money = (v: number) => formatPrice(v, pf.cur, lang);
+  // Sales, dividends and fees, shown only once the user records any.
+  const extras = [
+    pf.realized ? `${s.ledger.realized} ${formatSigned(pf.realized, pf.cur, lang)}` : '',
+    pf.income ? `${s.ledger.dividendsNet} ${formatSigned(pf.income, pf.cur, lang)}` : '',
+    pf.fees ? `${s.ledger.feesPaid} ${money(pf.fees)}` : '',
+  ].filter(Boolean);
   const onHero = colors.onHero;
   const muted = 'rgba(255,255,255,0.72)';
   const up = '#7EE2A8';
@@ -318,9 +324,14 @@ function PortfolioHero({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
             {`${s.stock.dayChange} ${formatSigned(pf.day, pf.cur, lang)}`}
           </Txt>
           <Txt variant="subhead" style={{ color: gain >= 0 ? up : down, writingDirection: 'ltr' }}>
-            {`${s.stock.totalGain} ${formatSigned(gain, pf.cur, lang)} (${formatSigned(pf.cost ? gain / pf.cost : 0, pf.cur, lang, true)})`}
+            {`${s.stock.totalGain} ${formatSigned(gain, pf.cur, lang)} (${formatSigned(pf.invested ? gain / pf.invested : 0, pf.cur, lang, true)})`}
           </Txt>
         </Row>
+        {extras.length ? (
+          <Txt variant="footnote" style={{ color: muted }}>
+            {extras.join(' · ')}
+          </Txt>
+        ) : null}
       </View>
       {pf.rows.some((r) => r.quote) ? (
         <StockChart symbol={`portfolio:${pf.rows.map((r) => `${r.symbol}x${r.shares}`).join(',')}`} currency={pf.cur} load={pf.history} ranges={['1W', '1M', '6M', '1Y']} initial="1M" height={130} tone="hero" />

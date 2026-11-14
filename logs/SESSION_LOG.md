@@ -156,6 +156,7 @@ One section per working session. Newest at bottom.
 - Widget space use: full-width clock tiles, movers column beside the value (row count follows widget height), USD/ILS rate in header; with 1-2 holdings the movers card shows price + today's sparkline. Built, installed and checked on the phone.
 - Widget keeps its numbers when the phone is locked or offline (last good quotes cached). Add holding by ticker, company name (English/Hebrew) or TASE security number. Built and installed; user to test search and locked-phone widget.
 - Search covers every Tel Aviv security (2,239 from the TASE public list, by number / Hebrew / English) plus Yahoo for global stocks; mutual funds not included (no price source). Widget stocks card widened to half width.
+- Branch `feature/funds-dividends` (for user review, not merged): mutual funds via Maya, currency/agorot price check, dividends + fees, sales with dates and realized profit (average cost). Built and installed.
 
 **Open items / next steps:**
 - Verify on phone: sound picker previews, "What is coming up?" chip.
