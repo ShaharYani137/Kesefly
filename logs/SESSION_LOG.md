@@ -239,3 +239,24 @@ One section per working session. Newest at bottom.
 - Update the main checkout (`git pull`) so local incremental builds (minutes) work again; optional: add Gradle + ccache caching to the Android workflow (~8-10 min runs).
 - iOS: add `ios.appleTeamId`; check the iOS build workflow run for main 6ebba0d (widget's first compile); App Group may not sign with a free Apple ID (Sideloadly).
 - Add purchase dates on the phone and check the Compare result screen.
+## Session 7 — 2026-11-14 (branch `feature/edit-savings-chat-keyboard`)
+
+**Goal:** let the user edit savings and investments data; fix the assistant chat keyboard (cannot type: input hidden, keyboard not adjusted).
+
+**Work done:**
+- New "Savings and investments" screen (`app/finances.tsx`): cash savings, current investments, high-interest debt, monthly income, expenses and planned investing on one page. Opened from the Home net-worth card (Edit) and the Plan tab tools card.
+- Chat keyboard (iPhone): composer was under the native iOS tab bar. Bottom safe-area edge added to the helper screen; keyboard inset hook animates with the keyboard and re-measures on keyboard frame changes.
+- Home "Savings + investments" card edits cash savings and investments in place (Edit, Save / Cancel), with a link to all numbers.
+- Keyboard on every page: shared `KeyboardScrollView` keeps the focused field above the keyboard and content above the iOS tab bar (Screen, Stocks, Events); onboarding uses the measured inset; tap anywhere on the chat bar opens the keyboard.
+
+**Decisions:**
+- JS-only keyboard fix (no new native dependency), so the GitHub iOS build only rebuilds the bundle.
+- Pension accounts and holdings already had editors; the missing piece was the onboarding money numbers.
+
+- iOS build workflow also runs on pushes to `feature/edit-savings-chat-keyboard` (no gh CLI here to start it by hand). Run 43639850473 succeeded; artifact Kesefly-ios link given to the user.
+- Wrapped up with DONE: logs and changes scanned (no keys, emails, device serial, local paths), committed and pushed (not merged).
+
+**Next steps:**
+- Install the new `Kesefly.ipa` and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
+- Check Android chat composer has no extra bottom gap.
+- Optional: remove the branch from the iOS build push trigger after merge.

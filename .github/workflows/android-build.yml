@@ -13,7 +13,7 @@ name: Android build
 on:
   workflow_dispatch:
   push:
-    branches: [main, feature/top-value]
+    branches: [main]
     paths:
       - 'mobile/**'
       - '.github/workflows/android-build.yml'
