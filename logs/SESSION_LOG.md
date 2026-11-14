@@ -228,3 +228,19 @@ One section per working session. Newest at bottom.
 **Next steps:**
 - Watch the first `iOS build` run; fix anything it reports.
 - Install on the iPhone with Sideloadly and test Face ID, notifications and Hebrew layout.
+
+## Session 7 — 2026-11-14 (branch `feature/edit-savings-chat-keyboard`)
+
+**Goal:** let the user edit savings and investments data; fix the assistant chat keyboard (cannot type: input hidden, keyboard not adjusted).
+
+**Work done:**
+- New "Savings and investments" screen (`app/finances.tsx`): cash savings, current investments, high-interest debt, monthly income, expenses and planned investing on one page. Opened from the Home net-worth card (Edit) and the Plan tab tools card.
+- Chat keyboard (iPhone): composer was under the native iOS tab bar. Bottom safe-area edge added to the helper screen; keyboard inset hook animates with the keyboard and re-measures on keyboard frame changes.
+
+**Decisions:**
+- JS-only keyboard fix (no new native dependency), so the GitHub iOS build only rebuilds the bundle.
+- Pension accounts and holdings already had editors; the missing piece was the onboarding money numbers.
+
+**Next steps:**
+- Build `Kesefly.ipa` (GitHub Actions) and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
+- Check Android chat composer has no extra bottom gap.

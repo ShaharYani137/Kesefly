@@ -105,6 +105,13 @@ export default function PlanScreen() {
       <Card style={{ gap: 0, paddingVertical: 4 }}>
         <ToolRow
           first
+          sf="banknote.fill"
+          md="savings"
+          title={s.finances.title}
+          hint={s.finances.subtitle}
+          onPress={() => router.push('/finances')}
+        />
+        <ToolRow
           sf="building.columns.fill"
           md="account_balance"
           title={s.savings.title}

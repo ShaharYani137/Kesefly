@@ -149,6 +149,7 @@ function AppStack() {
       <Stack.Screen name="stock/[symbol]" />
       <Stack.Screen name="lesson/[id]" />
       <Stack.Screen name="goal" />
+      <Stack.Screen name="finances" />
       <Stack.Screen name="holding/[symbol]" />
       <Stack.Screen name="tax" />
       <Stack.Screen name="compare" />

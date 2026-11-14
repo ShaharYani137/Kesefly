@@ -140,6 +140,7 @@ export default function HomeScreen() {
             {s.home.netWorth}
           </Txt>
           <Txt variant="title">{money(p.cashSavings + p.investments)}</Txt>
+          <Button kind="plain" label={s.finances.edit} onPress={() => router.push('/finances')} />
         </Card>
       </Appear>
 

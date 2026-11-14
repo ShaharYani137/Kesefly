@@ -10,7 +10,13 @@
  *
  * Keyboard: Android runs edge-to-edge, so the window does not resize for the keyboard and
  * KeyboardAvoidingView had no effect there. `useKeyboardInset` pads the screen by the exact
- * overlap instead (both platforms), and the suggestion chips hide while typing.
+ * overlap instead (both platforms).
+ *
+ * iPhone: the native tab bar (UITabBar) lies over the bottom of the screen, so the composer was
+ * hidden under it and the keyboard overlap was measured from the screen bottom, not the bar.
+ * The SafeAreaView now pads the bottom edge too: on iOS that inset includes the tab bar, on
+ * Android (screen ends above the navigation bar) it is about 0. The measured root then ends at
+ * the visible bottom on both platforms.
  */
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -164,7 +170,7 @@ export default function HelperScreen() {
   const chips = useMemo(() => [...usual.tickers, ...s.helper.suggestions], [usual.tickers, s.helper.suggestions]);
 
   return (
-    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
       <View ref={kbRef} style={{ flex: 1, paddingBottom: kbInset }}>
         <Row style={{ paddingHorizontal: Metrics.margin, paddingVertical: 8 }}>
           <HelperAvatar size={40} />
