@@ -243,6 +243,10 @@ One section per working session. Newest at bottom.
 - JS-only keyboard fix (no new native dependency), so the GitHub iOS build only rebuilds the bundle.
 - Pension accounts and holdings already had editors; the missing piece was the onboarding money numbers.
 
+- iOS build workflow also runs on pushes to `feature/edit-savings-chat-keyboard` (no gh CLI here to start it by hand). Run 43639850473 succeeded; artifact Kesefly-ios link given to the user.
+- Wrapped up with DONE: logs and changes scanned (no keys, emails, device serial, local paths), committed and pushed (not merged).
+
 **Next steps:**
-- Build `Kesefly.ipa` (GitHub Actions) and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
+- Install the new `Kesefly.ipa` and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
 - Check Android chat composer has no extra bottom gap.
+- Optional: remove the branch from the iOS build push trigger after merge.
