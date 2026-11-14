@@ -81,6 +81,11 @@ jobs:
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | tee xcodebuild.log | grep -E '(error|warning: .*deprecated|BUILD (SUCCEEDED|FAILED))' || true
+          # A failed build shows its first compiler errors as annotations on the run page.
+          if ! grep -q 'BUILD SUCCEEDED' xcodebuild.log; then
+            grep -E ': error: ' xcodebuild.log | sort -u | head -15 | while IFS= read -r line; do echo "::error::${line#*/mobile/}"; done
+            exit 1
+          fi
           test -d build/Build/Products/Release-iphoneos/Kesefly.app
 
       - name: Package .ipa
