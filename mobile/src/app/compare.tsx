@@ -11,7 +11,7 @@ import { BENCHMARKS, type BenchmarkResult, type BenchmarkSymbol, convertAt, type
 import { formatPrice, formatSigned, getHistorySince } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
 import { guessCurrency, usePortfolio } from '@/state/portfolio';
-import { Appear, Button, Card, Disclaimer, Screen, Segmented, Txt } from '@/ui/components';
+import { Appear, Button, Card, Chip, Disclaimer, Screen, Txt } from '@/ui/components';
 import { LineItem } from '@/ui/money-ui';
 import { useTokens } from '@/ui/theme';
 
@@ -75,7 +75,7 @@ export default function CompareScreen() {
 
   const name = s.compare.benchmarks[bench];
   const body = () => {
-    if (!holdings.length || first === null)
+    if (!holdings.length)
       return (
         <Card>
           <Txt variant="subhead" color="textSecondary">
@@ -83,11 +83,12 @@ export default function CompareScreen() {
           </Txt>
         </Card>
       );
-    if (undated)
+    // Holdings without dates (or no dated purchase at all): say how many need a date.
+    if (undated || first === null)
       return (
         <Card>
           <Txt variant="subhead" color="warning">
-            {fill(s.compare.needDates, { n: undated })}
+            {fill(s.compare.needDates, { n: undated || holdings.length })}
           </Txt>
         </Card>
       );
@@ -168,7 +169,12 @@ export default function CompareScreen() {
 
   return (
     <Screen title={s.compare.title} subtitle={s.compare.subtitle} onBack={() => router.back()}>
-      <Segmented<BenchmarkSymbol> value={bench} onChange={setBench} options={BENCHMARKS.map((b) => ({ value: b.symbol, label: s.compare.benchmarks[b.symbol] }))} />
+      {/* Chips that wrap: four index names do not fit one segmented row on a phone. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {BENCHMARKS.map((b) => (
+          <Chip key={b.symbol} label={(b.symbol === bench ? '✓ ' : '') + s.compare.benchmarks[b.symbol]} onPress={() => setBench(b.symbol)} />
+        ))}
+      </View>
       {body()}
       <Card>
         <Txt variant="headline">{s.compare.howTitle}</Txt>
