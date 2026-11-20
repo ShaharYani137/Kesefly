@@ -5,7 +5,9 @@
  * Also read by the widgets (widget/data.ts, widget/ios.ts) for an open practice trade.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { canSave, generation, onAccountSwitch } from './account-vault';
 
 import { type AlertRule, rulesFromPlan } from '@/lab/alerts';
 import type { Plan } from '@/lab/exit';
@@ -89,10 +91,18 @@ export function LabProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [state, setState] = useState<LabPersisted>(fresh);
   const [tm, setTm] = useState<LabState['tm']>(null);
+  /** Account-vault generation the state was loaded in (see state/account-vault.ts). */
+  const loadedAt = useRef(-1);
 
-  useEffect(() => {
+  const load = useCallback((fromScratch: boolean) => {
+    const at = generation();
     AsyncStorage.getItem(LAB_KEY)
       .then((raw) => {
+        // After an account switch, start from defaults.
+        if (fromScratch) {
+          setState(fresh());
+          setTm(null);
+        }
         if (!raw) return;
         const saved = JSON.parse(raw) as Partial<LabPersisted>;
         const limits = withDefaults(saved.limits);
@@ -107,11 +117,19 @@ export function LabProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch(() => {})
-      .finally(() => setHydrated(true));
+      .finally(() => {
+        loadedAt.current = at;
+        setHydrated(true);
+      });
   }, []);
 
   useEffect(() => {
-    if (hydrated) AsyncStorage.setItem(LAB_KEY, JSON.stringify(state)).catch(() => {});
+    load(false);
+    return onAccountSwitch(() => load(true));
+  }, [load]);
+
+  useEffect(() => {
+    if (hydrated && canSave(loadedAt.current)) AsyncStorage.setItem(LAB_KEY, JSON.stringify(state)).catch(() => {});
   }, [state, hydrated]);
 
   const accept = useCallback(() => setState((p) => ({ ...p, accepted: true, acceptedAt: Date.now() })), []);

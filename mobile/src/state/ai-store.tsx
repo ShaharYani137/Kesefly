@@ -5,7 +5,9 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { canSave, generation, onAccountSwitch } from './account-vault';
 
 import type { ProviderId } from '@/engine/ai-providers';
 import type { AiEffort, BetaMessageParam } from '@/engine/claude';
@@ -66,10 +68,15 @@ export function AiProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [state, setState] = useState<Saved>(DEFAULTS);
   const [masked, setMasked] = useState<string | null>(null);
+  /** Account-vault generation the state was loaded in (see state/account-vault.ts). */
+  const loadedAt = useRef(-1);
 
-  useEffect(() => {
+  const load = useCallback((fromScratch: boolean) => {
+    const at = generation();
     Promise.all([AsyncStorage.getItem(STORE), SecureStore.getItemAsync(KEY_SLOT)])
       .then(([raw, key]) => {
+        // After an account switch, start from defaults.
+        if (fromScratch) setState(DEFAULTS);
         if (raw) {
           const saved = JSON.parse(raw) as Partial<Saved>;
           setState({ ...DEFAULTS, ...saved, chats: Array.isArray(saved.chats) ? saved.chats : [] });
@@ -77,11 +84,19 @@ export function AiProvider({ children }: { children: ReactNode }) {
         setMasked(key ? mask(key) : null);
       })
       .catch(() => {})
-      .finally(() => setHydrated(true));
+      .finally(() => {
+        loadedAt.current = at;
+        setHydrated(true);
+      });
   }, []);
 
   useEffect(() => {
-    if (hydrated) AsyncStorage.setItem(STORE, JSON.stringify(state)).catch(() => {});
+    load(false);
+    return onAccountSwitch(() => load(true));
+  }, [load]);
+
+  useEffect(() => {
+    if (hydrated && canSave(loadedAt.current)) AsyncStorage.setItem(STORE, JSON.stringify(state)).catch(() => {});
   }, [state, hydrated]);
 
   const saveKey = useCallback(async (key: string) => {

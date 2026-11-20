@@ -6,12 +6,12 @@
  *   - cloud: Supabase Auth over its REST API, when EXPO_PUBLIC_SUPABASE_URL and
  *     EXPO_PUBLIC_SUPABASE_ANON_KEY are set at build time (see mobile/.env.example).
  *     Email + password, sign-up, password reset. Tokens live in the secure store.
- *     Email verification: when the Supabase project has "Confirm email" on, sign-up returns no
- *     session. Supabase mails a one-time code (the "Confirm signup" template must contain
- *     {{ .Token }}); the user types it in the app and verifyEmail() exchanges it for a session.
- *     Signing in to an unconfirmed account also leads to the code step (a fresh code is sent).
  *   - device: when no cloud project is configured. The account exists only on this phone
  *     (password stored as a salted SHA-256 hash in the secure store). Nothing is uploaded.
+ *     Several device accounts can share the phone: each email has its own record and hash.
+ *
+ * Each account's app data is kept apart on the phone (state/account-vault.ts): signing out
+ * puts it aside, signing in loads that account's own data.
  *
  * App lock: a 4-digit PIN (salted hash in the secure store) is required; fingerprint / Face ID
  * can be turned on as a faster way in (expo-local-authentication). After 5 wrong PINs the
@@ -26,6 +26,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { openAccount, parkAccount } from './account-vault';
 import { useApp } from './app-store';
 
 const K = {
@@ -46,7 +47,7 @@ export const CLOUD = SUPABASE_URL.length > 0 && SUPABASE_KEY.length > 0;
 export type Account = { email: string; name: string; mode: 'cloud' | 'device' };
 type Session = { access_token: string; refresh_token: string; expires_at: number };
 
-export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email' | 'code' | 'rate';
+export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email';
 
 export class AuthFailure extends Error {
   constructor(public code: AuthError) {
@@ -66,10 +67,6 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  /** Cloud only: checks the code mailed after sign-up and signs the user in. */
-  verifyEmail: (email: string, code: string, name?: string) => Promise<void>;
-  /** Cloud only: mails a new sign-up code. */
-  resendCode: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
@@ -87,6 +84,11 @@ async function hashWithSalt(value: string, salt?: string): Promise<string> {
   const s = salt ?? Crypto.randomUUID();
   const h = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${s}:${value}`);
   return `${s}:${h}`;
+}
+
+/** SecureStore-safe suffix for per-account device keys (short SHA-256 of the email). */
+async function emailId(mail: string): Promise<string> {
+  return (await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, mail)).slice(0, 16);
 }
 
 async function verifyHash(value: string, stored: string | null): Promise<boolean> {
@@ -115,8 +117,6 @@ async function supabase(path: string, body: object, token?: string): Promise<Rec
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
     const msg = String(json.msg ?? json.error_description ?? json.message ?? '').toLowerCase();
-    if (res.status === 429 || msg.includes('security purposes') || msg.includes('rate limit')) throw new AuthFailure('rate');
-    if (msg.includes('token') && (msg.includes('expired') || msg.includes('invalid'))) throw new AuthFailure('code');
     if (msg.includes('already')) throw new AuthFailure('exists');
     if (msg.includes('password')) throw new AuthFailure(res.status === 400 && msg.includes('invalid') ? 'invalid' : 'weak');
     if (msg.includes('confirm')) throw new AuthFailure('confirm');
@@ -163,7 +163,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         setBio(bio === '1');
         if (!acc) return setStatus('signedOut');
-        setAccount(JSON.parse(acc) as Account);
+        const saved = JSON.parse(acc) as Account;
+        // Make sure the data on screen is this account's (claims data saved before accounts were separated).
+        await openAccount(saved.email).catch(() => {});
+        setAccount(saved);
         setStatus(pin ? 'locked' : 'needsPin');
         // Refresh a cloud session quietly; a failure keeps the user signed in on this device.
         const sess = await SecureStore.getItemAsync(K.session);
@@ -197,6 +200,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [autoLock]);
 
   const finishSignIn = useCallback(async (acc: Account) => {
+    // Load this account's own data (empty for a new account) before the app shows.
+    await openAccount(acc.email);
     await SecureStore.setItemAsync(K.account, JSON.stringify(acc));
     setAccount(acc);
     const pin = await SecureStore.getItemAsync(K.pin);
@@ -216,8 +221,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await SecureStore.setItemAsync(K.session, JSON.stringify(sess));
         return finishSignIn({ email: mail, name: name.trim(), mode: 'cloud' });
       }
-      await SecureStore.setItemAsync(K.password, await hashWithSalt(password));
-      return finishSignIn({ email: mail, name: name.trim(), mode: 'device' });
+      // Device accounts: one password hash and record per email, so several can share the phone.
+      const id = await emailId(mail);
+      if (await SecureStore.getItemAsync(`${K.password}.${id}`)) throw new AuthFailure('exists');
+      const acc: Account = { email: mail, name: name.trim(), mode: 'device' };
+      await SecureStore.setItemAsync(`${K.password}.${id}`, await hashWithSalt(password));
+      await SecureStore.setItemAsync(`${K.account}.${id}`, JSON.stringify(acc));
+      return finishSignIn(acc);
     },
     [finishSignIn],
   );
@@ -235,11 +245,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return finishSignIn({ email: mail, name: meta?.name ?? mail.split('@')[0], mode: 'cloud' });
       }
       // Device mode: the account and password hash must already be on this phone.
+      const id = await emailId(mail);
+      const stored = await SecureStore.getItemAsync(`${K.account}.${id}`);
+      if (stored) {
+        if (!(await verifyHash(password, await SecureStore.getItemAsync(`${K.password}.${id}`)))) throw new AuthFailure('invalid');
+        return finishSignIn(JSON.parse(stored) as Account);
+      }
+      // Older installs kept one device account under `.last` and one password hash.
       const acc = await SecureStore.getItemAsync(`${K.account}.last`);
       const prev = acc ? (JSON.parse(acc) as Account) : null;
       if (!prev || prev.email !== mail || !(await verifyHash(password, await SecureStore.getItemAsync(K.password)))) {
         throw new AuthFailure('invalid');
       }
+      await SecureStore.setItemAsync(`${K.password}.${id}`, (await SecureStore.getItemAsync(K.password)) ?? '');
+      await SecureStore.setItemAsync(`${K.account}.${id}`, acc ?? '');
       return finishSignIn(prev);
     },
     [finishSignIn],
@@ -250,27 +269,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase('recover', { email: email.trim().toLowerCase() });
   }, []);
 
-  const verifyEmail = useCallback(
-    async (email: string, code: string, name?: string) => {
-      if (!CLOUD) throw new AuthFailure('invalid');
-      const mail = email.trim().toLowerCase();
-      const token = code.replace(/\D/g, '');
-      if (token.length < 6) throw new AuthFailure('code');
-      const j = await supabase('verify', { type: 'email', email: mail, token });
-      const sess = toSession(j);
-      if (!sess) throw new AuthFailure('code');
-      await SecureStore.setItemAsync(K.session, JSON.stringify(sess));
-      const meta = (j.user as { user_metadata?: { name?: string } } | undefined)?.user_metadata;
-      return finishSignIn({ email: mail, name: meta?.name ?? name?.trim() ?? mail.split('@')[0], mode: 'cloud' });
-    },
-    [finishSignIn],
-  );
-
-  const resendCode = useCallback(async (email: string) => {
-    if (!CLOUD) throw new AuthFailure('invalid');
-    await supabase('resend', { type: 'signup', email: email.trim().toLowerCase() });
-  }, []);
-
   const signOut = useCallback(async () => {
     const sess = await SecureStore.getItemAsync(K.session);
     if (CLOUD && sess) {
@@ -279,7 +277,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Device accounts stay on the phone so the user can sign back in with the same password.
     const acc = await SecureStore.getItemAsync(K.account);
     if (acc) await SecureStore.setItemAsync(`${K.account}.last`, acc);
+    const cur = acc ? (JSON.parse(acc) as Account) : null;
+    if (cur?.mode === 'device') {
+      // Older device accounts have only the single password hash: give them their own record.
+      const id = await emailId(cur.email);
+      const legacy = await SecureStore.getItemAsync(K.password);
+      if (legacy && !(await SecureStore.getItemAsync(`${K.password}.${id}`))) {
+        await SecureStore.setItemAsync(`${K.password}.${id}`, legacy);
+        await SecureStore.setItemAsync(`${K.account}.${id}`, acc ?? '');
+      }
+    }
     await Promise.all([K.account, K.session, K.pin, K.biometric].map((k) => SecureStore.deleteItemAsync(k)));
+    // Put this account's data aside so the next account starts with its own.
+    await parkAccount().catch(() => {});
     setAccount(null);
     setBio(false);
     setStatus('signedOut');
@@ -339,8 +349,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       resetPassword,
-      verifyEmail,
-      resendCode,
       signOut,
       setPin,
       unlockWithPin,
@@ -349,7 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       changePin,
     }),
-    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, verifyEmail, resendCode, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
+    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

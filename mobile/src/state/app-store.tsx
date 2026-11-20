@@ -5,7 +5,9 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { canSave, generation, onAccountSwitch } from './account-vault';
 
 import { type AcademyProgress, completeLesson as completeLessonFn, EMPTY_PROGRESS, type Placement } from '@/engine/academy';
 import type { SavingsAccount } from '@/engine/savings';
@@ -125,26 +127,33 @@ function deviceLang(): Lang {
   }
 }
 
+const freshState = (lang: Lang): Persisted => ({
+  lang,
+  profile: EMPTY_PROFILE,
+  onboarded: false,
+  watchlist: DEFAULT_WATCHLIST,
+  holdings: [],
+  sales: [],
+  dividends: [],
+  savings: [],
+  notify: false,
+  eventAlerts: false,
+  academy: EMPTY_PROGRESS,
+  prefs: DEFAULT_PREFS,
+});
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
-  const [state, setState] = useState<Persisted>(() => ({
-    lang: deviceLang(),
-    profile: EMPTY_PROFILE,
-    onboarded: false,
-    watchlist: DEFAULT_WATCHLIST,
-    holdings: [],
-    sales: [],
-    dividends: [],
-    savings: [],
-    notify: false,
-    eventAlerts: false,
-    academy: EMPTY_PROGRESS,
-    prefs: DEFAULT_PREFS,
-  }));
+  const [state, setState] = useState<Persisted>(() => freshState(deviceLang()));
+  /** Account-vault generation the state was loaded in (see state/account-vault.ts). */
+  const loadedAt = useRef(-1);
 
-  useEffect(() => {
+  const load = useCallback((fromScratch: boolean) => {
+    const at = generation();
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
+        // After an account switch, start from defaults but keep the language on screen.
+        if (fromScratch) setState((prev) => freshState(prev.lang));
         if (!raw) return;
         const saved = JSON.parse(raw) as Partial<Persisted>;
         setState((prev) => ({
@@ -165,11 +174,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Corrupt or unreadable storage: start fresh rather than crash.
       })
-      .finally(() => setHydrated(true));
+      .finally(() => {
+        loadedAt.current = at;
+        setHydrated(true);
+      });
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    load(false);
+    return onAccountSwitch(() => load(true));
+  }, [load]);
+
+  useEffect(() => {
+    if (!hydrated || !canSave(loadedAt.current)) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
   }, [state, hydrated]);
 

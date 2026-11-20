@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
-import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Pressable, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 
 import { formatMoney, formatPercent } from '@/engine/format';
@@ -9,6 +9,7 @@ import { checkup } from '@/engine/health';
 import { forecast } from '@/engine/projection';
 import { recommendations } from '@/engine/recommendations';
 import { fill, useApp } from '@/state/app-store';
+import { useAuth } from '@/state/auth';
 import {
   Appear,
   Button,
@@ -32,13 +33,45 @@ import { IdeaCard, useIdeaText } from '@/ui/idea-card';
 import { enterPop } from '@/ui/motion';
 import { Metrics, useTokens } from '@/ui/theme';
 
-function greeting(s: ReturnType<typeof useApp>['s']): string {
-  const h = new Date().getHours();
-  return h < 12 ? s.home.morning : h < 18 ? s.home.afternoon : s.home.evening;
+type DayPart = 'morning' | 'afternoon' | 'evening' | 'night';
+
+/**
+ * Time of day on the phone's clock. Kesefly design decision: morning 5:00-11:59,
+ * afternoon 12:00-16:59, evening 17:00-20:59, night 21:00-4:59.
+ */
+function dayPart(d = new Date()): DayPart {
+  const h = d.getHours();
+  return h >= 5 && h < 12 ? 'morning' : h >= 12 && h < 17 ? 'afternoon' : h >= 17 && h < 21 ? 'evening' : 'night';
+}
+
+/** The current day part; checks every minute and when the app comes back to the foreground. */
+function useDayPart(): DayPart {
+  const [part, setPart] = useState(dayPart);
+  useEffect(() => {
+    const tick = () => setPart(dayPart());
+    const id = setInterval(tick, 60_000);
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') tick();
+    });
+    return () => {
+      clearInterval(id);
+      sub.remove();
+    };
+  }, []);
+  return part;
+}
+
+/** "Good evening, Yossi": time-of-day greeting plus the account's first name, when there is one. */
+function greeting(s: ReturnType<typeof useApp>['s'], part: DayPart, name?: string): string {
+  const hello = s.home[part];
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `${hello}, ${first}` : hello;
 }
 
 export default function HomeScreen() {
   const { s, profile: p, lang } = useApp();
+  const { account } = useAuth();
+  const part = useDayPart();
   const { colors } = useTokens();
   const money = (v: number) => formatMoney(v, p.currency, lang);
   const f = useMemo(() => forecast(p), [p]);
@@ -56,7 +89,7 @@ export default function HomeScreen() {
 
   return (
     <Screen
-      title={greeting(s)}
+      title={greeting(s, part, account?.name)}
       subtitle={s.home.subtitle}
       trailing={<IconButton sf="gearshape" md="settings" label={s.home.settings} onPress={() => router.push('/settings')} />}>
       {/* Helper card: the single most important next step, said by the assistant. */}

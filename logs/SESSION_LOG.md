@@ -293,18 +293,21 @@ One section per working session. Newest at bottom.
 - Optional: official TA-125 member list; "Show guide again" in Settings.
 
 
-## Session 9 — 2026-11-20 (branch `feature/email-verification`)
+## Session 9 — 2026-11-20 (branch `feature/account-data`, first named `feature/email-verification`)
 
-**Goal:** verify the email of a new account before it enters the app: the user types a code sent to the email they entered.
+**Goal:** email verification on sign-up (code typed in the app); then fixes from phone testing.
 
 **Work done:**
-- `auth.tsx`: `verifyEmail(email, code)` exchanges the mailed code for a session (Supabase `/auth/v1/verify`, type `email`); `resendCode(email)` (`/auth/v1/resend`); errors `code` and `rate`.
-- `auth-screens.tsx`: code step (VerifyStep) after sign-up, and after signing in to an unconfirmed account. One-time-code autofill, resend after 60 s, "Use a different email".
-- English + Hebrew strings. tsc, eslint, vitest (46) pass.
+- Built an email code step (Supabase verify + resend), then removed it at the user's request: it will be done in a later session. Its first commit is on the branch; the removal is in the working tree.
+- Account data separation (`mobile/src/state/account-vault.ts`): sign-out puts the account's data aside and clears it; sign-in loads that account's data, or starts empty. Covers app, Lab, AI chats and key, helper brain, tour, event alerts. Test added.
+- Device mode: several accounts can share the phone (password hash and record per email).
+- Home title: time-of-day greeting with the account's first name ("ערב טוב, יוסי"); added night; updates every minute and on return to the app.
+- Release APK installed on the Android phone. tsc 0, eslint 0, vitest 48 passed.
 
 **Decisions:**
-- Verification works only in cloud mode (Supabase). Device mode has no server that can send email, so it is unchanged.
-- Supabase setup needed: Authentication > Providers > Email > "Confirm email" on, and the "Confirm signup" email template must contain `{{ .Token }}` (the default template only has a link).
+- Data saved before the separation belongs to the first account that opens it.
+- Day parts (design decision): morning 5-12, afternoon 12-17, evening 17-21, night 21-5.
 
 **Next steps:**
-- Set the Supabase project, the template, and the `EXPO_PUBLIC_SUPABASE_*` GitHub variables; build and test sign-up on the phone.
+- Email verification: Supabase "Confirm email" on, "Confirm signup" template with `{{ .Token }}`, then rebuild the code step.
+- Keep the Supabase URL in `mobile/.env.local`, not in `.env.example`.
