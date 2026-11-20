@@ -292,3 +292,19 @@ One section per working session. Newest at bottom.
 - Check on the phone: guide (fresh install), dialogs with the green icon, chat scrolling during a long reply, Hebrew alignment in dialogs.
 - Optional: official TA-125 member list; "Show guide again" in Settings.
 
+
+## Session 9 — 2026-11-20 (branch `feature/email-verification`)
+
+**Goal:** verify the email of a new account before it enters the app: the user types a code sent to the email they entered.
+
+**Work done:**
+- `auth.tsx`: `verifyEmail(email, code)` exchanges the mailed code for a session (Supabase `/auth/v1/verify`, type `email`); `resendCode(email)` (`/auth/v1/resend`); errors `code` and `rate`.
+- `auth-screens.tsx`: code step (VerifyStep) after sign-up, and after signing in to an unconfirmed account. One-time-code autofill, resend after 60 s, "Use a different email".
+- English + Hebrew strings. tsc, eslint, vitest (46) pass.
+
+**Decisions:**
+- Verification works only in cloud mode (Supabase). Device mode has no server that can send email, so it is unchanged.
+- Supabase setup needed: Authentication > Providers > Email > "Confirm email" on, and the "Confirm signup" email template must contain `{{ .Token }}` (the default template only has a link).
+
+**Next steps:**
+- Set the Supabase project, the template, and the `EXPO_PUBLIC_SUPABASE_*` GitHub variables; build and test sign-up on the phone.

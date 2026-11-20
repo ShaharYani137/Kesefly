@@ -6,6 +6,10 @@
  *   - cloud: Supabase Auth over its REST API, when EXPO_PUBLIC_SUPABASE_URL and
  *     EXPO_PUBLIC_SUPABASE_ANON_KEY are set at build time (see mobile/.env.example).
  *     Email + password, sign-up, password reset. Tokens live in the secure store.
+ *     Email verification: when the Supabase project has "Confirm email" on, sign-up returns no
+ *     session. Supabase mails a one-time code (the "Confirm signup" template must contain
+ *     {{ .Token }}); the user types it in the app and verifyEmail() exchanges it for a session.
+ *     Signing in to an unconfirmed account also leads to the code step (a fresh code is sent).
  *   - device: when no cloud project is configured. The account exists only on this phone
  *     (password stored as a salted SHA-256 hash in the secure store). Nothing is uploaded.
  *
@@ -42,7 +46,7 @@ export const CLOUD = SUPABASE_URL.length > 0 && SUPABASE_KEY.length > 0;
 export type Account = { email: string; name: string; mode: 'cloud' | 'device' };
 type Session = { access_token: string; refresh_token: string; expires_at: number };
 
-export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email';
+export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email' | 'code' | 'rate';
 
 export class AuthFailure extends Error {
   constructor(public code: AuthError) {
@@ -62,6 +66,10 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Cloud only: checks the code mailed after sign-up and signs the user in. */
+  verifyEmail: (email: string, code: string, name?: string) => Promise<void>;
+  /** Cloud only: mails a new sign-up code. */
+  resendCode: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
@@ -107,6 +115,8 @@ async function supabase(path: string, body: object, token?: string): Promise<Rec
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
     const msg = String(json.msg ?? json.error_description ?? json.message ?? '').toLowerCase();
+    if (res.status === 429 || msg.includes('security purposes') || msg.includes('rate limit')) throw new AuthFailure('rate');
+    if (msg.includes('token') && (msg.includes('expired') || msg.includes('invalid'))) throw new AuthFailure('code');
     if (msg.includes('already')) throw new AuthFailure('exists');
     if (msg.includes('password')) throw new AuthFailure(res.status === 400 && msg.includes('invalid') ? 'invalid' : 'weak');
     if (msg.includes('confirm')) throw new AuthFailure('confirm');
@@ -240,6 +250,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase('recover', { email: email.trim().toLowerCase() });
   }, []);
 
+  const verifyEmail = useCallback(
+    async (email: string, code: string, name?: string) => {
+      if (!CLOUD) throw new AuthFailure('invalid');
+      const mail = email.trim().toLowerCase();
+      const token = code.replace(/\D/g, '');
+      if (token.length < 6) throw new AuthFailure('code');
+      const j = await supabase('verify', { type: 'email', email: mail, token });
+      const sess = toSession(j);
+      if (!sess) throw new AuthFailure('code');
+      await SecureStore.setItemAsync(K.session, JSON.stringify(sess));
+      const meta = (j.user as { user_metadata?: { name?: string } } | undefined)?.user_metadata;
+      return finishSignIn({ email: mail, name: meta?.name ?? name?.trim() ?? mail.split('@')[0], mode: 'cloud' });
+    },
+    [finishSignIn],
+  );
+
+  const resendCode = useCallback(async (email: string) => {
+    if (!CLOUD) throw new AuthFailure('invalid');
+    await supabase('resend', { type: 'signup', email: email.trim().toLowerCase() });
+  }, []);
+
   const signOut = useCallback(async () => {
     const sess = await SecureStore.getItemAsync(K.session);
     if (CLOUD && sess) {
@@ -308,6 +339,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       resetPassword,
+      verifyEmail,
+      resendCode,
       signOut,
       setPin,
       unlockWithPin,
@@ -316,7 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       changePin,
     }),
-    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
+    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, verifyEmail, resendCode, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
