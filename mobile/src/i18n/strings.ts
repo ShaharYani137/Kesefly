@@ -4,6 +4,7 @@
  */
 import { EXTRA, type ExtraStrings } from './extra';
 import { AI, type AiStrings } from './ai';
+import { CHAT, type ChatStrings } from './chat';
 import { LAB, type LabStrings } from './lab';
 import { MONEY, type MoneyStrings } from './money';
 import { TOUR, type TourStrings } from './tour';
@@ -368,7 +369,7 @@ const en = {
 };
 
 type BaseStrings = typeof en;
-export type Strings = BaseStrings & ExtraStrings & MoneyStrings & LabStrings & AiStrings & TourStrings;
+export type Strings = BaseStrings & ExtraStrings & MoneyStrings & LabStrings & AiStrings & TourStrings & ChatStrings;
 
 const he: BaseStrings = {
   appName: 'כספלי',
@@ -726,6 +727,6 @@ const he: BaseStrings = {
 };
 
 export const STRINGS: Record<'en' | 'he', Strings> = {
-  en: { ...en, ...EXTRA.en, ...MONEY.en, ...LAB.en, ...AI.en, ...TOUR.en },
-  he: { ...he, ...EXTRA.he, ...MONEY.he, ...LAB.he, ...AI.he, ...TOUR.he },
+  en: { ...en, ...EXTRA.en, ...MONEY.en, ...LAB.en, ...AI.en, ...TOUR.en, ...CHAT.en },
+  he: { ...he, ...EXTRA.he, ...MONEY.he, ...LAB.he, ...AI.he, ...TOUR.he, ...CHAT.he },
 };

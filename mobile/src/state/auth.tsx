@@ -40,8 +40,8 @@ const K = {
 const MAX_TRIES = 5;
 const WAIT_MS = 30_000;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '');
+export const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 export const CLOUD = SUPABASE_URL.length > 0 && SUPABASE_KEY.length > 0;
 
 export type Account = { email: string; name: string; mode: 'cloud' | 'device' };
@@ -132,6 +132,35 @@ function toSession(j: Record<string, unknown>): Session | null {
     refresh_token: String(j.refresh_token ?? ''),
     expires_at: Date.now() + Number(j.expires_in ?? 3600) * 1000,
   };
+}
+
+/* ---------- Access token for other cloud features (user chat) ---------- */
+
+let refreshing: Promise<Session | null> | null = null;
+
+/**
+ * The signed-in cloud account's access token, refreshed when it expires within a minute.
+ * Null in device mode or when signed out.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  if (!CLOUD) return null;
+  const raw = await SecureStore.getItemAsync(K.session);
+  if (!raw) return null;
+  const sess = JSON.parse(raw) as Session;
+  if (sess.expires_at > Date.now() + 60_000) return sess.access_token;
+  if (!sess.refresh_token) return null;
+  // One refresh at a time: parallel callers share it.
+  refreshing ??= supabase('token?grant_type=refresh_token', { refresh_token: sess.refresh_token })
+    .then(async (j) => {
+      const next = toSession(j);
+      if (next) await SecureStore.setItemAsync(K.session, JSON.stringify(next));
+      return next;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshing = null;
+    });
+  return (await refreshing)?.access_token ?? null;
 }
 
 /* ---------- Provider ---------- */

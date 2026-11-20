@@ -311,3 +311,23 @@ One section per working session. Newest at bottom.
 **Next steps:**
 - Email verification: Supabase "Confirm email" on, "Confirm signup" template with `{{ .Token }}`, then rebuild the code step.
 - Keep the Supabase URL in `mobile/.env.local`, not in `.env.example`.
+
+## Session 10 — 2026-11-21 (branch `feature/user-chat`)
+
+**Goal:** chats between users for advising each other, like WhatsApp. Build the system now; the user connects Supabase later.
+
+**Work done:**
+- Supabase migration: profiles with unique @username, 1:1 and group chats, members, messages, Row Level Security, server functions, Realtime.
+- App client without an SDK: REST (`chat/api.ts`) and Realtime WebSocket (`chat/realtime.ts`).
+- Screens: Chats list, New chat (person or group), Chat room. Home header chat button. English + Hebrew.
+- Setup guide: `docs/CHAT_SETUP.md`. tsc, eslint, vitest (52), Metro bundle pass.
+
+**Decisions:**
+- Supabase backend (already the app's cloud sign-in), 1:1 + groups, find people by @username (emails stay private).
+- Chat works only with cloud accounts; device-only accounts see a notice.
+- Live updates plus a catch-up poll (15 s in a chat, 30 s on the list) so a missed event only delays a message.
+- Every chat shows that other users are not licensed investment advisors.
+
+**Next steps:**
+- Connect Supabase (`docs/CHAT_SETUP.md`), run the migration, rebuild, test with two accounts.
+- Later: push notifications for new messages, block/report, email verification.

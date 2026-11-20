@@ -91,7 +91,12 @@ export default function HomeScreen() {
     <Screen
       title={greeting(s, part, account?.name)}
       subtitle={s.home.subtitle}
-      trailing={<IconButton sf="gearshape" md="settings" label={s.home.settings} onPress={() => router.push('/settings')} />}>
+      trailing={
+        <Row style={{ gap: 0 }}>
+          <IconButton sf="bubble.left.and.bubble.right" md="forum" label={s.chat.open} onPress={() => router.push('/chats')} />
+          <IconButton sf="gearshape" md="settings" label={s.home.settings} onPress={() => router.push('/settings')} />
+        </Row>
+      }>
       {/* Helper card: the single most important next step, said by the assistant. */}
       <Appear index={0}>
         <Card tone="accent">

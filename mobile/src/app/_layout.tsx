@@ -169,6 +169,9 @@ function AppStack() {
       <Stack.Screen name="savings" />
       <Stack.Screen name="assessment" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="ai-settings" />
+      <Stack.Screen name="chats/index" />
+      <Stack.Screen name="chats/new" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="chats/[id]" />
       <Stack.Screen name="lab/index" />
       <Stack.Screen name="lab/gate" options={{ gestureEnabled: false }} />
       <Stack.Screen name="lab/scanner" />
