@@ -181,6 +181,11 @@ export default function StocksScreen() {
             <ToolRow first={!holdings.length} sf="square.and.arrow.down" md="upload_file" title={s.tools.import} hint={s.tools.importHint} onPress={() => router.push('/import')} />
           </Card>
 
+          {/* ---------- Day-trading lab (practice only; risk gate on first open) ---------- */}
+          <Card style={{ gap: 0, paddingVertical: 4 }}>
+            <ToolRow first sf="flask" md="science" title={s.lab.title} hint={s.lab.rowHint} onPress={() => router.push('/lab')} />
+          </Card>
+
           {/* ---------- Watchlist ---------- */}
           <SectionHeader>{s.stocks.watchlist}</SectionHeader>
           <Segmented<'mine' | 'movers'>

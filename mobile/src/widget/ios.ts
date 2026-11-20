@@ -12,9 +12,11 @@
  *   and early closes; Swift only looks up the current segment);
  * - every label in the app language.
  * Android: ExtensionStorage is a no-op there (the native module is iOS only).
+ * Builds without the widget (KESEFLY_IOS_WIDGET=0, see app.config.js) skip all of this.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ExtensionStorage } from '@bacons/apple-targets';
+import Constants from 'expo-constants';
 
 import { marketStatus, type Zone } from '@/engine/clock';
 import { bySymbol, type DividendIn, type LotIn, position, type SaleIn } from '@/engine/positions';
@@ -70,7 +72,11 @@ function segments(zone: Zone, lang: Lang, now: number): IosSegment[] {
   return out;
 }
 
+/** False in the iPhone build without the widget (free Apple ID). */
+export const hasIosWidget = Constants.expoConfig?.extra?.iosWidget !== false;
+
 export async function syncIosWidget(): Promise<void> {
+  if (!hasIosWidget) return;
   let saved: Saved = {};
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
@@ -129,6 +135,8 @@ export async function syncIosWidget(): Promise<void> {
       { label: s.clock.wallStreet, flag: '🇺🇸', tz: 'America/New_York', segments: segments('NY', lang, now) },
       { label: s.clock.telAviv, flag: '🇮🇱', tz: 'Asia/Jerusalem', segments: segments('TLV', lang, now) },
     ],
+    /** Open Day-trading lab practice trade (one line), or null. */
+    lab: snap.lab,
     snapshot: { value: snap.value, day: snap.day, dayUp: snap.dayUp, gain: snap.gain, gainUp: snap.gainUp, movers: snap.movers.map(({ symbol, price, pct, up }) => ({ symbol, price, pct, up })), rate: snap.rate, updated: snap.updated },
   };
 

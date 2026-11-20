@@ -260,3 +260,35 @@ One section per working session. Newest at bottom.
 - Install the new `Kesefly.ipa` and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
 - Check Android chat composer has no extra bottom gap.
 - Optional: remove the branch from the iOS build push trigger after merge.
+## Session 8 — 2026-11-20 (branch `feature/day-trading-lab`)
+
+**Goal:** implement the "Kesefly Day-Trading Lab Plan" phase by phase (0 to 4); let iPhone users install the app by becoming a free Apple developer. Afterwards (queued by the user): own AI API key in Settings and professional chat options.
+
+**Work done:**
+- Phase 0 (same app on both phones): per-feature notification cancel; iOS build with and without widget; localized widget fallback; iPhone install guide (EN/HE); test matrix; vitest.
+- Phase 1 (market data): NY/TLV sessions, `getCandles` / `getSpark`, CPython-exact seeded random numbers.
+- Phase 2 (engines): scanner, entry, exit, Time Machine, sizing, risk, paper account, alerts; tests reproduce the skill's numbers exactly (364.18 at 10:15, 358.32 / 370.04, 8 shares / 46.88, Time Machine 29.38 / 25.48 / 45.14 %).
+- Phase 3 (screens): risk gate, hub, scanner, setup, plan, Time Machine, ticket, journal, Lab settings; Stocks row, Home card, Learn track (5 lessons), helper chat topics, widget line; English + Hebrew.
+- Phase 4 (release prep): CI gates on both workflows, Gradle cache, NOTICES + About credit, Metro bundle check. 34 tests, tsc 0, lint 0.
+
+**Decisions:**
+- Engines are pure TypeScript in `mobile/src/lab/`; the Time Machine uses CPython's Mersenne Twister so results match the skill bit for bit.
+- Tel Aviv range, cutoff and flat-by times, shekel limits (x3.6), paper fill rules and index snapshots are Kesefly design decisions (marked in code).
+- Lab state has its own storage key; Lab notifications are tagged `lab-time` / `lab-price`.
+- Free Apple ID users install `Kesefly-no-widget.ipa` (no App Group) after turning on Developer Mode.
+
+- AI chat with the user's own Anthropic API key: Settings > AI chat (key saved encrypted and checked), Claude chat on the Helper tab (streaming, saved chats with full context, compaction, memory notes + `save_memory`, web search, model and effort choice, share-numbers opt-in). Offline helper kept as fallback.
+
+- AI key from ANY company in Settings > AI chat (OpenAI, Gemini, Claude, Grok, Mistral, DeepSeek, Groq, OpenRouter, or any OpenAI-compatible address); company detected from the key and confirmed; model list from the provider.
+- Installed and checked on the Android phone several times (release APK, `npm run apk`); fixes from phone feedback: Security chips cut off, segmented buttons sized to their text (scroll when too wide, dividers correct in Hebrew), Rubik Bold for every title, themed alert dialog (RTL, app icon on a green tile), Israel/USA flags in the Lab, resizable candles (pinch, drag, buttons), more scanner lists (TA-125, TA-90, Tel Aviv sectors, Dow 30, ETFs, Israeli stocks in New York, US sectors), chat no longer jumps while the AI types, AI chat header layout, one-time welcome guide (8 cards).
+
+**Decisions (later):**
+- Non-Claude providers through their OpenAI-compatible APIs; Claude keeps the SDK and its extras (compaction, web search, memory tool).
+- TA-125 and the Tel Aviv sector lists are approximate snapshots (verified symbols, not official member files); TA-125 has 109 shares.
+- Alerts use an in-app themed dialog instead of the system Alert.
+
+**Next steps:**
+- CI on push builds the iPhone files (branch is in the iOS trigger); the Android workflow builds on `main` only (or run it by hand). Install both iPhone files and run `docs/TEST_MATRIX.md`.
+- Check on the phone: guide (fresh install), dialogs with the green icon, chat scrolling during a long reply, Hebrew alignment in dialogs.
+- Optional: official TA-125 member list; "Show guide again" in Settings.
+

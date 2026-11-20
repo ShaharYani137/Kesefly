@@ -11,7 +11,9 @@
  * Text drawn by the OS (alert dialogs, notifications, the fingerprint prompt) gets the same
  * treatment, because those follow the system direction too.
  */
-import { Alert, type AlertButton } from 'react-native';
+import type { AlertButton } from 'react-native';
+
+import { showDialog } from './dialog';
 
 export const RLM = '‏';
 export const LRM = '‎';
@@ -27,11 +29,8 @@ export function ltr(text: string): string {
   return LRM + text.replace(/\n/g, `\n${LRM}`);
 }
 
-/** Alert.alert with right-to-left title, message and buttons in Hebrew. */
-export function alertDir(rtl: boolean, title: string, message?: string, buttons?: AlertButton[]) {
-  Alert.alert(
-    bidi(title, rtl),
-    message ? bidi(message, rtl) : undefined,
-    buttons?.map((b) => ({ ...b, text: b.text ? bidi(b.text, rtl) : b.text })),
-  );
+/** Alert in the app's theme and direction (themed dialog, ui/dialog.tsx). */
+export function alertDir(_rtl: boolean, title: string, message?: string, buttons?: AlertButton[]) {
+  // Themed in-app dialog (ui/dialog.tsx); it applies the app's direction itself.
+  showDialog(title, message, buttons);
 }

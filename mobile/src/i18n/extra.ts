@@ -396,8 +396,8 @@ const en = {
   settings3: {
     appearance: 'Appearance',
     theme: { system: 'System', light: 'Light', dark: 'Dark' },
-    autoLock: 'Lock again after',
-    autoLockOpts: { now: 'Right away', m1: '1 min', m5: '5 min', start: 'App start only' },
+    autoLock: 'When to lock again after you leave the app',
+    autoLockOpts: { now: 'Now', m1: '1 min', m5: '5 min', start: 'On open' },
     changePin: 'Change PIN',
     alerts: 'Alert preferences',
     scope: 'Which news alerts you',
@@ -811,8 +811,8 @@ const he: ExtraStrings = {
   settings3: {
     appearance: 'מראה',
     theme: { system: 'כמו הטלפון', light: 'בהיר', dark: 'כהה' },
-    autoLock: 'נעילה מחדש אחרי',
-    autoLockOpts: { now: 'מיד', m1: 'דקה', m5: '5 דקות', start: 'רק בפתיחה' },
+    autoLock: 'מתי לנעול שוב אחרי שיוצאים מהאפליקציה',
+    autoLockOpts: { now: 'מיד', m1: 'דקה', m5: '5 דק׳', start: 'בפתיחה' },
     changePin: 'שינוי קוד',
     alerts: 'העדפות התראות',
     scope: 'על אילו חדשות להתריע',

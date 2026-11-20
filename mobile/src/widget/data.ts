@@ -10,7 +10,9 @@ import { marketStatus, formatDuration } from '@/engine/clock';
 import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
+import { openOrders, type PaperAccount } from '@/lab/paper';
 import { STORAGE_KEY } from '@/state/app-store';
+import { LAB_KEY } from '@/state/lab-key';
 
 export type ClockLine = { label: string; flag: 'US' | 'IL'; time: string; status: string; open: boolean };
 
@@ -56,7 +58,29 @@ export type WidgetData = {
   /** USD/ILS rate text, e.g. "USD/ILS 3.712", or null when the rate is unavailable. */
   rate: string | null;
   updated: string;
+  /** Open Day-trading lab practice trade, one line, or null. */
+  lab: { line: string; up: boolean | null } | null;
 };
+
+/** One line for the first open practice trade: "Practice · TSLA × 8 · +$12.40". */
+async function labLine(lang: Lang): Promise<WidgetData['lab']> {
+  try {
+    const raw = await AsyncStorage.getItem(LAB_KEY);
+    if (!raw) return null;
+    const acct = (JSON.parse(raw) as { account?: PaperAccount }).account;
+    const o = acct?.orders ? openOrders(acct)[0] : undefined;
+    if (!o) return null;
+    const s = STRINGS[lang].lab;
+    const base = `${s.practice} · ${o.symbol} × ${o.qty}`;
+    if (!o.fill) return { line: `${base} · ${s.hub.pending.replace('{price}', formatPrice(o.limit ?? o.planEntry, o.currency, lang))}`, up: null };
+    const q = (await withTimeout(getQuotes([o.symbol], true), {} as Record<string, Quote>))[o.symbol];
+    if (!q) return { line: base, up: null };
+    const pnl = o.qty * (q.price - o.fill.price);
+    return { line: `${base} · ${pnl >= 0 ? '+' : '−'}${formatPrice(Math.abs(pnl), o.currency, lang)}`, up: pnl >= 0 };
+  } catch {
+    return null;
+  }
+}
 
 type Saved = {
   lang?: Lang;
@@ -219,5 +243,6 @@ export async function widgetData(): Promise<WidgetData> {
     movers,
     rate: rate ? `USD/ILS ${rate.toFixed(3)}` : null,
     updated: s.widget.updated.replace('{time}', `${two(d.getHours())}:${two(d.getMinutes())}`),
+    lab: await labLine(lang),
   };
 }

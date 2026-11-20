@@ -26,6 +26,7 @@ import {
   Txt,
 } from '@/ui/components';
 import { LearnCard, LiveFeed, MarketGlance, PortfolioCard, TimeCard, TopMovers } from '@/ui/home-widgets';
+import { LabHomeCard } from '@/ui/lab-ui';
 import { usePortfolio } from '@/state/portfolio';
 import { IdeaCard, useIdeaText } from '@/ui/idea-card';
 import { enterPop } from '@/ui/motion';
@@ -94,6 +95,9 @@ export default function HomeScreen() {
       <Appear index={1}>
         <TimeCard />
       </Appear>
+
+      {/* Shown only while a Day-trading lab practice trade is open. */}
+      <LabHomeCard />
 
       {/* Live portfolio, the main markets and today's biggest watchlist moves. */}
       <Appear index={2}>

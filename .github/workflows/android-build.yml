@@ -52,12 +52,23 @@ jobs:
       - name: Install JavaScript packages
         run: npm ci
 
+      - name: Tests, typecheck, lint
+        run: |
+          npm test
+          npx tsc --noEmit
+          npm run lint
+
       - name: Generate the Android project (expo prebuild)
         run: npx expo prebuild --platform android --no-install
 
+      # Gradle caches and wrapper between runs (about 20 to 8-10 minutes once warm).
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
       - name: Build release APK (arm64)
         working-directory: mobile/android
-        run: ./gradlew app:assembleRelease -x lint -x test -PreactNativeArchitectures=arm64-v8a --no-daemon
+        run: ./gradlew app:assembleRelease -x lint -x test -PreactNativeArchitectures=arm64-v8a --build-cache
 
       - name: Name the APK
         run: |

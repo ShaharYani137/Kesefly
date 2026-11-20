@@ -51,21 +51,18 @@ The release build is signed with the debug key. Create a real upload key before 
 
 ## Run on an iPhone (Windows, no Mac)
 
-The app runs on its own, like the Android APK: no Expo Go, no PC, no Metro. GitHub builds it on a Mac for free (`.github/workflows/ios-build.yml`), and Sideloadly installs it from Windows with a free Apple ID.
+The app runs on its own, like the Android APK: no Expo Go, no PC, no Metro. GitHub builds it on a Mac for free (`.github/workflows/ios-build.yml`), and Sideloadly installs it from Windows. Each iPhone user becomes a free Apple developer for their own phone (Apple ID + Developer Mode).
 
-1. **Get the build.** Every push to `main`, `Shavit` or `Shahar` that changes `mobile/` starts a build (about 20–30 minutes). To start one by hand: repo > **Actions** > **iOS build** > **Run workflow**.
-   - Latest `main` build, no login needed: [Kesefly.ipa](https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa) (also on the repo's **Releases** page).
-   - Other branches: open the green run and download **Kesefly-ios** under **Artifacts** (GitHub login needed), then unzip it to get `Kesefly.ipa`.
-2. **Install the tools on Windows.** Install [Sideloadly](https://sideloadly.io) and Apple's **Apple Devices** app (Microsoft Store), which has the iPhone USB driver.
-3. **Install the app.** Connect the iPhone with a cable and tap **Trust**. In Sideloadly, drag in `Kesefly.ipa`, enter your Apple ID, and click **Start**.
-4. **Trust it on the iPhone (first time only).** Settings > General > **VPN & Device Management** > your Apple ID > **Trust**. iOS 16 and later also needs Settings > Privacy & Security > **Developer Mode** on (the phone restarts).
+Full steps, in English and Hebrew: [docs/INSTALL_IPHONE.md](docs/INSTALL_IPHONE.md).
 
-Free Apple ID limits:
+Each build makes two files:
 
-- The app stops opening after **7 days**. Connect the phone and click **Start** in Sideloadly again; your data stays.
-- At most 3 sideloaded apps at once.
-- Notifications are local only (weekly tips, events, price moves): they work. Remote push is off, because a free Apple ID cannot sign it (`mobile/plugins/with-local-notifications-only.js`).
-- The home-screen widget is Android only.
+- `Kesefly-no-widget.ipa`: free Apple ID (no App Group, so no home-screen widget). Built with `KESEFLY_IOS_WIDGET=0` (`mobile/app.config.js`).
+- `Kesefly.ipa`: with the widget; needs a paid Apple Developer account.
+
+Latest `main` build, no login needed: [Kesefly-no-widget.ipa](https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly-no-widget.ipa) · [Kesefly.ipa](https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa).
+
+Notifications are local only (weekly tips, events, price moves, Lab alerts). Remote push is off, because a free Apple ID cannot sign it (`mobile/plugins/with-local-notifications-only.js`).
 
 A paid Apple Developer account ($99/year) removes the 7-day limit and allows TestFlight. Then build with EAS (`eas build -p ios`) instead.
 

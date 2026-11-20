@@ -9,7 +9,7 @@ import { Pressable, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { buildPath, type PathItem } from '@/engine/academy';
-import { ACADEMY, PATH } from '@/i18n/academy';
+import { ACADEMY, DAY_TRADING_TRACK, PATH } from '@/i18n/academy';
 import { fill, useApp } from '@/state/app-store';
 import { Appear, Button, Card, Icon, Pill, Row, Screen, SectionHeader, Txt } from '@/ui/components';
 import { Fonts, Metrics, useTokens } from '@/ui/theme';
@@ -86,6 +86,20 @@ export default function LearnScreen() {
           </View>
         );
       })}
+
+      {/* ---------- Day-trading track (separate from the 4-level path; practice in the Lab) ---------- */}
+      <SectionHeader>{`${s.lab.track} · ${DAY_TRADING_TRACK.filter((id) => academy.done[id]).length}/${DAY_TRADING_TRACK.length}`}</SectionHeader>
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        {DAY_TRADING_TRACK.map((id, i) => (
+          <LessonRow
+            key={id}
+            item={{ id, level: 4, status: academy.done[id] ? 'done' : 'open', forYou: false, score: academy.done[id]?.score }}
+            first={i === 0}
+            last={i === DAY_TRADING_TRACK.length - 1}
+          />
+        ))}
+      </Card>
+      <Button kind="tonal" label={s.lab.title} onPress={() => router.push('/lab')} />
     </Screen>
   );
 }

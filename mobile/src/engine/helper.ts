@@ -46,7 +46,11 @@ type Topic =
   | 'dividends'
   | 'home'
   | 'rates'
-  | 'gold';
+  | 'gold'
+  | 'labTimeMachine'
+  | 'labOrb'
+  | 'labStops'
+  | 'labDayTrading';
 
 /**
  * Keyword rules, checked in order (first match wins).
@@ -70,6 +74,11 @@ const RULES: { topic: Topic; en: RegExp; he: string[] }[] = [
     en: /\b(should i (buy|sell)|buy|sell|best stock|which stock|recommend)\b/i,
     he: ['לקנות', 'למכור', 'כדאי לי לקנות', 'איזו מניה', 'המלצה'],
   },
+  // Day-trading lab: explains the methods; never says what to buy.
+  { topic: 'labTimeMachine', en: /\b(time machine|monte carlo|simulation|replays?)\b/i, he: ['מכונת הזמן', 'סימולציה', 'מונטה קרלו'] },
+  { topic: 'labOrb', en: /\b(opening.?range|orb|breakouts?|setups?|bull flag|oversold|rsi)\b/i, he: ['טווח הפתיחה', 'פריצה', 'פריצת', 'סטאפ', 'דגל שורי', 'מכירת יתר'] },
+  { topic: 'labStops', en: /\b(stop.?loss|stops|my stop|targets?|r multiple|position siz\w*|sizing|reward to risk)\b/i, he: ['סטופ', 'סטופ לוס', 'יעד', 'גודל פוזיציה', 'סיכוי מול סיכון'] },
+  { topic: 'labDayTrading', en: /\b(day.?trad\w*|trading lab|paper trad\w*|practice trad\w*)\b/i, he: ['מסחר יומי', 'מעבדה', 'מעבדת', 'דיי טריידינג', 'מסחר תרגול'] },
   {
     topic: 'crypto',
     en: /\b(crypto|bitcoin|btc|ethereum|eth)\b/i,
@@ -294,6 +303,14 @@ export function answer(
       return { text: a.thanks };
     case 'noAdvice':
       return { text: a.noAdvice };
+    case 'labTimeMachine':
+      return { text: s.lab.helper.timeMachine };
+    case 'labOrb':
+      return { text: s.lab.helper.orb };
+    case 'labStops':
+      return { text: s.lab.helper.stops };
+    case 'labDayTrading':
+      return { text: s.lab.helper.dayTrading };
     case 'crypto':
       return { text: a.crypto };
     case 'summary': {

@@ -70,6 +70,9 @@ struct Snapshot: Codable {
   let updated: String
 }
 
+/// Open Day-trading lab practice trade, one formatted line (src/widget/data.ts).
+struct LabLine: Codable { let line: String; let up: Bool? }
+
 struct Payload: Codable {
   let v: Int
   let lang: String
@@ -80,12 +83,26 @@ struct Payload: Codable {
   let labels: Labels
   let markets: [Market]
   let snapshot: Snapshot
+  /// Missing in payloads written before the Lab existed.
+  let lab: LabLine?
 }
+
+/// Market segments in the payload cover 3 days. Older data shows the "Open Kesefly to update"
+/// fallback instead of wrong clocks.
+let maxAgeMs: Double = 3 * 86_400_000
 
 func loadPayload() -> Payload? {
   guard let raw = UserDefaults(suiteName: appGroup)?.string(forKey: dataKey),
-        let data = raw.data(using: .utf8) else { return nil }
-  return try? JSONDecoder().decode(Payload.self, from: data)
+        let data = raw.data(using: .utf8),
+        let p = try? JSONDecoder().decode(Payload.self, from: data) else { return nil }
+  return Date().timeIntervalSince1970 * 1000 - p.at > maxAgeMs ? nil : p
+}
+
+/// Fallback text when there is no (fresh) data. The app has not written labels yet, so the
+/// language comes from the phone.
+func openAppText() -> (title: String, body: String) {
+  let he = Locale.preferredLanguages.first?.hasPrefix("he") ?? false
+  return he ? ("כספלי", "פתחו את כספלי כדי לעדכן") : ("Kesefly", "Open Kesefly to update")
 }
 
 // MARK: - Prices (Yahoo Finance chart endpoint)
@@ -361,6 +378,17 @@ struct MoversList: View {
   }
 }
 
+struct LabRow: View {
+  let lab: LabLine
+  var body: some View {
+    Text(lab.line)
+      .font(.caption2.weight(.semibold))
+      .foregroundColor(lab.up == nil ? gold : (lab.up! ? upColor : downColor))
+      .lineLimit(1)
+      .minimumScaleFactor(0.7)
+  }
+}
+
 struct ClockRow: View {
   let clocks: [Clock]
   var body: some View {
@@ -390,7 +418,7 @@ struct KeseflyWidgetView: View {
 
   var body: some View {
     content
-      .environment(\.layoutDirection, entry.payload?.lang == "he" ? .rightToLeft : .leftToRight)
+      .environment(\.layoutDirection, (entry.payload?.lang ?? (Locale.preferredLanguages.first?.hasPrefix("he") == true ? "he" : "en")) == "he" ? .rightToLeft : .leftToRight)
       .containerBackground(for: .widget) { bg }
       .widgetURL(URL(string: "kesefly://"))
   }
@@ -417,6 +445,7 @@ struct KeseflyWidgetView: View {
       case .systemLarge, .systemExtraLarge:
         VStack(alignment: .leading, spacing: 10) {
           Header(p: p, n: n, showRate: true)
+          if let lab = p.lab { LabRow(lab: lab) }
           ValueBlock(p: p, n: n, big: true)
           if !n.movers.isEmpty { MoversList(movers: Array(n.movers.prefix(6)), showPrice: true) }
           Spacer(minLength: 0)
@@ -425,6 +454,7 @@ struct KeseflyWidgetView: View {
       default:
         VStack(alignment: .leading, spacing: 8) {
           Header(p: p, n: n, showRate: false)
+          if let lab = p.lab { LabRow(lab: lab) }
           HStack(spacing: 10) {
             ValueBlock(p: p, n: n, big: false)
             if !n.movers.isEmpty { MoversList(movers: Array(n.movers.prefix(3)), showPrice: false) }
@@ -433,11 +463,23 @@ struct KeseflyWidgetView: View {
         }
       }
     } else {
-      VStack(alignment: .leading, spacing: 6) {
-        Text("Kesefly").font(.caption.weight(.bold)).foregroundColor(gold)
-        Text("Open Kesefly once to show your portfolio here.").font(.footnote).foregroundColor(.white)
+      let t = openAppText()
+      switch family {
+      case .accessoryInline:
+        Text(t.body)
+      case .accessoryRectangular:
+        VStack(alignment: .leading, spacing: 1) {
+          Text(t.title).font(.caption2.weight(.bold)).lineLimit(1)
+          Text(t.body).font(.caption2).lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      default:
+        VStack(alignment: .leading, spacing: 6) {
+          Text(t.title).font(.caption.weight(.bold)).foregroundColor(gold)
+          Text(t.body).font(.footnote).foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
   }
 }

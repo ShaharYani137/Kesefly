@@ -18,6 +18,9 @@
  *   - Brand v2 colors and the Rubik typeface (see the color and Fonts blocks below).
  *   - iOS card corner radius 10pt and prominent button height 50pt.
  *   - Android primary button height 56dp (M3 Expressive "medium" button size).
+ *   - Every title role (largeTitle, title, title3, headline) and section header is Rubik Bold on
+ *     both platforms (user request 2026-11-20). Sizes and line heights stay as in the references;
+ *     only the weight differs from HIG (semibold title 3 / headline) and M3 (regular / medium).
  */
 import { Platform, type TextStyle, useColorScheme } from 'react-native';
 
@@ -148,8 +151,8 @@ export type TypeRole = 'largeTitle' | 'title' | 'title3' | 'headline' | 'body' |
 const iosType: Record<TypeRole, TextStyle> = {
   largeTitle: { fontSize: 34, lineHeight: 41, fontFamily: Fonts.bold },
   title: { fontSize: 28, lineHeight: 34, fontFamily: Fonts.bold },
-  title3: { fontSize: 20, lineHeight: 25, fontFamily: Fonts.semibold },
-  headline: { fontSize: 17, lineHeight: 22, fontFamily: Fonts.semibold },
+  title3: { fontSize: 20, lineHeight: 25, fontFamily: Fonts.bold },
+  headline: { fontSize: 17, lineHeight: 22, fontFamily: Fonts.bold },
   body: { fontSize: 17, lineHeight: 22, fontFamily: Fonts.regular },
   subhead: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.regular },
   footnote: { fontSize: 13, lineHeight: 18, fontFamily: Fonts.regular },
@@ -157,15 +160,15 @@ const iosType: Record<TypeRole, TextStyle> = {
 };
 
 const mdType: Record<TypeRole, TextStyle> = {
-  largeTitle: { fontSize: 28, lineHeight: 36, fontFamily: Fonts.regular }, // Headline medium
-  title: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.regular }, // Title large
-  title3: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.medium }, // Title large, emphasized
+  largeTitle: { fontSize: 28, lineHeight: 36, fontFamily: Fonts.bold }, // Headline medium (bold: design decision)
+  title: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.bold }, // Title large (bold: design decision)
+  title3: { fontSize: 22, lineHeight: 28, fontFamily: Fonts.bold }, // Title large, emphasized (bold: design decision)
   headline: {
     fontSize: 16,
     lineHeight: 24,
-    fontFamily: Fonts.medium,
+    fontFamily: Fonts.bold,
     letterSpacing: 0.2,
-  }, // Title medium
+  }, // Title medium (bold: design decision)
   body: { fontSize: 16, lineHeight: 24, fontFamily: Fonts.regular, letterSpacing: 0.5 }, // Body large
   subhead: {
     fontSize: 14,

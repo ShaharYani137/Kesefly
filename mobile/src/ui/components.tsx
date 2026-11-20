@@ -1,5 +1,6 @@
 import { Children, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, type ScrollViewProps, StyleSheet, Text, type TextProps, TextInput, View, type ViewStyle } from 'react-native';
+import { Image } from 'expo-image';
 import { SymbolView, type SymbolViewProps } from 'expo-symbols';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSpring, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -265,6 +266,8 @@ export function SectionHeader({ children }: { children: string }) {
         marginBottom: -8,
         marginHorizontal: 4,
         textTransform: isIOS ? 'uppercase' : 'none',
+        // Section titles are Rubik Bold too (design decision, see theme.ts).
+        fontFamily: Fonts.bold,
       }}>
       {children}
     </Txt>
@@ -448,7 +451,11 @@ export function TextField({
   );
 }
 
-/** iOS segmented control look on iOS; M3 segmented button look on Android. */
+/**
+ * iOS segmented control look on iOS; M3 segmented button look on Android.
+ * Segments size to their own label and stretch to fill the row; when the labels are wider than
+ * the screen, the control scrolls sideways instead of cutting text (design decision).
+ */
 export function Segmented<T extends string>({
   options,
   value,
@@ -469,35 +476,39 @@ export function Segmented<T extends string>({
       ? { ...base.colors, fill: 'rgba(255,255,255,0.12)', card: 'rgba(255,255,255,0.22)', separator: 'rgba(255,255,255,0.25)', text: '#FFFFFF', accentSoft: 'rgba(255,255,255,0.22)', onAccentSoft: '#FFFFFF' }
       : base.colors;
   return (
-    <View
+    <ScrollView
+      horizontal
+      bounces={false}
+      showsHorizontalScrollIndicator={false}
       accessibilityRole="radiogroup"
       style={{
-        flexDirection: 'row',
+        flexGrow: 0,
         borderRadius: isIOS ? 9 : 999,
         backgroundColor: isIOS ? colors.fill : 'transparent',
         borderWidth: isIOS ? 0 : 1,
         borderColor: colors.separator,
-        padding: isIOS ? 2 : 0,
-        overflow: 'hidden',
-      }}>
+      }}
+      contentContainerStyle={{ flexGrow: 1, flexDirection: 'row', padding: isIOS ? 2 : 0 }}>
       {options.map((o, i) => {
         const selected = o.value === value;
-        return (
+        return [
+          // Divider as its own view: a start border lands on the wrong side in a horizontal
+          // ScrollView in Hebrew on Android.
+          !isIOS && i > 0 ? <View key={`d${o.value}`} style={{ width: 1, backgroundColor: colors.separator }} /> : null,
           <Pressable
             key={o.value}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             onPress={() => onChange(o.value)}
             style={{
-              flex: 1,
+              flexGrow: 1,
+              flexShrink: 0,
               minHeight: isIOS ? 32 : 40,
               alignItems: 'center',
               justifyContent: 'center',
               borderRadius: isIOS ? 7 : 0,
               backgroundColor: selected ? (isIOS ? colors.card : colors.accentSoft) : 'transparent',
-              borderStartWidth: !isIOS && i > 0 ? 1 : 0,
-              borderColor: colors.separator,
-              paddingHorizontal: 8,
+              paddingHorizontal: isIOS ? 12 : 14,
             }}>
             <Text
               numberOfLines={1}
@@ -508,10 +519,10 @@ export function Segmented<T extends string>({
               }}>
               {bidi(`${!isIOS && selected ? '✓ ' : ''}${o.label}`, isRTL)}
             </Text>
-          </Pressable>
-        );
+          </Pressable>,
+        ];
       })}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -625,6 +636,21 @@ export function Chip({ label, onPress, sf, md }: { label: string; onPress: () =>
 }
 
 /** Kesefly helper avatar: a round badge with the assistant symbol. */
+const APP_MARK = require('@/assets/images/splash-icon.png');
+
+/**
+ * Kesefly app icon as a badge: the gold "K" mark on a solid brand-green tile (brand v2 teal
+ * #0F7B6C, theme.ts), the same look as the launcher icon. Used in dialogs and the guide.
+ * DESIGN DECISION: corner radius 28% of the size (launcher-icon squircle feel).
+ */
+export function AppIconBadge({ size = 48 }: { size?: number }) {
+  return (
+    <View style={{ width: size, height: size, borderRadius: size * 0.28, backgroundColor: '#0F7B6C', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <Image source={APP_MARK} style={{ width: size * 0.9, height: size * 0.9 }} contentFit="contain" />
+    </View>
+  );
+}
+
 export function HelperAvatar({ size = 36 }: { size?: number }) {
   const { colors } = useTokens();
   return (

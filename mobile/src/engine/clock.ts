@@ -91,6 +91,11 @@ function session(zone: Zone, z: ZonedTime): [number, number] | null {
   return z.weekday === 5 ? [9 * 60 + 59, 13 * 60 + 50] : [9 * 60 + 59, 17 * 60 + 25];
 }
 
+/** Regular-session [open, close] in local minutes for the zone's calendar day at instant `t`, or null when shut. */
+export function sessionMinutes(zone: Zone, t: number): [number, number] | null {
+  return session(zone, zoned(zone, t));
+}
+
 export function marketStatus(zone: Zone, t = Date.now()): MarketStatus {
   const z = zoned(zone, t);
   const now = z.hour * 60 + z.minute;

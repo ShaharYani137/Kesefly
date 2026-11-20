@@ -5,15 +5,21 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
 import { Appearance, AppState, Platform, useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useApp } from '@/state/app-store';
 import { AuthProvider, useAuth } from '@/state/auth';
 // Imported for its side effect too: defines the background task at module scope.
 import { checkEvents, disableEventAlerts, enableEventAlerts, ensureEventsChannel } from '@/state/event-alerts';
+import { AiProvider } from '@/state/ai-store';
+import { LabMonitor } from '@/state/lab-monitor';
+import { LabProvider, useLab } from '@/state/lab-store';
 import { ensureChannel, scheduleWeeklyTips } from '@/state/notifications';
 import { AnimatedSplash } from '@/ui/animated-splash';
+import { AppTour } from '@/ui/app-tour';
 import { AuthScreen, LockScreen, PinSetup } from '@/ui/auth-screens';
+import { DialogHost } from '@/ui/dialog';
 import { OfflineBanner } from '@/ui/offline-banner';
 import { syncIosWidget } from '@/widget/ios';
 import { refreshWidget } from '@/widget/task';
@@ -24,7 +30,7 @@ SplashScreen.preventAutoHideAsync();
 const FOREGROUND_CHECK_MS = 10 * 60_000;
 
 function RootStack() {
-  const { hydrated } = useApp();
+  const { hydrated, onboarded } = useApp();
   const auth = useAuth();
   const [fontsLoaded] = useFonts({ Rubik_400Regular, Rubik_500Medium, Rubik_600SemiBold, Rubik_700Bold });
   const [intro, setIntro] = useState(true);
@@ -46,11 +52,15 @@ function RootStack() {
           <AppStack />
           <NotificationSync />
           <NotificationTaps />
+          <LabMonitor />
+          {/* Once, after the profile setup, while unlocked and after the intro animation. */}
+          <AppTour ready={onboarded && auth.status === 'ready' && !intro} />
           {auth.status === 'needsPin' ? <PinSetup /> : null}
           {auth.status === 'locked' ? <LockScreen /> : null}
         </>
       )}
       <OfflineBanner />
+      <DialogHost />
       {intro ? <AnimatedSplash onDone={endIntro} /> : null}
     </View>
   );
@@ -95,6 +105,8 @@ function NotificationSync() {
 function WidgetSync() {
   const { holdings, sales, dividends, lang, profile, hydrated } = useApp();
   const currency = profile.currency;
+  // Open practice trades show on both widgets too.
+  const labOpen = useLab().account.orders.filter((o) => o.status === 'open' || o.status === 'pending').map((o) => `${o.id}:${o.status}`).join(',');
   useEffect(() => {
     if (!hydrated) return;
     const id = setTimeout(() => {
@@ -102,7 +114,7 @@ function WidgetSync() {
       if (Platform.OS === 'ios') syncIosWidget().catch(() => {});
     }, 800);
     return () => clearTimeout(id);
-  }, [holdings, sales, dividends, lang, currency, hydrated]);
+  }, [holdings, sales, dividends, lang, currency, hydrated, labOpen]);
   useEffect(() => {
     if (Platform.OS !== 'ios') return;
     const sub = AppState.addEventListener('change', (st) => {
@@ -156,6 +168,16 @@ function AppStack() {
       <Stack.Screen name="import" />
       <Stack.Screen name="savings" />
       <Stack.Screen name="assessment" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="ai-settings" />
+      <Stack.Screen name="lab/index" />
+      <Stack.Screen name="lab/gate" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="lab/scanner" />
+      <Stack.Screen name="lab/setup/[symbol]" />
+      <Stack.Screen name="lab/plan" />
+      <Stack.Screen name="lab/timemachine" />
+      <Stack.Screen name="lab/ticket" />
+      <Stack.Screen name="lab/journal" />
+      <Stack.Screen name="lab/settings" />
     </Stack>
   );
 }
@@ -163,15 +185,21 @@ function AppStack() {
 export default function RootLayout() {
   const scheme = useColorScheme();
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <AppProvider>
+        <LabProvider>
+        <AiProvider>
         <AuthProvider>
           <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
             <StatusBar style="auto" />
             <RootStack />
           </ThemeProvider>
         </AuthProvider>
+        </AiProvider>
+        </LabProvider>
       </AppProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

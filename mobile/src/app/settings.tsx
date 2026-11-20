@@ -11,6 +11,7 @@ import { type NotifType, SOUND_IDS, type SoundId } from '@/state/sounds';
 import { cancelTips, requestPermission, scheduleWeeklyTips, sendTestTip } from '@/state/notifications';
 import { alertDir, bidi } from '@/ui/bidi';
 import { Button, Card, Chip, Disclaimer, Row, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
+import { ToolRow } from '@/ui/money-ui';
 import { useTokens } from '@/ui/theme';
 
 export default function SettingsScreen() {
@@ -274,11 +275,19 @@ export default function SettingsScreen() {
         <Button kind="destructive" label={s.settings2.signOut} onPress={confirmSignOut} />
       </View>
 
+      <SectionHeader>{s.ai.settingsRow}</SectionHeader>
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ToolRow first sf="sparkles" md="auto_awesome" title={s.ai.settingsRow} hint={s.ai.settingsHint} onPress={() => router.push('/ai-settings')} />
+      </Card>
+
       <SectionHeader>{s.settings.about}</SectionHeader>
       <Card>
         <Txt variant="subhead">{s.settings.privacy}</Txt>
         <Txt variant="footnote" color="textSecondary">
           {s.settings3.sources}
+        </Txt>
+        <Txt variant="footnote" color="textSecondary">
+          {s.lab.settings.credit}
         </Txt>
         <Disclaimer />
         <Txt variant="footnote" color="textSecondary">
