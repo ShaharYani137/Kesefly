@@ -331,3 +331,21 @@ One section per working session. Newest at bottom.
 **Next steps:**
 - Connect Supabase (`docs/CHAT_SETUP.md`), run the migration, rebuild, test with two accounts.
 - Later: push notifications for new messages, block/report, email verification.
+
+## Session 11 — 2026-11-21 (branch `feature/user-chat`)
+
+**Goal:** pick up after Session 10 and list what is left.
+
+**Work done:**
+- Checked the branch: Session 10 is committed (`f33421c`), pushed, and the APK is on the phone.
+- Started a plan for Google sign-in (Supabase Google OAuth with PKCE, no new packages). Paused at the user's request; no code changed.
+- Wrote the list of open work below.
+
+**Decisions:**
+- None new.
+
+**Next steps:**
+- User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
+- Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
+- Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.
+- Merge `feature/user-chat` into `main` after the chat test.
