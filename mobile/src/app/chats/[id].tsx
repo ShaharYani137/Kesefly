@@ -15,7 +15,7 @@ import { getConversation, leaveConversation, listMembers, listMessages, markRead
 import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
 import { BackButton, IconButton, Row, Txt } from '@/ui/components';
-import { ChatAvatar, chatDay, useChatError } from '@/ui/chat-ui';
+import { ChatAvatar, chatDay, isVerified, useChatError, VerifiedBadge } from '@/ui/chat-ui';
 import { showDialog } from '@/ui/dialog';
 import { useKeyboardInset } from '@/ui/keyboard';
 import { Metrics, useTokens } from '@/ui/theme';
@@ -38,6 +38,8 @@ export default function ChatRoomScreen() {
   const [pending, setPending] = useState<Pending[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [isGroup, setIsGroup] = useState(false);
+  /** 1:1 chat with a verified account: badge after the name in the header. */
+  const [peerVerified, setPeerVerified] = useState(false);
   const [title, setTitle] = useState(titleParam ?? '');
   const [loading, setLoading] = useState(true);
   const [older, setOlder] = useState(true);
@@ -64,7 +66,10 @@ export default function ChatRoomScreen() {
         if (conv?.is_group && conv.title) setTitle(conv.title);
         if (!conv?.is_group) {
           const peer = mem.find((m) => m.user_id !== uid)?.profile;
-          if (peer) setTitle(peer.display_name || `@${peer.username}`);
+          if (peer) {
+            setTitle(peer.display_name || `@${peer.username}`);
+            setPeerVerified(isVerified(peer.username));
+          }
         }
         setMembers(mem);
         setMessages(msgs);
@@ -152,6 +157,7 @@ export default function ChatRoomScreen() {
     ]);
 
   const names = useMemo(() => new Map(members.map((m) => [m.user_id, m.profile ? m.profile.display_name || `@${m.profile.username}` : '?'])), [members]);
+  const verifiedIds = useMemo(() => new Set(members.filter((m) => isVerified(m.profile?.username)).map((m) => m.user_id)), [members]);
   const items: Item[] = useMemo(() => [...pending.map((p) => ({ kind: 'pending' as const, p })), ...messages.map((m) => ({ kind: 'msg' as const, m }))], [pending, messages]);
   const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
   const dayOf = (it: Item) => new Date(it.kind === 'msg' ? it.m.created_at : it.p.created_at).toDateString();
@@ -189,9 +195,12 @@ export default function ChatRoomScreen() {
             opacity: item.kind === 'pending' && !failed ? 0.7 : 1,
           }}>
           {isGroup && !mine && !sameSenderAbove && item.kind === 'msg' ? (
-            <Txt variant="caption" style={{ color: colors.accent, marginBottom: 2 }}>
-              {names.get(item.m.sender_id) ?? '?'}
-            </Txt>
+            <Row style={{ gap: 4, marginBottom: 2 }}>
+              <Txt variant="caption" style={{ color: colors.accent, flexShrink: 1 }}>
+                {names.get(item.m.sender_id) ?? '?'}
+              </Txt>
+              {verifiedIds.has(item.m.sender_id) ? <VerifiedBadge size={12} /> : null}
+            </Row>
           ) : null}
           <Txt selectable style={{ color: mine ? colors.onAccent : colors.text }}>
             {body}
@@ -211,9 +220,12 @@ export default function ChatRoomScreen() {
           <BackButton onPress={() => router.back()} />
           <ChatAvatar name={title} group={isGroup} size={36} />
           <View style={{ flex: 1, minWidth: 0 }}>
-            <Txt variant="headline" numberOfLines={1} accessibilityRole="header">
-              {title}
-            </Txt>
+            <Row style={{ gap: 4 }}>
+              <Txt variant="headline" numberOfLines={1} accessibilityRole="header" style={{ flexShrink: 1 }}>
+                {title}
+              </Txt>
+              {!isGroup && peerVerified ? <VerifiedBadge /> : null}
+            </Row>
             {isGroup ? (
               <Txt variant="caption" color="textSecondary" numberOfLines={1}>
                 {fill(s.chat.members, { n: members.length })}

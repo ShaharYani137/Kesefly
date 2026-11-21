@@ -4,6 +4,8 @@ Kesefly is not in the App Store. An iPhone runs it only after you become an Appl
 
 Hebrew version below.
 
+> Planned: a web app that installs from Safari with no Developer Mode. See [IPHONE_WEB_APP_PLAN.md](IPHONE_WEB_APP_PLAN.md).
+
 ## Which file
 
 | File | For | Widget |

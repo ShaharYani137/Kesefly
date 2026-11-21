@@ -11,8 +11,10 @@ import { chatAvailable, type Conversation, getMyProfile, listConversations, myUs
 import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
 import { useAuth } from '@/state/auth';
+import { updateChatBadge } from '@/state/chat-alerts';
+import { requestPermission } from '@/state/notifications';
 import { Card, Icon, IconButton, Row, Screen, Txt } from '@/ui/components';
-import { ChatAvatar, chatTime, ProfileSetup, useChatError } from '@/ui/chat-ui';
+import { ChatAvatar, chatTime, isVerified, ProfileSetup, useChatError, VerifiedBadge } from '@/ui/chat-ui';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const POLL_MS = 30_000;
@@ -35,6 +37,7 @@ export default function ChatsScreen() {
       .then(([p, list, id]) => {
         setProfile(p);
         setChats(list);
+        updateChatBadge(list).catch(() => {});
         setMe(id);
         setError('');
       })
@@ -58,6 +61,12 @@ export default function ChatsScreen() {
   }, [cloud, refresh]);
 
   const ready = cloud && profile && !editing;
+
+  // Ask once for notification permission when chat is ready: new messages notify in the background.
+  const hasProfile = !!profile;
+  useEffect(() => {
+    if (cloud && hasProfile) requestPermission().catch(() => false);
+  }, [cloud, hasProfile]);
 
   return (
     <Screen
@@ -131,9 +140,12 @@ export default function ChatsScreen() {
                     <ChatAvatar name={title} group={c.is_group} />
                     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                       <Row style={{ gap: 8 }}>
-                        <Txt variant="headline" numberOfLines={1} style={{ flex: 1 }}>
-                          {title}
-                        </Txt>
+                        <Row style={{ flex: 1, minWidth: 0, gap: 4 }}>
+                          <Txt variant="headline" numberOfLines={1} style={{ flexShrink: 1 }}>
+                            {title}
+                          </Txt>
+                          {!c.is_group && isVerified(c.peer_username) ? <VerifiedBadge /> : null}
+                        </Row>
                         <Txt variant="caption" style={{ color: c.unread ? colors.accent : colors.textSecondary }}>
                           {chatTime(c.last_at, lang, s.chat)}
                         </Txt>

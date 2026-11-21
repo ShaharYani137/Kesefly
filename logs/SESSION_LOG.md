@@ -340,12 +340,21 @@ One section per working session. Newest at bottom.
 - Checked the branch: Session 10 is committed (`f33421c`), pushed, and the APK is on the phone.
 - Started a plan for Google sign-in (Supabase Google OAuth with PKCE, no new packages). Paused at the user's request; no code changed.
 - Wrote the list of open work below.
+- iPhone without Developer Mode: chose a free web app (PWA). Wrote the hand-off plan `docs/IPHONE_WEB_APP_PLAN.md` for the co-founder; no app code changed.
+- Supabase connected (`mobile/.env.local`). Fixed: URL with `/rest/v1/` path (app now keeps only the project address); send failures shown as "Check your email" (new `mail` error); chat tables had no grants for signed-in users (added to the migration). Chat works on the phone.
+- Chat notifications with no server: background check about every 15 min, one notification per chat with new messages, unread badge on the app icon, "Chat messages" sound in Settings.
+- Verified badge for @shasha in the chat screens (app-side list).
+- DONE: committed, pushed, merged `feature/user-chat` into `main`, deleted the branch.
+- Email verification on sign-up: first restored the code step, then switched to the default confirmation link at the user's request (link opens the app, which signs in). Added the Supabase auth setup steps to `docs/CHAT_SETUP.md`.
 
 **Decisions:**
-- None new.
+- Email confirmation uses Supabase's default link template, not a typed code.
+- iPhone users without Developer Mode get a web app (Safari > Add to Home Screen), hosted on EAS Hosting. The co-founder builds it.
 
 **Next steps:**
+- Co-founder: build `docs/IPHONE_WEB_APP_PLAN.md`.
+- Confirmation email: Supabase failed to send it (SMTP). Fix the SMTP settings or the template, then test sign-up again.
+- Test chat notifications on the phone (battery set to Unrestricted).
 - User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
 - Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
 - Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.
-- Merge `feature/user-chat` into `main` after the chat test.

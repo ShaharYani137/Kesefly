@@ -17,6 +17,26 @@ export function useChatError() {
 }
 
 /** Round avatar: first letter of the name on a tinted circle, or a group icon. */
+/**
+ * Verified accounts, by @username. Checked in the app only (no server field), so only names
+ * on this list get the badge. Usernames are unique, so nobody else can hold one while its
+ * owner keeps it.
+ */
+const VERIFIED_USERNAMES: readonly string[] = ['shasha'];
+
+export const isVerified = (username?: string | null) => !!username && VERIFIED_USERNAMES.includes(username.toLowerCase());
+
+/** Seal badge shown after a verified account's name. */
+export function VerifiedBadge({ size = 16 }: { size?: number }) {
+  const { s } = useApp();
+  const { colors } = useTokens();
+  return (
+    <View accessible accessibilityLabel={s.chat.verified}>
+      <Icon sf="checkmark.seal.fill" md="verified" size={size} color={colors.accent} />
+    </View>
+  );
+}
+
 export function ChatAvatar({ name, group, size = 44 }: { name: string; group?: boolean; size?: number }) {
   const { colors } = useTokens();
   const letter = name.trim().charAt(0).toUpperCase() || '?';

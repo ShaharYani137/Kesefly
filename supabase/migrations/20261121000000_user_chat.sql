@@ -293,6 +293,16 @@ grant execute on function public.leave_conversation(uuid) to authenticated;
 grant execute on function public.mark_read(uuid) to authenticated;
 grant execute on function public.my_conversations() to authenticated;
 
+-- ---------- Table access ----------
+-- Newer Supabase projects do not give the API roles access to new tables, so grant it here.
+-- Row Level Security (above) still decides which rows each user sees. Signed-out users get none.
+-- These match the policies: no update or delete on chats, members or messages from the app.
+
+grant select, insert, update on public.profiles to authenticated;
+grant select on public.conversations to authenticated;
+grant select on public.conversation_members to authenticated;
+grant select, insert on public.messages to authenticated;
+
 -- ---------- Live updates ----------
 
 do $$

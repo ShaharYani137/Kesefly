@@ -244,7 +244,7 @@ export default function SettingsScreen() {
         <Txt variant="footnote" color="textSecondary">
           {s.settings3.soundsHint}
         </Txt>
-        {(['tips', 'events', 'moves'] as NotifType[]).map((type) => (
+        {(['tips', 'events', 'moves', 'chat'] as NotifType[]).map((type) => (
           <View key={type} style={{ gap: 6 }}>
             <Txt variant="headline">{s.settings3.soundTypes[type]}</Txt>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>

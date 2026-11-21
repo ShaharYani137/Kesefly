@@ -1,6 +1,8 @@
 /**
  * Authentication screens, shown by the root layout instead of / on top of the app:
  *   - AuthScreen: brand hero, sign in / create account (email + password), forgot password.
+ *     Cloud accounts with email confirmation then show the link step (VerifyStep): the user
+ *     taps the link Supabase mailed, comes back, and the app signs in.
  *   - PinSetup: create a 4-digit PIN (twice), then offer fingerprint / Face ID.
  *   - LockScreen: PIN keypad + biometric unlock, over the app.
  * Keypad digits are laid out like a phone keypad in both languages (keypads do not mirror),
@@ -8,8 +10,8 @@
  */
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, AppState, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -27,6 +29,11 @@ const PIN_LEN = 4;
 
 /* ---------- Sign in / sign up ---------- */
 
+type FieldOpts = Partial<React.ComponentProps<typeof TextInput>>;
+type FieldFn = (value: string, onChange: (t: string) => void, label: string, opts?: FieldOpts) => React.ReactNode;
+
+const ltrField = (opts: FieldOpts) => opts.keyboardType === 'email-address' || opts.secureTextEntry !== undefined;
+
 export function AuthScreen() {
   const { s, isRTL, lang, setLang } = useApp();
   const auth = useAuth();
@@ -39,6 +46,8 @@ export function AuthScreen() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ text: string; ok?: boolean } | null>(null);
   const { ref: kbRef, inset: kbInset } = useKeyboardInset();
+  /** Email waiting for its confirmation link (cloud accounts with "Confirm email" on). */
+  const [verifying, setVerifying] = useState<string | null>(null);
 
   const submit = async () => {
     setBusy(true);
@@ -49,8 +58,14 @@ export function AuthScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e) {
       const code = e instanceof AuthFailure ? e.code : 'network';
-      setMsg({ text: s.auth.errors[code] });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      if (code === 'confirm' && CLOUD) {
+        // Sign-up already mailed a link; an unconfirmed sign-in needs a fresh one.
+        if (mode === 'in') await auth.resendConfirm(email).catch(() => {});
+        setVerifying(email.trim().toLowerCase());
+      } else {
+        setMsg({ text: s.auth.errors[code] });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+      }
     }
     setBusy(false);
   };
@@ -64,7 +79,7 @@ export function AuthScreen() {
     }
   };
 
-  const field = (value: string, onChange: (t: string) => void, label: string, opts: Partial<React.ComponentProps<typeof TextInput>> = {}) => (
+  const field: FieldFn = (value, onChange, label, opts = {}) => (
     <View style={{ gap: 6 }}>
       <Txt variant="subhead" color="textSecondary">
         {label}
@@ -87,8 +102,8 @@ export function AuthScreen() {
             paddingHorizontal: 16,
             color: colors.text,
             // Email and password are Latin: type them left-to-right in both languages.
-            textAlign: opts.keyboardType === 'email-address' || opts.secureTextEntry !== undefined ? 'left' : isRTL ? 'right' : 'left',
-            writingDirection: opts.keyboardType === 'email-address' || opts.secureTextEntry !== undefined ? 'ltr' : isRTL ? 'rtl' : 'ltr',
+            textAlign: ltrField(opts) ? 'left' : isRTL ? 'right' : 'left',
+            writingDirection: ltrField(opts) ? 'ltr' : isRTL ? 'rtl' : 'ltr',
           },
         ]}
       />
@@ -116,6 +131,9 @@ export function AuthScreen() {
             </View>
           </View>
 
+          {verifying ? (
+            <VerifyStep email={verifying} password={password} onBack={() => setVerifying(null)} />
+          ) : (
           <Animated.View entering={enterItem(1)} style={{ padding: 20, gap: 14 }}>
             <Segmented<'in' | 'up'>
               value={mode}
@@ -164,8 +182,107 @@ export function AuthScreen() {
               </Txt>
             </View>
           </Animated.View>
+          )}
         </ScrollView>
     </View>
+  );
+}
+
+/* ---------- Email confirmation link ---------- */
+
+const RESEND_WAIT_S = 60;
+
+/**
+ * Waits while the user taps the confirmation link Supabase mailed. The link confirms the email
+ * on Supabase and opens the app again; on return the screen signs in with the email and
+ * password the user typed (kept in memory only). The button does the same by hand, for a link
+ * opened on another device.
+ */
+function VerifyStep({ email, password, onBack }: { email: string; password: string; onBack: () => void }) {
+  const { s } = useApp();
+  const auth = useAuth();
+  const { colors } = useTokens();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; ok?: boolean } | null>(null);
+  // A link was just sent, so the resend button waits first.
+  const [resendAt, setResendAt] = useState(() => Date.now() + RESEND_WAIT_S * 1000);
+  const [now, setNow] = useState(() => Date.now());
+  const left = Math.max(0, Math.ceil((resendAt - now) / 1000));
+  const busyRef = useRef(false);
+
+  useEffect(() => {
+    if (left <= 0) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [left]);
+
+  /** quiet: an automatic try on return to the app shows no "not confirmed yet" message. */
+  const tryContinue = useCallback(
+    async (quiet: boolean) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
+      setBusy(true);
+      if (!quiet) setMsg(null);
+      try {
+        // On success the provider leaves 'signedOut' and this screen unmounts.
+        await auth.signIn(email, password);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        return;
+      } catch (e) {
+        const code = e instanceof AuthFailure ? e.code : 'network';
+        if (!quiet) {
+          setMsg({ text: code === 'confirm' ? s.auth.verifyNotYet : s.auth.errors[code] });
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
+        }
+      }
+      busyRef.current = false;
+      setBusy(false);
+    },
+    [auth, email, password, s],
+  );
+
+  // Back from the email app (or opened by the link): try to continue.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'active') tryContinue(true);
+    });
+    return () => sub.remove();
+  }, [tryContinue]);
+
+  const resend = async () => {
+    setMsg(null);
+    try {
+      await auth.resendConfirm(email);
+      setResendAt(Date.now() + RESEND_WAIT_S * 1000);
+      setNow(Date.now());
+      setMsg({ text: s.auth.verifySent, ok: true });
+    } catch (e) {
+      setMsg({ text: s.auth.errors[e instanceof AuthFailure ? e.code : 'network'] });
+    }
+  };
+
+  return (
+    <Animated.View entering={enterItem(1)} style={{ padding: 20, gap: 14 }}>
+      <View style={{ alignItems: 'center', gap: 8 }}>
+        <Icon sf="envelope.badge" md="mark_email_unread" size={44} color={colors.accent} />
+        <Txt variant="title" style={{ textAlign: 'center' }}>
+          {s.auth.verifyTitle}
+        </Txt>
+        <Txt variant="body" color="textSecondary" style={{ textAlign: 'center' }}>
+          {fill(s.auth.verifyBody, { email })}
+        </Txt>
+      </View>
+      {msg ? (
+        <Animated.View entering={enterFade()}>
+          <Txt variant="subhead" color={msg.ok ? 'positive' : 'danger'}>
+            {msg.text}
+          </Txt>
+        </Animated.View>
+      ) : null}
+      {busy ? <ActivityIndicator color={colors.accent} /> : <Button label={s.auth.verifyButton} onPress={() => tryContinue(false)} />}
+      <Button kind="plain" label={left > 0 ? fill(s.auth.verifyResendIn, { s: left }) : s.auth.verifyResend} onPress={resend} disabled={left > 0} />
+      <Button kind="plain" label={s.auth.verifyChange} onPress={onBack} />
+    </Animated.View>
   );
 }
 

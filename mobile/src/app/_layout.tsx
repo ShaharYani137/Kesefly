@@ -10,6 +10,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useApp } from '@/state/app-store';
 import { AuthProvider, useAuth } from '@/state/auth';
+// Imported for its side effect too: defines the chat background task at module scope.
+import { disableChatAlerts, enableChatAlerts, ensureChatChannel } from '@/state/chat-alerts';
 // Imported for its side effect too: defines the background task at module scope.
 import { checkEvents, disableEventAlerts, enableEventAlerts, ensureEventsChannel } from '@/state/event-alerts';
 import { AiProvider } from '@/state/ai-store';
@@ -92,6 +94,18 @@ function NotificationSync() {
     const id = setInterval(() => checkEvents().catch(() => {}), FOREGROUND_CHECK_MS);
     return () => clearInterval(id);
   }, [eventAlerts, hydrated]);
+  // New-message checks run only for cloud accounts (chat needs one). Signing out or a device
+  // account stops them and clears the icon badge.
+  const cloudAccount = useAuth().account?.mode === 'cloud';
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!cloudAccount) {
+      disableChatAlerts().catch(() => {});
+      return;
+    }
+    ensureChatChannel(lang, sounds.chat).catch(() => {});
+    enableChatAlerts().catch(() => {});
+  }, [cloudAccount, hydrated, lang, sounds.chat]);
   return null;
 }
 

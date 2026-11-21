@@ -6,6 +6,11 @@
  *   - cloud: Supabase Auth over its REST API, when EXPO_PUBLIC_SUPABASE_URL and
  *     EXPO_PUBLIC_SUPABASE_ANON_KEY are set at build time (see mobile/.env.example).
  *     Email + password, sign-up, password reset. Tokens live in the secure store.
+ *     Email verification: when the Supabase project has "Confirm email" on, sign-up returns no
+ *     session. Supabase mails a confirmation link (the default "Confirm signup" template with
+ *     {{ .ConfirmationURL }}). Tapping it confirms the email on Supabase, then opens the app
+ *     (CONFIRM_REDIRECT). The app then signs in with the email and password the user typed.
+ *     Signing in to an unconfirmed account also leads to this step (a fresh link is sent).
  *   - device: when no cloud project is configured. The account exists only on this phone
  *     (password stored as a salted SHA-256 hash in the secure store). Nothing is uploaded.
  *     Several device accounts can share the phone: each email has its own record and hash.
@@ -40,14 +45,23 @@ const K = {
 const MAX_TRIES = 5;
 const WAIT_MS = 30_000;
 
-export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').replace(/\/+$/, '');
+// Only the project address (https://<project>.supabase.co): a URL copied with a path, such as
+// the dashboard's ".../rest/v1/", would otherwise break every auth and chat call.
+export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim().replace(/^(https?:\/\/[^/?#]+).*$/, '$1');
 export const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 export const CLOUD = SUPABASE_URL.length > 0 && SUPABASE_KEY.length > 0;
 
 export type Account = { email: string; name: string; mode: 'cloud' | 'device' };
 type Session = { access_token: string; refresh_token: string; expires_at: number };
 
-export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email';
+/**
+ * Where the confirmation link goes after Supabase confirms the email: opens the app.
+ * Add `kesefly://**` to Supabase Authentication > URL Configuration > Redirect URLs. If it is
+ * missing, Supabase sends the user to the Site URL instead; the email is still confirmed.
+ */
+const CONFIRM_REDIRECT = 'kesefly://';
+
+export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email' | 'rate' | 'mail';
 
 export class AuthFailure extends Error {
   constructor(public code: AuthError) {
@@ -67,6 +81,8 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Cloud only: mails a new sign-up confirmation link. */
+  resendConfirm: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
@@ -117,6 +133,9 @@ async function supabase(path: string, body: object, token?: string): Promise<Rec
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
     const msg = String(json.msg ?? json.error_description ?? json.message ?? '').toLowerCase();
+    if (res.status === 429 || msg.includes('security purposes') || msg.includes('rate limit')) throw new AuthFailure('rate');
+    // Supabase could not send the confirmation email (SMTP settings): not the same as "sent, now confirm".
+    if (msg.includes('sending') || msg.includes('smtp')) throw new AuthFailure('mail');
     if (msg.includes('already')) throw new AuthFailure('exists');
     if (msg.includes('password')) throw new AuthFailure(res.status === 400 && msg.includes('invalid') ? 'invalid' : 'weak');
     if (msg.includes('confirm')) throw new AuthFailure('confirm');
@@ -243,7 +262,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!EMAIL_RE.test(mail)) throw new AuthFailure('email');
       if (password.length < 8) throw new AuthFailure('weak');
       if (CLOUD) {
-        const j = await supabase('signup', { email: mail, password, data: { name: name.trim() } });
+        const j = await supabase(`signup?redirect_to=${encodeURIComponent(CONFIRM_REDIRECT)}`, { email: mail, password, data: { name: name.trim() } });
         const sess = toSession(j);
         // Projects with email confirmation on return no session until the link is clicked.
         if (!sess) throw new AuthFailure('confirm');
@@ -296,6 +315,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = useCallback(async (email: string) => {
     if (!CLOUD) throw new AuthFailure('invalid');
     await supabase('recover', { email: email.trim().toLowerCase() });
+  }, []);
+
+  const resendConfirm = useCallback(async (email: string) => {
+    if (!CLOUD) throw new AuthFailure('invalid');
+    await supabase(`resend?redirect_to=${encodeURIComponent(CONFIRM_REDIRECT)}`, { type: 'signup', email: email.trim().toLowerCase() });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -378,6 +402,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       resetPassword,
+      resendConfirm,
       signOut,
       setPin,
       unlockWithPin,
@@ -386,7 +411,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       changePin,
     }),
-    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
+    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, resendConfirm, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -78,7 +78,8 @@ async function request<T>(path: string, init: { method?: string; body?: unknown;
   if (!res.ok) {
     const err = (json ?? {}) as { code?: string; message?: string };
     if (err.code === '23505') throw new ChatError('taken'); // unique violation (username)
-    if (err.code === '42P01' || err.code === 'PGRST202' || err.code === 'PGRST205') throw new ChatError('notSetUp'); // migration not run
+    // Migration not run (42P01, PGRST202, PGRST205), or the tables have no grants for signed-in users (42501).
+    if (err.code === '42P01' || err.code === 'PGRST202' || err.code === 'PGRST205' || err.code === '42501') throw new ChatError('notSetUp');
     if (res.status === 401) throw new ChatError('signedOut');
     if (res.status >= 500) throw new ChatError('network');
     throw new ChatError('invalid');

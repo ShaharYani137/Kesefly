@@ -9,8 +9,8 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { createGroup, type Profile, searchUsers, startDirect } from '@/chat/api';
 import { fill, useApp } from '@/state/app-store';
-import { Button, Card, Chip, Icon, Screen, Segmented, TextField, Txt } from '@/ui/components';
-import { ChatAvatar, useChatError } from '@/ui/chat-ui';
+import { Button, Card, Chip, Icon, Row, Screen, Segmented, TextField, Txt } from '@/ui/components';
+import { ChatAvatar, isVerified, useChatError, VerifiedBadge } from '@/ui/chat-ui';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const SEARCH_DELAY_MS = 300;
@@ -131,9 +131,12 @@ export default function NewChatScreen() {
                 })}>
                 <ChatAvatar name={p.display_name || p.username} size={40} />
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Txt variant="headline" numberOfLines={1}>
-                    {p.display_name || p.username}
-                  </Txt>
+                  <Row style={{ gap: 4 }}>
+                    <Txt variant="headline" numberOfLines={1} style={{ flexShrink: 1 }}>
+                      {p.display_name || p.username}
+                    </Txt>
+                    {isVerified(p.username) ? <VerifiedBadge /> : null}
+                  </Row>
                   {/* @username is Latin: keep it left-to-right in Hebrew too. */}
                   <Txt variant="subhead" color="textSecondary" numberOfLines={1} style={{ writingDirection: 'ltr' }}>
                     @{p.username}
