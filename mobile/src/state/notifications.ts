@@ -17,6 +17,7 @@ import type { Lang, Profile } from '@/engine/types';
 import type { Strings } from '@/i18n/strings';
 import { bidi } from '@/ui/bidi';
 
+import { cancelScheduled, tagged } from './scheduled';
 import { channelId, contentSound, DEFAULT_SOUNDS, ensureSoundChannel, type SoundId } from './sounds';
 import { ideaText } from '@/ui/idea-card';
 
@@ -67,21 +68,21 @@ function tips(profile: Profile, s: Strings, lang: Lang): { title: string; body: 
   return Array.from({ length: WEEKS }, (_, i) => pool[i % pool.length]);
 }
 
-/** Replaces all scheduled tips with a fresh set. Call when enabling, or when the plan changes. */
+/** Replaces the scheduled tips (only tips: other features keep theirs) with a fresh set. Call when enabling, or when the plan changes. */
 export async function scheduleWeeklyTips(profile: Profile, s: Strings, lang: Lang, sound: SoundId = DEFAULT_SOUNDS.tips) {
   await ensureChannel(s, sound);
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelScheduled('tips');
   const list = tips(profile, s, lang);
   for (let w = 0; w < list.length; w++) {
     await Notifications.scheduleNotificationAsync({
-      content: { title: bidi(list[w].title, lang === 'he'), body: bidi(list[w].body, lang === 'he'), sound: contentSound(sound) },
+      content: { title: bidi(list[w].title, lang === 'he'), body: bidi(list[w].body, lang === 'he'), sound: contentSound(sound), data: tagged('tips') },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: sunday(w), channelId: channelId('tips', sound) },
     });
   }
 }
 
 export async function cancelTips() {
-  await Notifications.cancelAllScheduledNotificationsAsync();
+  await cancelScheduled('tips');
 }
 
 /** Sends one tip in 3 seconds, so the user can see what it looks like. */

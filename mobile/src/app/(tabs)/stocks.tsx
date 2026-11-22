@@ -7,7 +7,7 @@
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
 import Animated, { LinearTransition } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -26,6 +26,7 @@ import {
   Disclaimer,
   Icon,
   IconButton,
+  KeyboardScrollView,
   Row,
   SectionHeader,
   Segmented,
@@ -33,6 +34,7 @@ import {
   Txt,
 } from '@/ui/components';
 import { enterFade, Springs } from '@/ui/motion';
+import { ToolRow } from '@/ui/money-ui';
 import { StockChart } from '@/ui/stock-chart';
 import { Fonts, Metrics, useTokens } from '@/ui/theme';
 
@@ -63,9 +65,8 @@ export default function StocksScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
-      <ScrollView
+      <KeyboardScrollView
         contentContainerStyle={{ paddingVertical: Metrics.margin, paddingBottom: Metrics.margin * 3, gap: Metrics.gap }}
-        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={pf.loading} onRefresh={pf.refresh} tintColor={colors.accent} colors={[colors.accent]} />}>
         <Row style={{ alignItems: 'flex-start', marginTop: 8, paddingHorizontal: Metrics.margin }}>
           <View style={{ flex: 1, gap: 4 }}>
@@ -168,6 +169,23 @@ export default function StocksScreen() {
             <Button kind="tonal" label={s.stocks.addHolding} onPress={() => setAdding(true)} />
           )}
 
+          {/* ---------- Portfolio tools: tax, index comparison, broker import ---------- */}
+          <SectionHeader>{s.tools.title}</SectionHeader>
+          <Card style={{ gap: 0, paddingVertical: 4 }}>
+            {holdings.length ? (
+              <>
+                <ToolRow first sf="percent" md="percent" title={s.tools.tax} hint={s.tools.taxHint} onPress={() => router.push('/tax')} />
+                <ToolRow sf="chart.line.uptrend.xyaxis" md="compare_arrows" title={s.tools.compare} hint={s.tools.compareHint} onPress={() => router.push('/compare')} />
+              </>
+            ) : null}
+            <ToolRow first={!holdings.length} sf="square.and.arrow.down" md="upload_file" title={s.tools.import} hint={s.tools.importHint} onPress={() => router.push('/import')} />
+          </Card>
+
+          {/* ---------- Day-trading lab (practice only; risk gate on first open) ---------- */}
+          <Card style={{ gap: 0, paddingVertical: 4 }}>
+            <ToolRow first sf="flask" md="science" title={s.lab.title} hint={s.lab.rowHint} onPress={() => router.push('/lab')} />
+          </Card>
+
           {/* ---------- Watchlist ---------- */}
           <SectionHeader>{s.stocks.watchlist}</SectionHeader>
           <Segmented<'mine' | 'movers'>
@@ -254,7 +272,7 @@ export default function StocksScreen() {
 
           <Disclaimer />
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </SafeAreaView>
   );
 }

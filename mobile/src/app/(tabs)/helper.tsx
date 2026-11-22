@@ -10,13 +10,18 @@
  *
  * Keyboard: Android runs edge-to-edge, so the window does not resize for the keyboard and
  * KeyboardAvoidingView had no effect there. `useKeyboardInset` pads the screen by the exact
- * overlap instead (both platforms). On iOS the screen also keeps its bottom safe area (the
- * native tab bar floats over the content), so the composer is never hidden behind the tab bar.
+ * overlap instead (both platforms).
+ *
+ * iPhone: the native tab bar (UITabBar) lies over the bottom of the screen, so the composer was
+ * hidden under it and the keyboard overlap was measured from the screen bottom, not the bar.
+ * The SafeAreaView now pads the bottom edge too: on iOS that inset includes the tab bar, on
+ * Android (screen ends above the navigation bar) it is about 0. The measured root then ends at
+ * the visible bottom on both platforms.
  */
 import * as Haptics from 'expo-haptics';
 import { router, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, TextInput, View } from 'react-native';
 import Animated, {
   Easing,
@@ -33,7 +38,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { netHoldings } from '@/engine/positions';
 import { type Action, ask as assistantAsk, type Memory, type ThinkStep, thinkingSteps } from '@/engine/assistant';
 import { type AnswerSource, favorites, feedback, getBrain, loadBrain } from '@/engine/brain';
+import { useAi } from '@/state/ai-store';
 import { fill, useApp } from '@/state/app-store';
+import { ClaudeChat } from '@/ui/claude-chat';
 import { Chip, HelperAvatar, Icon, IconButton, Row, Txt } from '@/ui/components';
 import { HScroll } from '@/ui/hscroll';
 import { useKeyboardInset } from '@/ui/keyboard';
@@ -62,7 +69,15 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 let nextId = 1;
 
+/** Claude chat when the user saved an API key (Settings > AI chat), else the offline helper. */
 export default function HelperScreen() {
+  const ai = useAi();
+  const [offline, setOffline] = useState(false);
+  if (ai.ready && !offline) return <ClaudeChat onOffline={() => setOffline(true)} />;
+  return <OfflineHelper onClaude={ai.ready ? () => setOffline(false) : undefined} />;
+}
+
+function OfflineHelper({ onClaude }: { onClaude?: () => void }) {
   const { s, lang, isRTL, profile, watchlist, holdings: lots, sales, academy } = useApp();
   // The assistant sees open positions only: sold shares are subtracted (engine/positions.ts).
   const holdings = useMemo(() => netHoldings(lots, sales), [lots, sales]);
@@ -75,11 +90,14 @@ export default function HelperScreen() {
   const [busy, setBusy] = useState(false);
   const [usual, setUsual] = useState<{ tickers: string[]; learned: number }>({ tickers: [], learned: 0 });
   const list = useRef<FlatList<Msg>>(null);
+  const input = useRef<ComponentRef<typeof TextInput>>(null);
   // True while the user is reading older messages (scrolled up): auto-scroll then leaves the
   // screen alone, so touching and scrolling feel free. Back near the bottom, it follows again.
   const reading = useRef(false);
+  /** Finger on the list: never move it then. */
+  const dragging = useRef(false);
   const follow = (animated: boolean) => {
-    if (!reading.current) list.current?.scrollToEnd({ animated });
+    if (!reading.current && !dragging.current) list.current?.scrollToEnd({ animated });
   };
   const lastQ = useRef<string | undefined>(undefined);
 
@@ -165,13 +183,7 @@ export default function HelperScreen() {
   const chips = useMemo(() => [...usual.tickers, ...s.helper.suggestions], [usual.tickers, s.helper.suggestions]);
 
   return (
-    // iOS: the native tab bar floats over the screen, so without the bottom edge the composer
-    // sat behind it (and the keyboard overlap was measured from the screen bottom). The bottom
-    // safe area here includes the tab bar, which keeps the composer above it and makes the
-    // keyboard inset exact. Android's navigation bar sits below the screen, so top only.
-    <SafeAreaView
-      edges={isIOS ? ['top', 'bottom'] : ['top']}
-      style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
       <View ref={kbRef} style={{ flex: 1, paddingBottom: kbInset }}>
         <Row style={{ paddingHorizontal: Metrics.margin, paddingVertical: 8 }}>
           <HelperAvatar size={40} />
@@ -183,6 +195,7 @@ export default function HelperScreen() {
               {usual.learned > 0 ? fill(s.assistant.learned, { n: usual.learned }) : s.helper.subtitle}
             </Txt>
           </View>
+          {onClaude ? <IconButton sf="sparkles" md="auto_awesome" label={s.ai.useClaude} onPress={onClaude} /> : null}
           <IconButton sf="square.and.pencil" md="edit_square" label={s.helper.clear} onPress={clear} />
         </Row>
 
@@ -199,13 +212,20 @@ export default function HelperScreen() {
           keyboardDismissMode="on-drag"
           onTouchStart={() => Keyboard.dismiss()}
           onScrollBeginDrag={() => {
+            dragging.current = true;
             reading.current = true;
           }}
-          onScroll={(e) => {
+          // Follow again only once the list is at rest back near the bottom (checking during the
+          // drag switched following back on at the first scroll event and pulled the screen down).
+          onScrollEndDrag={(e) => {
+            dragging.current = false;
             const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-            if (contentSize.height - (contentOffset.y + layoutMeasurement.height) < 80) reading.current = false;
+            reading.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) > 80;
           }}
-          scrollEventThrottle={100}
+          onMomentumScrollEnd={(e) => {
+            const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+            reading.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) > 80;
+          }}
           renderItem={({ item, index }) => <Bubble msg={item} onRate={rate} last={index === msgs.length - 1} onAsk={ask} />}
         />
 
@@ -232,7 +252,10 @@ export default function HelperScreen() {
             ))}
           </HScroll>
 
-          <View
+          {/* A tap anywhere on the bar (not only on the text line) opens the keyboard. */}
+          <Pressable
+            accessible={false}
+            onPress={() => input.current?.focus()}
             style={{
               marginHorizontal: Metrics.margin,
               flexDirection: 'row',
@@ -248,6 +271,7 @@ export default function HelperScreen() {
               paddingVertical: 4,
             }}>
             <TextInput
+              ref={input}
               accessibilityLabel={s.helper.placeholder}
               value={draft}
               onChangeText={setDraft}
@@ -274,7 +298,7 @@ export default function HelperScreen() {
             <View style={{ transform: [{ scaleX: isRTL ? -1 : 1 }], opacity: busy || !draft.trim() ? 0.4 : 1 }}>
               <IconButton sf="arrow.up" md="send" tone="filled" label={s.helper.send} onPress={send} />
             </View>
-          </View>
+          </Pressable>
         </View>
       </View>
     </SafeAreaView>

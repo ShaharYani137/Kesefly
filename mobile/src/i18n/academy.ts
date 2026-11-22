@@ -6,11 +6,16 @@
  */
 import type { Lang } from '@/engine/types';
 
+import { type LabLessonId, LAB_LESSONS } from './lab-academy';
+
+export { DAY_TRADING_TRACK, type LabLessonId } from './lab-academy';
+
 export type Question = { q: string; options: string[]; answer: number; explain: string };
 export type Lesson = { id: LessonId; minutes: number; title: string; sections: string[]; takeaway: string; quiz: Question[] };
 export type Level = { id: 1 | 2 | 3 | 4; title: string; lessons: LessonId[] };
 
 export type LessonId =
+  | LabLessonId
   | 'budget'
   | 'emergency'
   | 'debt'
@@ -431,6 +436,7 @@ const en: Academy = {
         },
       ],
     },
+    ...LAB_LESSONS.en,
   },
   placement: [
     { level: 1, q: 'Income 12,000, expenses 9,000 a month. Free cash?', options: ['3,000', '21,000', '9,000'], answer: 0, explain: '12,000 − 9,000 = 3,000.' },
@@ -847,6 +853,7 @@ const he: Academy = {
         },
       ],
     },
+    ...LAB_LESSONS.he,
   },
   placement: [
     { level: 1, q: 'הכנסה 12,000, הוצאות 9,000 בחודש. כמה כסף פנוי?', options: ['3,000', '21,000', '9,000'], answer: 0, explain: '12,000 − 9,000 = 3,000.' },

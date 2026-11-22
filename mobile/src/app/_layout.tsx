@@ -4,17 +4,26 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { Appearance, Platform, useColorScheme, View } from 'react-native';
+import { Appearance, AppState, Platform, useColorScheme, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AppProvider, useApp } from '@/state/app-store';
 import { AuthProvider, useAuth } from '@/state/auth';
+// Imported for its side effect too: defines the chat background task at module scope.
+import { disableChatAlerts, enableChatAlerts, ensureChatChannel } from '@/state/chat-alerts';
 // Imported for its side effect too: defines the background task at module scope.
 import { checkEvents, disableEventAlerts, enableEventAlerts, ensureEventsChannel } from '@/state/event-alerts';
+import { AiProvider } from '@/state/ai-store';
+import { LabMonitor } from '@/state/lab-monitor';
+import { LabProvider, useLab } from '@/state/lab-store';
 import { ensureChannel, scheduleWeeklyTips } from '@/state/notifications';
 import { AnimatedSplash } from '@/ui/animated-splash';
+import { AppTour } from '@/ui/app-tour';
 import { AuthScreen, LockScreen, PinSetup } from '@/ui/auth-screens';
+import { DialogHost } from '@/ui/dialog';
 import { OfflineBanner } from '@/ui/offline-banner';
+import { syncIosWidget } from '@/widget/ios';
 import { refreshWidget } from '@/widget/task';
 
 SplashScreen.preventAutoHideAsync();
@@ -23,7 +32,7 @@ SplashScreen.preventAutoHideAsync();
 const FOREGROUND_CHECK_MS = 10 * 60_000;
 
 function RootStack() {
-  const { hydrated } = useApp();
+  const { hydrated, onboarded } = useApp();
   const auth = useAuth();
   const [fontsLoaded] = useFonts({ Rubik_400Regular, Rubik_500Medium, Rubik_600SemiBold, Rubik_700Bold });
   const [intro, setIntro] = useState(true);
@@ -45,11 +54,15 @@ function RootStack() {
           <AppStack />
           <NotificationSync />
           <NotificationTaps />
+          <LabMonitor />
+          {/* Once, after the profile setup, while unlocked and after the intro animation. */}
+          <AppTour ready={onboarded && auth.status === 'ready' && !intro} />
           {auth.status === 'needsPin' ? <PinSetup /> : null}
           {auth.status === 'locked' ? <LockScreen /> : null}
         </>
       )}
       <OfflineBanner />
+      <DialogHost />
       {intro ? <AnimatedSplash onDone={endIntro} /> : null}
     </View>
   );
@@ -81,16 +94,48 @@ function NotificationSync() {
     const id = setInterval(() => checkEvents().catch(() => {}), FOREGROUND_CHECK_MS);
     return () => clearInterval(id);
   }, [eventAlerts, hydrated]);
+  // New-message checks run only for cloud accounts (chat needs one). Signing out or a device
+  // account stops them and clears the icon badge.
+  const cloudAccount = useAuth().account?.mode === 'cloud';
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!cloudAccount) {
+      disableChatAlerts().catch(() => {});
+      return;
+    }
+    ensureChatChannel(lang, sounds.chat).catch(() => {});
+    enableChatAlerts().catch(() => {});
+  }, [cloudAccount, hydrated, lang, sounds.chat]);
   return null;
 }
 
-/** Keeps the Android home-screen widget in step with holdings, language and currency. */
+/**
+ * Keeps the home-screen widgets in step with purchases, sales, dividends, language and currency:
+ * Android widget (widget/task.tsx) and iOS WidgetKit widget (widget/ios.ts). The widgets read
+ * the saved state, and this child effect runs before AppProvider's save effect, so the sync
+ * waits a moment for the write. iOS also syncs when the app goes to the background, so the
+ * widget starts from fresh prices.
+ */
 function WidgetSync() {
-  const { holdings, lang, profile, hydrated } = useApp();
+  const { holdings, sales, dividends, lang, profile, hydrated } = useApp();
   const currency = profile.currency;
+  // Open practice trades show on both widgets too.
+  const labOpen = useLab().account.orders.filter((o) => o.status === 'open' || o.status === 'pending').map((o) => `${o.id}:${o.status}`).join(',');
   useEffect(() => {
-    if (hydrated && Platform.OS === 'android') refreshWidget().catch(() => {});
-  }, [holdings, lang, currency, hydrated]);
+    if (!hydrated) return;
+    const id = setTimeout(() => {
+      if (Platform.OS === 'android') refreshWidget().catch(() => {});
+      if (Platform.OS === 'ios') syncIosWidget().catch(() => {});
+    }, 800);
+    return () => clearTimeout(id);
+  }, [holdings, sales, dividends, lang, currency, hydrated, labOpen]);
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st === 'background') syncIosWidget().catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
   return null;
 }
 
@@ -130,9 +175,26 @@ function AppStack() {
       <Stack.Screen name="stock/[symbol]" />
       <Stack.Screen name="lesson/[id]" />
       <Stack.Screen name="goal" />
-      <Stack.Screen name="money" />
+      <Stack.Screen name="finances" />
       <Stack.Screen name="holding/[symbol]" />
+      <Stack.Screen name="tax" />
+      <Stack.Screen name="compare" />
+      <Stack.Screen name="import" />
+      <Stack.Screen name="savings" />
       <Stack.Screen name="assessment" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="ai-settings" />
+      <Stack.Screen name="chats/index" />
+      <Stack.Screen name="chats/new" options={{ animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="chats/[id]" />
+      <Stack.Screen name="lab/index" />
+      <Stack.Screen name="lab/gate" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="lab/scanner" />
+      <Stack.Screen name="lab/setup/[symbol]" />
+      <Stack.Screen name="lab/plan" />
+      <Stack.Screen name="lab/timemachine" />
+      <Stack.Screen name="lab/ticket" />
+      <Stack.Screen name="lab/journal" />
+      <Stack.Screen name="lab/settings" />
     </Stack>
   );
 }
@@ -140,15 +202,21 @@ function AppStack() {
 export default function RootLayout() {
   const scheme = useColorScheme();
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <SafeAreaProvider>
       <AppProvider>
+        <LabProvider>
+        <AiProvider>
         <AuthProvider>
           <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
             <StatusBar style="auto" />
             <RootStack />
           </ThemeProvider>
         </AuthProvider>
+        </AiProvider>
+        </LabProvider>
       </AppProvider>
     </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -183,6 +183,34 @@ One section per working session. Newest at bottom.
 - Background task timing is set by Android; alerts are not instant.
 - TASE Friday close time approximate; holiday list covers 2026-2027 only.
 
+## Session 6 — 2026-11-14
+
+**Goal:** Build the "Top value (Israel + US investor)" features: tax view, pension + Keren Hishtalmut, broker CSV import, benchmark compare.
+
+**Work done (branch `feature/top-value`):**
+- Tax view (`app/tax.tsx`, `engine/tax.ts`): tax residence switch (Israel / US). Israel: 25% on gains with same-year loss offset, average cost. US: short/long-term by lot age (FIFO), user-picked rates, short/long netting, "turns long-term in N days" hint. Tax this year so far, tax if each holding or everything were sold today, losses that would cut this year's tax (with wash-sale / Form 1301 notes), dividend tax still due, W-8BEN check.
+- Pension and savings (`app/savings.tsx`, `engine/savings.ts`): pension fund, study fund, provident fund, 401(k), IRA. Fee check (good / above good / legal max), fee cost until retirement, projection at 5%, study fund tax-free date, Har HaKesef / Mislaka tip. Linked from the Plan tab.
+- Import from broker (`app/import.tsx`, `engine/csv-import.ts`): paste CSV; IBKR activity statement and generic tables with English or Hebrew headers; TASE security numbers and Hebrew names to symbols; agorot handling; preview, unreadable lines, duplicates skipped; one-tap import.
+- Compare to an index (`app/compare.tsx`, `engine/benchmark.ts`): S&P 500, TA-125, Nasdaq-100, World (VT); same cash flows on the same days with historical USD/ILS; end value and XIRR for both.
+- Stocks tab: "Portfolio tools" card (Tax view, Compare, Import).
+- Checks: tsc 0, eslint 0, Node tests for all four engines pass, Yahoo daily history verified live for every benchmark.
+
+**Decisions:**
+- Israeli tax uses average cost (same as the ledger); US uses FIFO (IRS default). Gains are nominal at today's FX; screen explains the real-gain difference.
+- US dividend withholding for Israeli residents: 25% with W-8BEN (treaty), 30% without.
+- "Good fee" reference rates are a Kesefly design decision, labelled as such in code and UI.
+- Import by pasted text in v1: no new native dependency.
+
+**Next steps:**
+- Build the APK and test the four screens on the phone (Hebrew and English).
+- Optional: file picker for CSV (expo-document-picker, needs rebuild); test with real IBI / Meitav / Excellence exports and add header words they use.
+- Optional: inflation-adjusted (real) gain for Israeli shekel assets using CPI.
+
+**Later in session 6: iOS widget + APK**
+- iOS WidgetKit widget via `@bacons/apple-targets` (`mobile/targets/widget/`): small, medium, large, lock screen. App writes data to App Group `group.com.kesefly.app` (`src/widget/ios.ts`); the widget fetches prices itself and falls back to the app's last numbers offline.
+- Widgets (Android + iOS) now also refresh after sales, dividends and CSV imports.
+- Release APK built from `feature/top-value`; phone was not connected, so not installed.
+- iOS next steps: add `ios.appleTeamId` to `app.json`, run `eas build -p ios`; first Swift compile happens there. Register the App Group in the Apple developer account if EAS does not do it automatically.
 ## Session 6 — 2026-11-14 (branch `Shavit`)
 
 **Goal:** run Kesefly on an iPhone as a standalone app (no Expo Go), from Windows.
@@ -200,3 +228,133 @@ One section per working session. Newest at bottom.
 **Next steps:**
 - Watch the first `iOS build` run; fix anything it reports.
 - Install on the iPhone with Sideloadly and test Face ID, notifications and Hebrew layout.
+
+**End of session 6: merge, Android CI, Compare fix**
+- Merged `feature/top-value` (money tools + iOS widget) into main at 6ebba0d, together with the teammate's iPhone build (PR #1).
+- Local APK builds failed on Windows paths (worktree folder name with `+`, then ninja mkdir errors in copied folders). Added GitHub Actions "Android build" (Linux): APK published as a pre-release (`android-build-N`). Build 1 and 2 installed on the phone, no crashes.
+- Checked Compare on the phone: index chips were cut off and undated holdings got the wrong message. Fixed (wrapping chips, "N purchases need a date"); verified by screenshot. Comparison result not seen on device (no purchase dates in user data).
+
+**Next steps:**
+- Merge `feature/top-value` into main again (Compare fix + Android workflow are only on the branch).
+- Update the main checkout (`git pull`) so local incremental builds (minutes) work again; optional: add Gradle + ccache caching to the Android workflow (~8-10 min runs).
+- iOS: add `ios.appleTeamId`; check the iOS build workflow run for main 6ebba0d (widget's first compile); App Group may not sign with a free Apple ID (Sideloadly).
+- Add purchase dates on the phone and check the Compare result screen.
+## Session 7 — 2026-11-14 (branch `feature/edit-savings-chat-keyboard`)
+
+**Goal:** let the user edit savings and investments data; fix the assistant chat keyboard (cannot type: input hidden, keyboard not adjusted).
+
+**Work done:**
+- New "Savings and investments" screen (`app/finances.tsx`): cash savings, current investments, high-interest debt, monthly income, expenses and planned investing on one page. Opened from the Home net-worth card (Edit) and the Plan tab tools card.
+- Chat keyboard (iPhone): composer was under the native iOS tab bar. Bottom safe-area edge added to the helper screen; keyboard inset hook animates with the keyboard and re-measures on keyboard frame changes.
+- Home "Savings + investments" card edits cash savings and investments in place (Edit, Save / Cancel), with a link to all numbers.
+- Keyboard on every page: shared `KeyboardScrollView` keeps the focused field above the keyboard and content above the iOS tab bar (Screen, Stocks, Events); onboarding uses the measured inset; tap anywhere on the chat bar opens the keyboard.
+
+**Decisions:**
+- JS-only keyboard fix (no new native dependency), so the GitHub iOS build only rebuilds the bundle.
+- Pension accounts and holdings already had editors; the missing piece was the onboarding money numbers.
+
+- iOS build workflow also runs on pushes to `feature/edit-savings-chat-keyboard` (no gh CLI here to start it by hand). Run 43639850473 succeeded; artifact Kesefly-ios link given to the user.
+- Wrapped up with DONE: logs and changes scanned (no keys, emails, device serial, local paths), committed and pushed (not merged).
+
+**Next steps:**
+- Install the new `Kesefly.ipa` and test on iPhone: tap the chat input, type, keyboard opens with the composer right above it; edit savings from Home and Plan.
+- Check Android chat composer has no extra bottom gap.
+- Optional: remove the branch from the iOS build push trigger after merge.
+## Session 8 — 2026-11-20 (branch `feature/day-trading-lab`)
+
+**Goal:** implement the "Kesefly Day-Trading Lab Plan" phase by phase (0 to 4); let iPhone users install the app by becoming a free Apple developer. Afterwards (queued by the user): own AI API key in Settings and professional chat options.
+
+**Work done:**
+- Phase 0 (same app on both phones): per-feature notification cancel; iOS build with and without widget; localized widget fallback; iPhone install guide (EN/HE); test matrix; vitest.
+- Phase 1 (market data): NY/TLV sessions, `getCandles` / `getSpark`, CPython-exact seeded random numbers.
+- Phase 2 (engines): scanner, entry, exit, Time Machine, sizing, risk, paper account, alerts; tests reproduce the skill's numbers exactly (364.18 at 10:15, 358.32 / 370.04, 8 shares / 46.88, Time Machine 29.38 / 25.48 / 45.14 %).
+- Phase 3 (screens): risk gate, hub, scanner, setup, plan, Time Machine, ticket, journal, Lab settings; Stocks row, Home card, Learn track (5 lessons), helper chat topics, widget line; English + Hebrew.
+- Phase 4 (release prep): CI gates on both workflows, Gradle cache, NOTICES + About credit, Metro bundle check. 34 tests, tsc 0, lint 0.
+
+**Decisions:**
+- Engines are pure TypeScript in `mobile/src/lab/`; the Time Machine uses CPython's Mersenne Twister so results match the skill bit for bit.
+- Tel Aviv range, cutoff and flat-by times, shekel limits (x3.6), paper fill rules and index snapshots are Kesefly design decisions (marked in code).
+- Lab state has its own storage key; Lab notifications are tagged `lab-time` / `lab-price`.
+- Free Apple ID users install `Kesefly-no-widget.ipa` (no App Group) after turning on Developer Mode.
+
+- AI chat with the user's own Anthropic API key: Settings > AI chat (key saved encrypted and checked), Claude chat on the Helper tab (streaming, saved chats with full context, compaction, memory notes + `save_memory`, web search, model and effort choice, share-numbers opt-in). Offline helper kept as fallback.
+
+- AI key from ANY company in Settings > AI chat (OpenAI, Gemini, Claude, Grok, Mistral, DeepSeek, Groq, OpenRouter, or any OpenAI-compatible address); company detected from the key and confirmed; model list from the provider.
+- Installed and checked on the Android phone several times (release APK, `npm run apk`); fixes from phone feedback: Security chips cut off, segmented buttons sized to their text (scroll when too wide, dividers correct in Hebrew), Rubik Bold for every title, themed alert dialog (RTL, app icon on a green tile), Israel/USA flags in the Lab, resizable candles (pinch, drag, buttons), more scanner lists (TA-125, TA-90, Tel Aviv sectors, Dow 30, ETFs, Israeli stocks in New York, US sectors), chat no longer jumps while the AI types, AI chat header layout, one-time welcome guide (8 cards).
+
+**Decisions (later):**
+- Non-Claude providers through their OpenAI-compatible APIs; Claude keeps the SDK and its extras (compaction, web search, memory tool).
+- TA-125 and the Tel Aviv sector lists are approximate snapshots (verified symbols, not official member files); TA-125 has 109 shares.
+- Alerts use an in-app themed dialog instead of the system Alert.
+
+**Next steps:**
+- CI on push builds the iPhone files (branch is in the iOS trigger); the Android workflow builds on `main` only (or run it by hand). Install both iPhone files and run `docs/TEST_MATRIX.md`.
+- Check on the phone: guide (fresh install), dialogs with the green icon, chat scrolling during a long reply, Hebrew alignment in dialogs.
+- Optional: official TA-125 member list; "Show guide again" in Settings.
+
+
+## Session 9 — 2026-11-20 (branch `feature/account-data`, first named `feature/email-verification`)
+
+**Goal:** email verification on sign-up (code typed in the app); then fixes from phone testing.
+
+**Work done:**
+- Built an email code step (Supabase verify + resend), then removed it at the user's request: it will be done in a later session. Its first commit is on the branch; the removal is in the working tree.
+- Account data separation (`mobile/src/state/account-vault.ts`): sign-out puts the account's data aside and clears it; sign-in loads that account's data, or starts empty. Covers app, Lab, AI chats and key, helper brain, tour, event alerts. Test added.
+- Device mode: several accounts can share the phone (password hash and record per email).
+- Home title: time-of-day greeting with the account's first name ("ערב טוב, יוסי"); added night; updates every minute and on return to the app.
+- Release APK installed on the Android phone. tsc 0, eslint 0, vitest 48 passed.
+
+**Decisions:**
+- Data saved before the separation belongs to the first account that opens it.
+- Day parts (design decision): morning 5-12, afternoon 12-17, evening 17-21, night 21-5.
+
+**Next steps:**
+- Email verification: Supabase "Confirm email" on, "Confirm signup" template with `{{ .Token }}`, then rebuild the code step.
+- Keep the Supabase URL in `mobile/.env.local`, not in `.env.example`.
+
+## Session 10 — 2026-11-21 (branch `feature/user-chat`)
+
+**Goal:** chats between users for advising each other, like WhatsApp. Build the system now; the user connects Supabase later.
+
+**Work done:**
+- Supabase migration: profiles with unique @username, 1:1 and group chats, members, messages, Row Level Security, server functions, Realtime.
+- App client without an SDK: REST (`chat/api.ts`) and Realtime WebSocket (`chat/realtime.ts`).
+- Screens: Chats list, New chat (person or group), Chat room. Home header chat button. English + Hebrew.
+- Setup guide: `docs/CHAT_SETUP.md`. tsc, eslint, vitest (52), Metro bundle pass.
+
+**Decisions:**
+- Supabase backend (already the app's cloud sign-in), 1:1 + groups, find people by @username (emails stay private).
+- Chat works only with cloud accounts; device-only accounts see a notice.
+- Live updates plus a catch-up poll (15 s in a chat, 30 s on the list) so a missed event only delays a message.
+- Every chat shows that other users are not licensed investment advisors.
+
+**Next steps:**
+- Connect Supabase (`docs/CHAT_SETUP.md`), run the migration, rebuild, test with two accounts.
+- Later: push notifications for new messages, block/report, email verification.
+
+## Session 11 — 2026-11-21 (branch `feature/user-chat`)
+
+**Goal:** pick up after Session 10 and list what is left.
+
+**Work done:**
+- Checked the branch: Session 10 is committed (`f33421c`), pushed, and the APK is on the phone.
+- Started a plan for Google sign-in (Supabase Google OAuth with PKCE, no new packages). Paused at the user's request; no code changed.
+- Wrote the list of open work below.
+- iPhone without Developer Mode: chose a free web app (PWA). Wrote the hand-off plan `docs/IPHONE_WEB_APP_PLAN.md` for the co-founder; no app code changed.
+- Supabase connected (`mobile/.env.local`). Fixed: URL with `/rest/v1/` path (app now keeps only the project address); send failures shown as "Check your email" (new `mail` error); chat tables had no grants for signed-in users (added to the migration). Chat works on the phone.
+- Chat notifications with no server: background check about every 15 min, one notification per chat with new messages, unread badge on the app icon, "Chat messages" sound in Settings.
+- Verified badge for @shasha in the chat screens (app-side list).
+- DONE: committed, pushed, merged `feature/user-chat` into `main`, deleted the branch.
+- Email verification on sign-up: first restored the code step, then switched to the default confirmation link at the user's request (link opens the app, which signs in). Added the Supabase auth setup steps to `docs/CHAT_SETUP.md`.
+
+**Decisions:**
+- Email confirmation uses Supabase's default link template, not a typed code.
+- iPhone users without Developer Mode get a web app (Safari > Add to Home Screen), hosted on EAS Hosting. The co-founder builds it.
+
+**Next steps:**
+- Co-founder: build `docs/IPHONE_WEB_APP_PLAN.md`.
+- Confirmation email: Supabase failed to send it (SMTP). Fix the SMTP settings or the template, then test sign-up again.
+- Test chat notifications on the phone (battery set to Unrestricted).
+- User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
+- Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
+- Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.

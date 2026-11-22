@@ -11,6 +11,7 @@ import { type NotifType, SOUND_IDS, type SoundId } from '@/state/sounds';
 import { cancelTips, requestPermission, scheduleWeeklyTips, sendTestTip } from '@/state/notifications';
 import { alertDir, bidi } from '@/ui/bidi';
 import { Button, Card, Chip, Disclaimer, Row, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
+import { ToolRow } from '@/ui/money-ui';
 import { useTokens } from '@/ui/theme';
 
 export default function SettingsScreen() {
@@ -243,7 +244,7 @@ export default function SettingsScreen() {
         <Txt variant="footnote" color="textSecondary">
           {s.settings3.soundsHint}
         </Txt>
-        {(['tips', 'events', 'moves'] as NotifType[]).map((type) => (
+        {(['tips', 'events', 'moves', 'chat'] as NotifType[]).map((type) => (
           <View key={type} style={{ gap: 6 }}>
             <Txt variant="headline">{s.settings3.soundTypes[type]}</Txt>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
@@ -269,17 +270,24 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={{ gap: 4 }}>
-        <Button kind="tonal" label={s.money.edit} onPress={() => router.push('/money')} />
         <Button kind="tonal" label={s.settings.editProfile} onPress={() => router.push('/onboarding?edit=1')} />
         <Button kind="destructive" label={s.settings.reset} onPress={confirmReset} />
         <Button kind="destructive" label={s.settings2.signOut} onPress={confirmSignOut} />
       </View>
+
+      <SectionHeader>{s.ai.settingsRow}</SectionHeader>
+      <Card style={{ gap: 0, paddingVertical: 4 }}>
+        <ToolRow first sf="sparkles" md="auto_awesome" title={s.ai.settingsRow} hint={s.ai.settingsHint} onPress={() => router.push('/ai-settings')} />
+      </Card>
 
       <SectionHeader>{s.settings.about}</SectionHeader>
       <Card>
         <Txt variant="subhead">{s.settings.privacy}</Txt>
         <Txt variant="footnote" color="textSecondary">
           {s.settings3.sources}
+        </Txt>
+        <Txt variant="footnote" color="textSecondary">
+          {s.lab.settings.credit}
         </Txt>
         <Disclaimer />
         <Txt variant="footnote" color="textSecondary">

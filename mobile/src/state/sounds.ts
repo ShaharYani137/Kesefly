@@ -1,5 +1,5 @@
 /**
- * Custom sound per notification type (weekly tips, market events, price moves).
+ * Custom sound per notification type (weekly tips, market events, price moves, chat messages).
  *
  * Android fixes a channel's sound when the channel is created, so every (type, sound) pair has
  * its own channel id, e.g. "events-alert". Picking a sound in Settings creates that channel and
@@ -12,9 +12,9 @@ import { Platform } from 'react-native';
 
 export const SOUND_IDS = ['default', 'chime', 'coin', 'bell', 'pulse', 'alert', 'silent'] as const;
 export type SoundId = (typeof SOUND_IDS)[number];
-export type NotifType = 'tips' | 'events' | 'moves';
+export type NotifType = 'tips' | 'events' | 'moves' | 'chat';
 
-export const DEFAULT_SOUNDS: Record<NotifType, SoundId> = { tips: 'chime', events: 'alert', moves: 'coin' };
+export const DEFAULT_SOUNDS: Record<NotifType, SoundId> = { tips: 'chime', events: 'alert', moves: 'coin', chat: 'bell' };
 
 export const channelId = (type: NotifType, sound: SoundId) => `${type}-${sound}`;
 

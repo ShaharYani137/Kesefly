@@ -143,6 +143,12 @@ export function KeseflyWidget({ data, size }: { data: WidgetData; size?: { width
         ])}
       </FlexWidget>
 
+      {data.lab ? (
+        <FlexWidget style={{ width: 'match_parent', flexDirection: row, justifyContent: 'flex-start' }}>
+          <TextWidget text={data.lab.line} maxLines={1} style={{ fontSize: 11, color: data.lab.up == null ? GOLD : data.lab.up ? UP : DOWN, fontWeight: '600' }} />
+        </FlexWidget>
+      ) : null}
+
       <FlexWidget style={{ width: 'match_parent', flex: 1, flexDirection: row, alignItems: 'center', flexGap: 10 }}>
         {order(showMovers ? [valueBlock, moversBlock] : [valueBlock])}
       </FlexWidget>

@@ -3,6 +3,11 @@
  * the `Strings` type is derived from English, so a missing Hebrew key fails typecheck.
  */
 import { EXTRA, type ExtraStrings } from './extra';
+import { AI, type AiStrings } from './ai';
+import { CHAT, type ChatStrings } from './chat';
+import { LAB, type LabStrings } from './lab';
+import { MONEY, type MoneyStrings } from './money';
+import { TOUR, type TourStrings } from './tour';
 
 const en = {
   appName: 'Kesefly',
@@ -13,6 +18,7 @@ const en = {
     keepGoing: 'Markets move every week. Your plan works best when you keep monthly deposits steady.',
   },
   common: {
+    ok: 'OK',
     next: 'Next',
     back: 'Back',
     save: 'Save',
@@ -74,6 +80,7 @@ const en = {
     morning: 'Good morning',
     afternoon: 'Good afternoon',
     evening: 'Good evening',
+    night: 'Good night',
     subtitle: 'Here is your money today.',
     helperSays: 'Kesefly suggests',
     askAbout: 'Ask me about this',
@@ -356,13 +363,13 @@ const en = {
     notifyOn: 'On',
     notifyOff: 'Off',
     privacy:
-      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance (prices and news), and the app reads public news feeds (CNBC, MarketWatch, Globes). Your PIN and password are stored encrypted on the phone.',
+      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance (prices and news), and the app reads public news feeds (CNBC, MarketWatch, Globes). Your PIN and password are stored encrypted on the phone. If you add your own AI API key (Settings > AI chat), your chat messages go to that AI company; your numbers go only if you turn on sharing.',
     version: 'Kesefly {v}',
   },
 };
 
 type BaseStrings = typeof en;
-export type Strings = BaseStrings & ExtraStrings;
+export type Strings = BaseStrings & ExtraStrings & MoneyStrings & LabStrings & AiStrings & TourStrings & ChatStrings;
 
 const he: BaseStrings = {
   appName: 'כספלי',
@@ -373,6 +380,7 @@ const he: BaseStrings = {
     keepGoing: 'השוק זז כל שבוע. התוכנית עובדת הכי טוב כשממשיכים בהפקדות חודשיות קבועות.',
   },
   common: {
+    ok: 'אישור',
     next: 'הבא',
     back: 'חזרה',
     save: 'שמירה',
@@ -434,6 +442,7 @@ const he: BaseStrings = {
     morning: 'בוקר טוב',
     afternoon: 'צהריים טובים',
     evening: 'ערב טוב',
+    night: 'לילה טוב',
     subtitle: 'ככה נראה הכסף שלכם היום.',
     helperSays: 'כספלי מציע',
     askAbout: 'לשאול אותי על זה',
@@ -712,12 +721,12 @@ const he: BaseStrings = {
     notifyTest: 'שליחת טיפ לדוגמה',
     notifyOn: 'פועל',
     notifyOff: 'כבוי',
-    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance (מחירים וחדשות), והאפליקציה קוראת פידים ציבוריים של חדשות (CNBC, MarketWatch, גלובס). הקוד והסיסמה נשמרים מוצפנים בטלפון.',
+    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance (מחירים וחדשות), והאפליקציה קוראת פידים ציבוריים של חדשות (CNBC, MarketWatch, גלובס). הקוד והסיסמה נשמרים מוצפנים בטלפון. אם תוסיפו מפתח API משלכם (הגדרות > צ׳אט AI), הודעות הצ׳אט נשלחות לחברת ה-AI; המספרים שלכם נשלחים רק אם תפעילו שיתוף.',
     version: 'כספלי {v}',
   },
 };
 
 export const STRINGS: Record<'en' | 'he', Strings> = {
-  en: { ...en, ...EXTRA.en },
-  he: { ...he, ...EXTRA.he },
+  en: { ...en, ...EXTRA.en, ...MONEY.en, ...LAB.en, ...AI.en, ...TOUR.en, ...CHAT.en },
+  he: { ...he, ...EXTRA.he, ...MONEY.he, ...LAB.he, ...AI.he, ...TOUR.he, ...CHAT.he },
 };

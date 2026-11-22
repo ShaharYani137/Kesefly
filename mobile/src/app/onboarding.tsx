@@ -1,12 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatMoney } from '@/engine/format';
 import { type Country, type Currency, type Lang, type Profile, type Risk } from '@/engine/types';
 import { fill, useApp } from '@/state/app-store';
 import { Button, Card, Disclaimer, NumberField, Row, Segmented, TextField, Txt } from '@/ui/components';
+import { useKeyboardInset } from '@/ui/keyboard';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const STEPS = 6;
@@ -16,6 +17,7 @@ export default function Onboarding() {
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const editing = edit === '1';
   const { s, lang, setLang, profile, saveProfile, isRTL } = useApp();
+  const { ref: kbRef, inset: kbInset } = useKeyboardInset();
   const { colors } = useTokens();
   const [step, setStep] = useState(editing ? 1 : 0);
   const [d, setD] = useState<Profile>(profile);
@@ -204,7 +206,8 @@ export default function Onboarding() {
         backgroundColor: colors.background,
         direction: isRTL ? 'rtl' : 'ltr',
       }}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      {/* Padded by the keyboard overlap (ui/keyboard.ts): KeyboardAvoidingView had no effect on Android edge-to-edge. */}
+      <View ref={kbRef} style={{ flex: 1, paddingBottom: kbInset }}>
         {step > 0 ? (
           <View style={{ paddingHorizontal: Metrics.margin, paddingTop: 8 }}>
             <Txt variant="footnote" color="textSecondary">
@@ -212,7 +215,7 @@ export default function Onboarding() {
             </Txt>
           </View>
         ) : null}
-        <ScrollView contentContainerStyle={{ padding: Metrics.margin, gap: 16 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: Metrics.margin, gap: 16 }} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
           {body}
         </ScrollView>
         <Row style={{ padding: Metrics.margin }}>
@@ -237,7 +240,7 @@ export default function Onboarding() {
             />
           </View>
         </Row>
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

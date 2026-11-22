@@ -12,6 +12,7 @@
  *   - web answers it already found (answered again instantly, even offline).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { canSave, generation, onAccountSwitch } from '@/state/account-vault';
 
 const KEY = 'investapp/brain/v1';
 
@@ -35,9 +36,17 @@ export const EMPTY_BRAIN: Brain = { tickers: {}, topics: {}, prefer: {}, web: {}
 
 let brain: Brain = EMPTY_BRAIN;
 let loaded = false;
+let loadedAt = -1;
+
+// Another account signed in: forget the cached brain and read that account's copy next time.
+onAccountSwitch(() => {
+  brain = EMPTY_BRAIN;
+  loaded = false;
+});
 
 export async function loadBrain(): Promise<Brain> {
   if (loaded) return brain;
+  loadedAt = generation();
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (raw) brain = { ...EMPTY_BRAIN, ...(JSON.parse(raw) as Partial<Brain>) };
@@ -49,6 +58,7 @@ export async function loadBrain(): Promise<Brain> {
 }
 
 function save() {
+  if (!loaded || !canSave(loadedAt)) return;
   AsyncStorage.setItem(KEY, JSON.stringify(brain)).catch(() => {});
 }
 

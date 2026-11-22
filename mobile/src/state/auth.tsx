@@ -6,8 +6,17 @@
  *   - cloud: Supabase Auth over its REST API, when EXPO_PUBLIC_SUPABASE_URL and
  *     EXPO_PUBLIC_SUPABASE_ANON_KEY are set at build time (see mobile/.env.example).
  *     Email + password, sign-up, password reset. Tokens live in the secure store.
+ *     Email verification: when the Supabase project has "Confirm email" on, sign-up returns no
+ *     session. Supabase mails a confirmation link (the default "Confirm signup" template with
+ *     {{ .ConfirmationURL }}). Tapping it confirms the email on Supabase, then opens the app
+ *     (CONFIRM_REDIRECT). The app then signs in with the email and password the user typed.
+ *     Signing in to an unconfirmed account also leads to this step (a fresh link is sent).
  *   - device: when no cloud project is configured. The account exists only on this phone
  *     (password stored as a salted SHA-256 hash in the secure store). Nothing is uploaded.
+ *     Several device accounts can share the phone: each email has its own record and hash.
+ *
+ * Each account's app data is kept apart on the phone (state/account-vault.ts): signing out
+ * puts it aside, signing in loads that account's own data.
  *
  * App lock: a 4-digit PIN (salted hash in the secure store) is required; fingerprint / Face ID
  * can be turned on as a faster way in (expo-local-authentication). After 5 wrong PINs the
@@ -22,6 +31,7 @@ import * as SecureStore from 'expo-secure-store';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { openAccount, parkAccount } from './account-vault';
 import { useApp } from './app-store';
 
 const K = {
@@ -35,14 +45,23 @@ const K = {
 const MAX_TRIES = 5;
 const WAIT_MS = 30_000;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+// Only the project address (https://<project>.supabase.co): a URL copied with a path, such as
+// the dashboard's ".../rest/v1/", would otherwise break every auth and chat call.
+export const SUPABASE_URL = (process.env.EXPO_PUBLIC_SUPABASE_URL ?? '').trim().replace(/^(https?:\/\/[^/?#]+).*$/, '$1');
+export const SUPABASE_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 export const CLOUD = SUPABASE_URL.length > 0 && SUPABASE_KEY.length > 0;
 
 export type Account = { email: string; name: string; mode: 'cloud' | 'device' };
 type Session = { access_token: string; refresh_token: string; expires_at: number };
 
-export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email';
+/**
+ * Where the confirmation link goes after Supabase confirms the email: opens the app.
+ * Add `kesefly://**` to Supabase Authentication > URL Configuration > Redirect URLs. If it is
+ * missing, Supabase sends the user to the Site URL instead; the email is still confirmed.
+ */
+const CONFIRM_REDIRECT = 'kesefly://';
+
+export type AuthError = 'invalid' | 'exists' | 'weak' | 'network' | 'confirm' | 'email' | 'rate' | 'mail';
 
 export class AuthFailure extends Error {
   constructor(public code: AuthError) {
@@ -62,6 +81,8 @@ type AuthState = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Cloud only: mails a new sign-up confirmation link. */
+  resendConfirm: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   setPin: (pin: string) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
@@ -79,6 +100,11 @@ async function hashWithSalt(value: string, salt?: string): Promise<string> {
   const s = salt ?? Crypto.randomUUID();
   const h = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, `${s}:${value}`);
   return `${s}:${h}`;
+}
+
+/** SecureStore-safe suffix for per-account device keys (short SHA-256 of the email). */
+async function emailId(mail: string): Promise<string> {
+  return (await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, mail)).slice(0, 16);
 }
 
 async function verifyHash(value: string, stored: string | null): Promise<boolean> {
@@ -107,6 +133,9 @@ async function supabase(path: string, body: object, token?: string): Promise<Rec
   const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
   if (!res.ok) {
     const msg = String(json.msg ?? json.error_description ?? json.message ?? '').toLowerCase();
+    if (res.status === 429 || msg.includes('security purposes') || msg.includes('rate limit')) throw new AuthFailure('rate');
+    // Supabase could not send the confirmation email (SMTP settings): not the same as "sent, now confirm".
+    if (msg.includes('sending') || msg.includes('smtp')) throw new AuthFailure('mail');
     if (msg.includes('already')) throw new AuthFailure('exists');
     if (msg.includes('password')) throw new AuthFailure(res.status === 400 && msg.includes('invalid') ? 'invalid' : 'weak');
     if (msg.includes('confirm')) throw new AuthFailure('confirm');
@@ -122,6 +151,35 @@ function toSession(j: Record<string, unknown>): Session | null {
     refresh_token: String(j.refresh_token ?? ''),
     expires_at: Date.now() + Number(j.expires_in ?? 3600) * 1000,
   };
+}
+
+/* ---------- Access token for other cloud features (user chat) ---------- */
+
+let refreshing: Promise<Session | null> | null = null;
+
+/**
+ * The signed-in cloud account's access token, refreshed when it expires within a minute.
+ * Null in device mode or when signed out.
+ */
+export async function getAccessToken(): Promise<string | null> {
+  if (!CLOUD) return null;
+  const raw = await SecureStore.getItemAsync(K.session);
+  if (!raw) return null;
+  const sess = JSON.parse(raw) as Session;
+  if (sess.expires_at > Date.now() + 60_000) return sess.access_token;
+  if (!sess.refresh_token) return null;
+  // One refresh at a time: parallel callers share it.
+  refreshing ??= supabase('token?grant_type=refresh_token', { refresh_token: sess.refresh_token })
+    .then(async (j) => {
+      const next = toSession(j);
+      if (next) await SecureStore.setItemAsync(K.session, JSON.stringify(next));
+      return next;
+    })
+    .catch(() => null)
+    .finally(() => {
+      refreshing = null;
+    });
+  return (await refreshing)?.access_token ?? null;
 }
 
 /* ---------- Provider ---------- */
@@ -153,7 +211,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         setBio(bio === '1');
         if (!acc) return setStatus('signedOut');
-        setAccount(JSON.parse(acc) as Account);
+        const saved = JSON.parse(acc) as Account;
+        // Make sure the data on screen is this account's (claims data saved before accounts were separated).
+        await openAccount(saved.email).catch(() => {});
+        setAccount(saved);
         setStatus(pin ? 'locked' : 'needsPin');
         // Refresh a cloud session quietly; a failure keeps the user signed in on this device.
         const sess = await SecureStore.getItemAsync(K.session);
@@ -187,6 +248,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [autoLock]);
 
   const finishSignIn = useCallback(async (acc: Account) => {
+    // Load this account's own data (empty for a new account) before the app shows.
+    await openAccount(acc.email);
     await SecureStore.setItemAsync(K.account, JSON.stringify(acc));
     setAccount(acc);
     const pin = await SecureStore.getItemAsync(K.pin);
@@ -199,15 +262,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!EMAIL_RE.test(mail)) throw new AuthFailure('email');
       if (password.length < 8) throw new AuthFailure('weak');
       if (CLOUD) {
-        const j = await supabase('signup', { email: mail, password, data: { name: name.trim() } });
+        const j = await supabase(`signup?redirect_to=${encodeURIComponent(CONFIRM_REDIRECT)}`, { email: mail, password, data: { name: name.trim() } });
         const sess = toSession(j);
         // Projects with email confirmation on return no session until the link is clicked.
         if (!sess) throw new AuthFailure('confirm');
         await SecureStore.setItemAsync(K.session, JSON.stringify(sess));
         return finishSignIn({ email: mail, name: name.trim(), mode: 'cloud' });
       }
-      await SecureStore.setItemAsync(K.password, await hashWithSalt(password));
-      return finishSignIn({ email: mail, name: name.trim(), mode: 'device' });
+      // Device accounts: one password hash and record per email, so several can share the phone.
+      const id = await emailId(mail);
+      if (await SecureStore.getItemAsync(`${K.password}.${id}`)) throw new AuthFailure('exists');
+      const acc: Account = { email: mail, name: name.trim(), mode: 'device' };
+      await SecureStore.setItemAsync(`${K.password}.${id}`, await hashWithSalt(password));
+      await SecureStore.setItemAsync(`${K.account}.${id}`, JSON.stringify(acc));
+      return finishSignIn(acc);
     },
     [finishSignIn],
   );
@@ -225,11 +293,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return finishSignIn({ email: mail, name: meta?.name ?? mail.split('@')[0], mode: 'cloud' });
       }
       // Device mode: the account and password hash must already be on this phone.
+      const id = await emailId(mail);
+      const stored = await SecureStore.getItemAsync(`${K.account}.${id}`);
+      if (stored) {
+        if (!(await verifyHash(password, await SecureStore.getItemAsync(`${K.password}.${id}`)))) throw new AuthFailure('invalid');
+        return finishSignIn(JSON.parse(stored) as Account);
+      }
+      // Older installs kept one device account under `.last` and one password hash.
       const acc = await SecureStore.getItemAsync(`${K.account}.last`);
       const prev = acc ? (JSON.parse(acc) as Account) : null;
       if (!prev || prev.email !== mail || !(await verifyHash(password, await SecureStore.getItemAsync(K.password)))) {
         throw new AuthFailure('invalid');
       }
+      await SecureStore.setItemAsync(`${K.password}.${id}`, (await SecureStore.getItemAsync(K.password)) ?? '');
+      await SecureStore.setItemAsync(`${K.account}.${id}`, acc ?? '');
       return finishSignIn(prev);
     },
     [finishSignIn],
@@ -240,6 +317,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase('recover', { email: email.trim().toLowerCase() });
   }, []);
 
+  const resendConfirm = useCallback(async (email: string) => {
+    if (!CLOUD) throw new AuthFailure('invalid');
+    await supabase(`resend?redirect_to=${encodeURIComponent(CONFIRM_REDIRECT)}`, { type: 'signup', email: email.trim().toLowerCase() });
+  }, []);
+
   const signOut = useCallback(async () => {
     const sess = await SecureStore.getItemAsync(K.session);
     if (CLOUD && sess) {
@@ -248,7 +330,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Device accounts stay on the phone so the user can sign back in with the same password.
     const acc = await SecureStore.getItemAsync(K.account);
     if (acc) await SecureStore.setItemAsync(`${K.account}.last`, acc);
+    const cur = acc ? (JSON.parse(acc) as Account) : null;
+    if (cur?.mode === 'device') {
+      // Older device accounts have only the single password hash: give them their own record.
+      const id = await emailId(cur.email);
+      const legacy = await SecureStore.getItemAsync(K.password);
+      if (legacy && !(await SecureStore.getItemAsync(`${K.password}.${id}`))) {
+        await SecureStore.setItemAsync(`${K.password}.${id}`, legacy);
+        await SecureStore.setItemAsync(`${K.account}.${id}`, acc ?? '');
+      }
+    }
     await Promise.all([K.account, K.session, K.pin, K.biometric].map((k) => SecureStore.deleteItemAsync(k)));
+    // Put this account's data aside so the next account starts with its own.
+    await parkAccount().catch(() => {});
     setAccount(null);
     setBio(false);
     setStatus('signedOut');
@@ -308,6 +402,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signUp,
       resetPassword,
+      resendConfirm,
       signOut,
       setPin,
       unlockWithPin,
@@ -316,7 +411,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       lock,
       changePin,
     }),
-    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
+    [status, account, biometric, biometricType, waitUntil, signIn, signUp, resetPassword, resendConfirm, signOut, setPin, unlockWithPin, unlockWithBiometric, setBiometric, lock, changePin],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

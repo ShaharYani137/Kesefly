@@ -5,9 +5,12 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getLocales } from 'expo-localization';
-import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+
+import { canSave, generation, onAccountSwitch } from './account-vault';
 
 import { type AcademyProgress, completeLesson as completeLessonFn, EMPTY_PROGRESS, type Placement } from '@/engine/academy';
+import type { SavingsAccount } from '@/engine/savings';
 import { EMPTY_PROFILE, type Lang, type Profile } from '@/engine/types';
 import type { LessonId } from '@/i18n/academy';
 
@@ -54,9 +57,14 @@ export type Prefs = {
   quietHours: boolean;
   /** Sound per notification type (state/sounds.ts). */
   sounds: Record<NotifType, SoundId>;
+  /** Tax view, US residents: short-term (ordinary income) and long-term rates, fractions. */
+  taxShort: number;
+  taxLong: number;
+  /** Savings: years until retirement, for fee projections. */
+  retireYears: number;
 };
 
-export const DEFAULT_PREFS: Prefs = { theme: 'system', autoLock: 60, alertScope: 'important', moveThreshold: 3, quietHours: true, sounds: DEFAULT_SOUNDS };
+export const DEFAULT_PREFS: Prefs = { theme: 'system', autoLock: 60, alertScope: 'important', moveThreshold: 3, quietHours: true, sounds: DEFAULT_SOUNDS, taxShort: 0.22, taxLong: 0.15, retireYears: 25 };
 
 type Persisted = {
   lang: Lang;
@@ -66,6 +74,8 @@ type Persisted = {
   holdings: Holding[];
   sales: Sale[];
   dividends: Dividend[];
+  /** Pension, study fund, provident fund, 401(k), IRA (engine/savings.ts). */
+  savings: SavingsAccount[];
   /** Weekly advice notifications on/off. */
   notify: boolean;
   /** World / economy event alerts on/off. */
@@ -93,6 +103,11 @@ type AppState = Persisted & {
   saveSymbolRecords: (symbol: string, records: SymbolRecords) => void;
   /** Remove a symbol's lots, sales and dividends. */
   removeSymbolRecords: (symbol: string) => void;
+  /** Add many records at once (broker CSV import). */
+  importRecords: (rec: { lots: Omit<Holding, 'id'>[]; sales: Omit<Sale, 'id'>[]; dividends: Omit<Dividend, 'id'>[] }) => void;
+  /** Add or replace a savings account (matched by id). */
+  saveSavings: (a: SavingsAccount) => void;
+  removeSavings: (id: string) => void;
   setNotify: (on: boolean) => void;
   setEventAlerts: (on: boolean) => void;
   savePlacement: (p: Placement) => void;
@@ -112,25 +127,33 @@ function deviceLang(): Lang {
   }
 }
 
+const freshState = (lang: Lang): Persisted => ({
+  lang,
+  profile: EMPTY_PROFILE,
+  onboarded: false,
+  watchlist: DEFAULT_WATCHLIST,
+  holdings: [],
+  sales: [],
+  dividends: [],
+  savings: [],
+  notify: false,
+  eventAlerts: false,
+  academy: EMPTY_PROGRESS,
+  prefs: DEFAULT_PREFS,
+});
+
 export function AppProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
-  const [state, setState] = useState<Persisted>(() => ({
-    lang: deviceLang(),
-    profile: EMPTY_PROFILE,
-    onboarded: false,
-    watchlist: DEFAULT_WATCHLIST,
-    holdings: [],
-    sales: [],
-    dividends: [],
-    notify: false,
-    eventAlerts: false,
-    academy: EMPTY_PROGRESS,
-    prefs: DEFAULT_PREFS,
-  }));
+  const [state, setState] = useState<Persisted>(() => freshState(deviceLang()));
+  /** Account-vault generation the state was loaded in (see state/account-vault.ts). */
+  const loadedAt = useRef(-1);
 
-  useEffect(() => {
+  const load = useCallback((fromScratch: boolean) => {
+    const at = generation();
     AsyncStorage.getItem(STORAGE_KEY)
       .then((raw) => {
+        // After an account switch, start from defaults but keep the language on screen.
+        if (fromScratch) setState((prev) => freshState(prev.lang));
         if (!raw) return;
         const saved = JSON.parse(raw) as Partial<Persisted>;
         setState((prev) => ({
@@ -141,6 +164,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           holdings: Array.isArray(saved.holdings) ? saved.holdings : [],
           sales: Array.isArray(saved.sales) ? saved.sales : [],
           dividends: Array.isArray(saved.dividends) ? saved.dividends : [],
+          savings: Array.isArray(saved.savings) ? saved.savings : [],
           notify: saved.notify ?? false,
           eventAlerts: saved.eventAlerts ?? false,
           academy: { ...EMPTY_PROGRESS, ...saved.academy },
@@ -150,11 +174,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Corrupt or unreadable storage: start fresh rather than crash.
       })
-      .finally(() => setHydrated(true));
+      .finally(() => {
+        loadedAt.current = at;
+        setHydrated(true);
+      });
   }, []);
 
   useEffect(() => {
-    if (!hydrated) return;
+    load(false);
+    return onAccountSwitch(() => load(true));
+  }, [load]);
+
+  useEffect(() => {
+    if (!hydrated || !canSave(loadedAt.current)) return;
     AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
   }, [state, hydrated]);
 
@@ -174,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         holdings: [],
         sales: [],
         dividends: [],
+        savings: [],
         notify: false,
         eventAlerts: false,
         academy: EMPTY_PROGRESS,
@@ -232,6 +265,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       })),
     [],
   );
+  const importRecords = useCallback(
+    (rec: { lots: Omit<Holding, 'id'>[]; sales: Omit<Sale, 'id'>[]; dividends: Omit<Dividend, 'id'>[] }) =>
+      setState((p) => ({
+        ...p,
+        holdings: [...p.holdings, ...rec.lots.map((x) => ({ ...x, id: newId() }))],
+        sales: [...p.sales, ...rec.sales.map((x) => ({ ...x, id: newId() }))],
+        dividends: [...p.dividends, ...rec.dividends.map((x) => ({ ...x, id: newId() }))],
+      })),
+    [],
+  );
+  const saveSavings = useCallback(
+    (a: SavingsAccount) =>
+      setState((p) => ({ ...p, savings: p.savings.some((x) => x.id === a.id) ? p.savings.map((x) => (x.id === a.id ? a : x)) : [...p.savings, a] })),
+    [],
+  );
+  const removeSavings = useCallback((id: string) => setState((p) => ({ ...p, savings: p.savings.filter((x) => x.id !== id) })), []);
   const setNotify = useCallback((notify: boolean) => setState((p) => ({ ...p, notify })), []);
   const setEventAlerts = useCallback((eventAlerts: boolean) => setState((p) => ({ ...p, eventAlerts })), []);
   const savePlacement = useCallback(
@@ -263,6 +312,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateHolding,
       saveSymbolRecords,
       removeSymbolRecords,
+      importRecords,
+      saveSavings,
+      removeSavings,
       setNotify,
       setEventAlerts,
       savePlacement,
@@ -284,6 +336,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateHolding,
       saveSymbolRecords,
       removeSymbolRecords,
+      importRecords,
+      saveSavings,
+      removeSavings,
       setNotify,
       setEventAlerts,
       savePlacement,

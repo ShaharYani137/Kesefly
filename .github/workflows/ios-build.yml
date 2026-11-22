@@ -1,18 +1,25 @@
 # Builds a standalone iPhone app (.ipa) on GitHub's Macs. No Expo Go, no Metro, no computer
 # needed at run time: the JavaScript is bundled into the app (Release build).
 #
-# The .ipa is UNSIGNED. Install it from Windows with Sideloadly and a free Apple ID, which
+# The .ipa is UNSIGNED. Install it from Windows with Sideloadly and an Apple ID, which
 # signs it for your iPhone (free-account apps must be reinstalled every 7 days).
-# Steps: README.md, "Run on an iPhone (Windows, no Mac)".
+# Steps: docs/INSTALL_IPHONE.md.
 #
-# Download: repo > Actions > "iOS build" > latest run > Artifacts > Kesefly-ios.
+# Two files per run:
+# - Kesefly.ipa            with the home-screen widget (needs an App Group: paid Apple
+#                          Developer account)
+# - Kesefly-no-widget.ipa  without the widget (KESEFLY_IOS_WIDGET=0, mobile/app.config.js),
+#                          for a free Apple ID, which cannot sign App Groups
+#
+# Download: repo > Actions > "iOS build" > latest run > Artifacts > Kesefly-ios /
+# Kesefly-ios-no-widget (main also publishes both as a GitHub Release).
 
 name: iOS build
 
 on:
   workflow_dispatch:
   push:
-    branches: [main, Shavit, Shahar]
+    branches: [main, Shavit, Shahar, feature/day-trading-lab]
     paths:
       - 'mobile/**'
       - '.github/workflows/ios-build.yml'
@@ -28,10 +35,23 @@ jobs:
   ios:
     runs-on: macos-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: widget
+            widget: '1'
+            file: Kesefly.ipa
+            artifact: Kesefly-ios
+          - variant: no-widget
+            widget: '0'
+            file: Kesefly-no-widget.ipa
+            artifact: Kesefly-ios-no-widget
     defaults:
       run:
         working-directory: mobile
     env:
+      KESEFLY_IOS_WIDGET: ${{ matrix.widget }}
       # Optional cloud accounts. Set these as repository VARIABLES (Settings > Secrets and
       # variables > Actions > Variables). Empty = accounts stay on the phone (device mode).
       EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
@@ -52,13 +72,11 @@ jobs:
       - name: Install JavaScript packages
         run: npm ci
 
-      # Report type errors as annotations on the run, without blocking the app build.
-      - name: Type check
-        continue-on-error: true
+      - name: Tests, typecheck, lint
         run: |
-          npx tsc --noEmit --pretty false > tsc.log 2>&1 && echo "tsc: 0 errors" && exit 0
-          sed -E 's/^([^(]+)\(([0-9]+),([0-9]+)\): error (.*)$/::error file=mobile\/\1,line=\2,col=\3::\4/' tsc.log | head -50
-          exit 1
+          npm test
+          npx tsc --noEmit
+          npm run lint
 
       - name: Generate the iOS project (expo prebuild)
         run: npx expo prebuild --platform ios --no-install
@@ -72,6 +90,14 @@ jobs:
               echo "::warning::aps-environment still present; removing it"
               /usr/libexec/PlistBuddy -c 'Delete :aps-environment' "$ENT"
             fi
+            if [ "$KESEFLY_IOS_WIDGET" = "0" ] && /usr/libexec/PlistBuddy -c 'Print :com.apple.security.application-groups' "$ENT" >/dev/null 2>&1; then
+              echo "::error::no-widget build still has an App Group entitlement"
+              exit 1
+            fi
+          fi
+          if [ "$KESEFLY_IOS_WIDGET" = "0" ] && grep -q KeseflyWidget ios/Kesefly.xcodeproj/project.pbxproj; then
+            echo "::error::no-widget build still has the widget target"
+            exit 1
           fi
 
       - name: Install CocoaPods
@@ -96,35 +122,51 @@ jobs:
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/Kesefly.app Payload/
           test -f Payload/Kesefly.app/main.jsbundle
-          zip -qry Kesefly.ipa Payload
-          ls -lh Kesefly.ipa
+          zip -qry "${{ matrix.file }}" Payload
+          ls -lh "${{ matrix.file }}"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: Kesefly-ios
-          path: mobile/Kesefly.ipa
+          name: ${{ matrix.artifact }}
+          path: mobile/${{ matrix.file }}
           retention-days: 30
 
-      # main only: also publish the .ipa as a GitHub Release, so it has a permanent public
-      # link that needs no GitHub login:
-      # https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa
-      - name: Publish release (main)
-        if: github.ref == 'refs/heads/main'
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcodebuild-log-${{ matrix.variant }}
+          path: mobile/xcodebuild.log
+          if-no-files-found: ignore
+
+  # main only: publish both .ipa files as one GitHub Release, so they have permanent public
+  # links that need no GitHub login:
+  # https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly.ipa
+  # https://github.com/ShaharYani137/Kesefly/releases/latest/download/Kesefly-no-widget.ipa
+  release:
+    needs: ios
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Kesefly-ios*
+          merge-multiple: true
+          path: out
+
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ios-build-${{ github.run_number }}
           name: Kesefly iPhone build ${{ github.run_number }}
           target_commitish: ${{ github.sha }}
           make_latest: true
-          files: mobile/Kesefly.ipa
+          files: |
+            out/Kesefly.ipa
+            out/Kesefly-no-widget.ipa
           body: |
-            Unsigned iPhone app. Install from Windows with Sideloadly and a free Apple ID
-            (see README, "Run on an iPhone (Windows, no Mac)").
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: xcodebuild-log
-          path: mobile/xcodebuild.log
-          if-no-files-found: ignore
+            Unsigned iPhone app, two files:
+            - Kesefly-no-widget.ipa: for a free Apple ID (no home-screen widget).
+            - Kesefly.ipa: with the widget, needs a paid Apple Developer account.
+            Install from Windows with Sideloadly; turn on Developer Mode on the iPhone.
+            Steps: docs/INSTALL_IPHONE.md.
