@@ -64,12 +64,26 @@ jobs:
       # Deep links: GitHub Pages serves 404.html for unknown paths, so it is a copy of index.html.
       - name: iPhone web-app tags and deep links
         run: |
-          TAGS='<link rel="apple-touch-icon" href="'"$BASE_URL"'/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Kesefly"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#062A26">'
-          sed -i "s#<head>#<head>$TAGS#" dist/index.html
-          sed -i 's#<meta name="viewport" content="\([^"]*\)"#<meta name="viewport" content="\1, viewport-fit=cover"#' dist/index.html
-          cp dist/index.html dist/404.html
-          touch dist/.nojekyll
-          ls -la dist | head -20
+          node -e "
+            const fs = require('fs');
+            const base = process.env.BASE_URL;
+            const tags = [
+              '<link rel=\"apple-touch-icon\" href=\"' + base + '/apple-touch-icon.png\">',
+              '<meta name=\"apple-mobile-web-app-capable\" content=\"yes\">',
+              '<meta name=\"mobile-web-app-capable\" content=\"yes\">',
+              '<meta name=\"apple-mobile-web-app-title\" content=\"Kesefly\">',
+              '<meta name=\"apple-mobile-web-app-status-bar-style\" content=\"black-translucent\">',
+              '<meta name=\"theme-color\" content=\"#062A26\">',
+            ].join('');
+            let html = fs.readFileSync('dist/index.html', 'utf8');
+            html = html.replace(/<head>/i, '<head>' + tags);
+            html = html.replace(/(<meta name=\"viewport\" content=\")([^\"]*)\"/i, (m, a, b) => a + b + (b.includes('viewport-fit') ? '' : ', viewport-fit=cover') + '\"');
+            fs.writeFileSync('dist/index.html', html);
+            fs.writeFileSync('dist/404.html', html);
+            fs.writeFileSync('dist/.nojekyll', '');
+            console.log(html.slice(0, 900));
+          "
+          ls dist
 
       # Smoke test: open the site as an iPhone, report page errors and what is on screen.
       - name: Smoke test in a headless iPhone browser
