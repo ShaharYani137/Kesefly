@@ -143,6 +143,8 @@ function WidgetSync() {
 function ThemeSync() {
   const { prefs } = useApp();
   useEffect(() => {
+    // Not implemented on the web (react-native-web): the site follows the browser's theme.
+    if (typeof Appearance.setColorScheme !== 'function') return;
     Appearance.setColorScheme(prefs.theme === 'system' ? 'auto' : prefs.theme);
   }, [prefs.theme]);
   return null;
