@@ -25,6 +25,30 @@ Personal money helper app (Hebrew name: כספלי) for the USA and Israel. Kese
 | `logs/` | Action and session logs |
 | `.claude/skills/` | Design and communication skills used while building |
 
+## Agent team (Claude Code)
+
+The repo defines a team of Claude Code agents in `.claude/agents/`. The **boss** is the main agent (set in `.claude/settings.json`), so running `claude` in the repo starts it. It is the only one that talks to you.
+
+| Agent | Role |
+| --- | --- |
+| `boss` | Talks to you, plans, briefs the specialists, approves or rejects proposals, gates every change, and sends a progress update every morning and evening |
+| `security-guardian` | Auth, Supabase RLS, secrets, storage, dependencies, privacy. Also reviews risky changes |
+| `connectivity-engineer` | Chat realtime, market and news APIs, offline mode, retries, caching |
+| `performance-engineer` | Startup, rendering, lists, charts, battery, bundle size |
+| `ios-specialist` | iPhone (Apple HIG), iOS build and Sideloadly |
+| `android-specialist` | Android (Material 3 Expressive), APK, widget |
+| `product-ux` | Features, Hebrew and English copy, RTL, accessibility, finance accuracy |
+| `qa-tester` | Type check, lint, tests, and a regression review of every change |
+
+How it works (`.claude/TEAM_RULES.md`):
+
+1. Specialists audit and send **proposals** to the boss, which records them in `logs/PROPOSALS.md`.
+2. The boss **approves** low- and medium-risk proposals. Anything in the *human gate* (sign-in, live database, user data, new services or keys, major upgrades, merging) waits for your answer.
+3. Approved work is built on an `agents/<date>-<topic>` branch, passes `qa-tester` (and `security-guardian` when relevant), and becomes a pull request. **You merge to `main`.**
+4. Progress updates are appended to `logs/BOSS_UPDATES.md`.
+
+To start a session without the boss, remove `"agent"` from `.claude/settings.json`, or start another agent with `claude --agent <name>`.
+
 ## Run on an Android phone (Windows)
 
 ```

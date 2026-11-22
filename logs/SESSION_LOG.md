@@ -358,3 +358,22 @@ One section per working session. Newest at bottom.
 - User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
 - Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
 - Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.
+
+## Session 12 — 2026-11-22 (branch `Shavit`)
+
+**Goal:** define a Claude Code agent team: a Boss that talks only to the humans, approves changes and reports twice a day, plus specialists that improve the app (connectivity and security first).
+
+**Work done:**
+- Merged `main` into `Shavit`. `main` already had its own savings editor and keyboard fix, so Shavit's older versions were dropped.
+- Agents in `.claude/agents/`: `boss` (main agent) plus `security-guardian`, `connectivity-engineer`, `performance-engineer`, `ios-specialist`, `android-specialist`, `product-ux` and `qa-tester`.
+- Shared rulebook `.claude/TEAM_RULES.md`: AUDIT and IMPLEMENT modes, proposal format, human gate, hard rules.
+- `.claude/settings.json` makes `boss` the default agent. New `logs/PROPOSALS.md` and `logs/BOSS_UPDATES.md`. README section "Agent team".
+
+**Decisions:**
+- The Boss approves low- and medium-risk work. The human gate (sign-in, live DB, user data, keys or services, major upgrades, merging to `main`) always waits for the humans.
+- Agent work goes on `agents/<date>-<topic>` branches as PRs. Only humans merge.
+- Twice-daily update by a scheduled task (morning and evening, Israel time).
+
+**Next steps:**
+- Merge the agent-team PR into `main`.
+- First Boss cycle: security and connectivity audits.
