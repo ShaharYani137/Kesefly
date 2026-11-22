@@ -1,0 +1,127 @@
+# Publishes the web version of Kesefly (from main) to GitHub Pages, so it opens on any phone
+# with no Expo Go, dev server or computer:  https://shaharyani137.github.io/Kesefly/
+# On iPhone: open it in Safari > Share > Add to Home Screen (runs full screen, with the icon).
+#
+# One-time setup by the repo owner: Settings > Pages > Build and deployment > Source: GitHub Actions.
+#
+# Every run (also on agents/* branches) builds the site and smoke-tests it in a headless iPhone
+# browser. Only main deploys.
+
+name: Web app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, 'agents/**']
+    paths:
+      - 'mobile/**'
+      - '.github/workflows/web-deploy.yml'
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile
+    env:
+      BASE_URL: /Kesefly
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install JavaScript packages
+        run: npm ci
+
+      # Web-only settings, applied in CI so the dev server and the phone builds stay unchanged:
+      # a single-page app served from /Kesefly on GitHub Pages.
+      - name: Web settings
+        run: |
+          node -e "
+            const fs = require('fs');
+            const p = 'app.json';
+            const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+            j.expo.web = { ...j.expo.web, output: 'single', name: 'Kesefly', shortName: 'Kesefly', themeColor: '#062A26', backgroundColor: '#062A26' };
+            j.expo.experiments = { ...j.expo.experiments, baseUrl: process.env.BASE_URL };
+            fs.writeFileSync(p, JSON.stringify(j, null, 2));
+          "
+
+      - name: Export web build
+        run: npx expo export --platform web --output-dir dist
+
+      # iPhone "Add to Home Screen": icon, full-screen standalone, status bar color.
+      # Deep links: GitHub Pages serves 404.html for unknown paths, so it is a copy of index.html.
+      - name: iPhone web-app tags and deep links
+        run: |
+          TAGS='<link rel="apple-touch-icon" href="'"$BASE_URL"'/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Kesefly"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#062A26">'
+          sed -i "s#<head>#<head>$TAGS#" dist/index.html
+          sed -i 's#<meta name="viewport" content="\([^"]*\)"#<meta name="viewport" content="\1, viewport-fit=cover"#' dist/index.html
+          cp dist/index.html dist/404.html
+          touch dist/.nojekyll
+          ls -la dist | head -20
+
+      # Smoke test: open the site as an iPhone, report page errors and what is on screen.
+      - name: Smoke test in a headless iPhone browser
+        run: |
+          mkdir -p ../site && cp -r dist "../site${BASE_URL}"
+          (cd ../site && python3 -m http.server 4173 >/dev/null 2>&1 &)
+          npm i --no-save playwright@1.49.1 >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          node -e "
+            const { chromium, devices } = require('playwright');
+            (async () => {
+              const browser = await chromium.launch();
+              const page = await browser.newPage({ ...devices['iPhone 13'] });
+              const errors = [];
+              page.on('pageerror', (e) => errors.push('pageerror: ' + e.message));
+              page.on('console', (m) => m.type() === 'error' && errors.push('console: ' + m.text()));
+              await page.goto('http://localhost:4173' + process.env.BASE_URL + '/', { waitUntil: 'networkidle' });
+              await page.waitForTimeout(6000);
+              await page.screenshot({ path: 'smoke-iphone.png' });
+              const text = (await page.innerText('body')).replace(/\s+/g, ' ').slice(0, 300);
+              console.log('::notice title=Screen text::' + text);
+              for (const e of errors.slice(0, 10)) console.log('::warning title=Web error::' + e.slice(0, 400));
+              console.log('errors: ' + errors.length);
+              await browser.close();
+              if (errors.some((e) => e.startsWith('pageerror')) || text.length < 20) process.exit(1);
+            })();
+          "
+
+      - name: Upload smoke-test screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-smoke-iphone
+          path: mobile/smoke-iphone.png
+          if-no-files-found: ignore
+
+      - name: Upload site for Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: mobile/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
