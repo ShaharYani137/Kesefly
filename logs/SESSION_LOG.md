@@ -358,3 +358,10 @@ One section per working session. Newest at bottom.
 - User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
 - Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
 - Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.
+
+## Session 13 — 2026-11-23 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (security-guardian + performance-engineer), decide, implement up to 2, log.
+- **Work done:** audits returned 8 proposals (P-001…P-008), including a FAIL security review of PR #3 (web app). Decisions recorded in `logs/PROPOSALS.md`; morning update in `logs/BOSS_UPDATES.md`.
+- **Decisions:** P-004–P-007 approved; P-001–P-003 (Supabase) and P-008 (web data storage) need the humans. No implementation: the npm registry was unreachable, so QA could not run.
+- **Next steps:** implement P-004 and P-006 when `npm ci` works; next audit connectivity-engineer + ios-specialist. Note: `logs/PROPOSALS.md` and `logs/BOSS_UPDATES.md` also exist on `Shavit` (PR #2); merge #2 first, then this branch (append-only, easy conflict).
