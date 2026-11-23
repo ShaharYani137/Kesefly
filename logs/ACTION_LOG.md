@@ -307,3 +307,9 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-23 08:55 | Audits: security-guardian (main + PR #3 review) and performance-engineer, read-only | — | 8 proposals |
 | 2026-11-23 09:05 | Recorded P-001…P-008 with decisions: P-004–P-007 approved (queued, no QA possible), P-001–P-003 and P-008 needs-human. No code implemented | `logs/PROPOSALS.md` | Done |
 | 2026-11-23 09:05 | Wrote morning Boss update; committed logs to `agents/boss-log` from `main` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-23 19:40 | Boss evening cycle (scheduled, cloud) from `Shavit` team defs. No new commits on `main`; no human comments on PRs #2–#4 | — | OK |
+| 2026-11-23 19:42 | npm registry check: DNS fails for registry.npmjs.org | — | Blocked: no local typecheck/lint/tests |
+| 2026-11-23 19:45 | Audits: connectivity-engineer and ios-specialist, read-only on `main` a69a977 | — | 7 proposals (P-009…P-015) |
+| 2026-11-23 19:55 | Decided P-009…P-015 approved (queued). Opened P-016 (PR check workflow) to work around the npm block | `logs/PROPOSALS.md` | Done |
+| 2026-11-23 20:00 | qa-tester implemented P-016 on `agents/2026-11-23-pr-checks` (b9e1bd1); qa-tester and security-guardian reviews PASS (static); pushed, opened PR #5 | `.github/workflows/pr-checks.yml` | PR #5 |
+| 2026-11-23 20:05 | Evening Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

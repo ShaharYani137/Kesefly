@@ -365,3 +365,10 @@ One section per working session. Newest at bottom.
 - **Work done:** audits returned 8 proposals (P-001…P-008), including a FAIL security review of PR #3 (web app). Decisions recorded in `logs/PROPOSALS.md`; morning update in `logs/BOSS_UPDATES.md`.
 - **Decisions:** P-004–P-007 approved; P-001–P-003 (Supabase) and P-008 (web data storage) need the humans. No implementation: the npm registry was unreachable, so QA could not run.
 - **Next steps:** implement P-004 and P-006 when `npm ci` works; next audit connectivity-engineer + ios-specialist. Note: `logs/PROPOSALS.md` and `logs/BOSS_UPDATES.md` also exist on `Shavit` (PR #2); merge #2 first, then this branch (append-only, easy conflict).
+
+## Session 14 — 2026-11-23 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (connectivity-engineer + ios-specialist), decide, implement up to 2, log.
+- **Work done:** 7 new proposals (P-009…P-015), all approved. Added P-016, a PR check workflow, implemented in PR #5 with QA and security PASS (static).
+- **Decisions:** no app code this cycle, because the npm registry is still unreachable. CI on PRs is the workaround.
+- **Next steps:** once #5 is merged (or npm is reachable): P-012 first, then P-004 and P-006. Next audit: security-guardian + android-specialist.
