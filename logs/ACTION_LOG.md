@@ -313,3 +313,4 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-23 19:55 | Decided P-009…P-015 approved (queued). Opened P-016 (PR check workflow) to work around the npm block | `logs/PROPOSALS.md` | Done |
 | 2026-11-23 20:00 | qa-tester implemented P-016 on `agents/2026-11-23-pr-checks` (b9e1bd1); qa-tester and security-guardian reviews PASS (static); pushed, opened PR #5 | `.github/workflows/pr-checks.yml` | PR #5 |
 | 2026-11-23 20:05 | Evening Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-23 19:50 | PR #5 first `PR checks` run green (run 45231488757); P-016 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |

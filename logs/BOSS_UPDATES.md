@@ -24,12 +24,12 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 **Still blocked:** the cloud run still cannot reach the npm registry, so app code cannot be type-checked or tested here. To work around this, the team opened PR #5, which runs the checks on GitHub for every PR.
 
 **Waiting for you**
-1. **Merge PR #5 (PR checks)?** It adds one CI workflow that runs tests, typecheck and lint on PRs. It is read-only and uses no secrets. QA and security reviews passed. **Recommendation: merge.** After that, the 10 queued fixes can ship as checked PRs. The alternative is to allow `registry.npmjs.org` in this scheduled task's cloud network settings.
+1. **Merge PR #5 (PR checks)?** It adds one CI workflow that runs tests, typecheck and lint on PRs. It is read-only and uses no secrets. QA and security reviews passed, and its first GitHub run is green. **Recommendation: merge.** After that, the 10 queued fixes can ship as checked PRs. The alternative is to allow `registry.npmjs.org` in this scheduled task's cloud network settings.
 2. **PR #2 (agent team): merge?** **Recommendation: yes.** The team still runs from `Shavit` until it is merged.
 3. **PR #3 (web app): hold.** Security review failed (P-008): tokens, API keys and finance data are stored in plaintext localStorage. No change since this morning.
 4. **P-003 / P-001 / P-002 (Supabase):** these are still waiting for your yes or no. **Recommendation:** yes to P-003 (lock message timestamps) and P-001 (verified badge by user id), then P-002 (blocking and rate limits).
 
-**In progress:** P-016, the PR checks workflow, in [#5](https://github.com/ShaharYani137/Kesefly/pull/5). It is done when its first GitHub run is green.
+**Done:** P-016, the PR checks workflow, in [#5](https://github.com/ShaharYani137/Kesefly/pull/5). Its first GitHub run is green: tests, typecheck and lint all pass on `main`'s code. It is waiting for your merge.
 
 **Security:** no new findings. The P-016 review passed; one low, optional note is to pin actions by SHA.
 
