@@ -136,7 +136,7 @@ export default function HoldingEditor() {
           </Labeled>
           <Row>
             <Field value={d.tax} onChange={(t) => patch(setDivs, d.id, { tax: cleanNum(t) })} placeholder={`${s.ledger.tax} (${currency})`} numeric />
-            <Field value={d.date} onChange={(t) => patch(setDivs, d.id, { date: cleanDate(t) })} placeholder={s.ledger.date} numeric />
+            <Field value={d.date} onChange={(t) => patch(setDivs, d.id, { date: cleanDate(t) })} placeholder={s.ledger.date} numeric="digits" />
           </Row>
         </RecordCard>
       ))}
@@ -191,7 +191,7 @@ function DateFee({ date, fee, cur, onDate, onFee }: { date: string; fee: string;
   return (
     <>
       <Row>
-        <Field value={date} onChange={(t) => onDate(cleanDate(t))} placeholder={s.ledger.date} numeric />
+        <Field value={date} onChange={(t) => onDate(cleanDate(t))} placeholder={s.ledger.date} numeric="digits" />
         <Field value={fee} onChange={(t) => onFee(cleanNum(t))} placeholder={`${s.ledger.fee} (${cur})`} numeric />
       </Row>
       {!validDate(date) ? (
