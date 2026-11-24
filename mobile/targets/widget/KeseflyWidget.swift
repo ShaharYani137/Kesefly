@@ -14,6 +14,10 @@
 // references/widgets.md: 16 pt margins via the default content margins, SF system text styles).
 // Brand colors are design decisions (same as the Android widget).
 //
+// Privacy (P-018): money values (portfolio value, today's change, total gain, mover prices) are
+// marked .privacySensitive(), so iOS can redact them while the iPhone is locked (Lock Screen,
+// StandBy). Titles, symbols and market clocks stay visible.
+//
 
 import SwiftUI
 import WidgetKit
@@ -332,8 +336,9 @@ struct ValueBlock: View {
           .foregroundColor(.white)
           .minimumScaleFactor(0.5)
           .lineLimit(1)
-        Text(n.day).font(.caption).foregroundColor(n.dayUp ? upColor : downColor).lineLimit(1).minimumScaleFactor(0.7)
-        Text(n.gain).font(.caption).foregroundColor(n.gainUp ? upColor : downColor).lineLimit(1).minimumScaleFactor(0.7)
+          .privacySensitive()
+        Text(n.day).font(.caption).foregroundColor(n.dayUp ? upColor : downColor).lineLimit(1).minimumScaleFactor(0.7).privacySensitive()
+        Text(n.gain).font(.caption).foregroundColor(n.gainUp ? upColor : downColor).lineLimit(1).minimumScaleFactor(0.7).privacySensitive()
       } else {
         Text(p.labels.empty).font(.footnote).foregroundColor(.white).lineLimit(4)
       }
@@ -365,7 +370,7 @@ struct MoversList: View {
         HStack(spacing: 6) {
           Text(m.symbol).font(.caption.weight(.semibold)).foregroundColor(.white).lineLimit(1)
           Spacer(minLength: 2)
-          if showPrice { Text(m.price).font(.caption2).foregroundColor(muted).lineLimit(1) }
+          if showPrice { Text(m.price).font(.caption2).foregroundColor(muted).lineLimit(1).privacySensitive() }
           Text(m.pct).font(.caption.weight(.bold)).foregroundColor(m.up ? upColor : downColor).lineLimit(1)
         }
         .environment(\.layoutDirection, .leftToRight)
@@ -428,11 +433,12 @@ struct KeseflyWidgetView: View {
       switch family {
       case .accessoryInline:
         Text(n.value.map { "\(p.labels.title.components(separatedBy: " · ").first ?? "Kesefly") \($0)" } ?? p.labels.title)
+          .privacySensitive()
       case .accessoryRectangular:
         VStack(alignment: .leading, spacing: 1) {
           Text(p.labels.title).font(.caption2.weight(.bold)).lineLimit(1)
-          Text(n.value ?? "—").font(.headline).lineLimit(1).minimumScaleFactor(0.6)
-          Text(n.day).font(.caption2).lineLimit(1).minimumScaleFactor(0.7)
+          Text(n.value ?? "—").font(.headline).lineLimit(1).minimumScaleFactor(0.6).privacySensitive()
+          Text(n.day).font(.caption2).lineLimit(1).minimumScaleFactor(0.7).privacySensitive()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
       case .systemSmall:

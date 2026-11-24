@@ -5,6 +5,7 @@
  *     taps the link Supabase mailed, comes back, and the app signs in.
  *   - PinSetup: create a 4-digit PIN (twice), then offer fingerprint / Face ID.
  *   - LockScreen: PIN keypad + biometric unlock, over the app.
+ *   - PrivacyCover: brand cover over the unlocked app while it is in the app switcher.
  * Keypad digits are laid out like a phone keypad in both languages (keypads do not mirror),
  * and the PIN dots fill left-to-right.
  */
@@ -347,7 +348,9 @@ function Dots({ n, shake }: { n: number; shake: number }) {
 function PinShell({ title, body, children }: { title: string; body?: string; children: React.ReactNode }) {
   const { isRTL } = useApp();
   return (
-    <View style={[StyleSheet.absoluteFill, { backgroundColor: BG, zIndex: 50, direction: isRTL ? 'rtl' : 'ltr' }]}>
+    // Modal for VoiceOver: only this cover is reachable, not the app behind it (P-018). The root
+    // layout also hides the app from TalkBack / VoiceOver while this is up.
+    <View accessibilityViewIsModal style={[StyleSheet.absoluteFill, { backgroundColor: BG, zIndex: 50, direction: isRTL ? 'rtl' : 'ltr' }]}>
       <SafeAreaView style={{ flex: 1, alignItems: 'center', justifyContent: 'space-evenly', paddingHorizontal: 24 }}>
         <View style={{ alignItems: 'center', gap: 10 }}>
           <Image source={require('@/assets/images/splash-icon.png')} style={{ width: 64, height: 64 }} contentFit="contain" />
@@ -488,6 +491,28 @@ export function LockScreen() {
         <Text style={{ color: 'rgba(255,255,255,0.7)', fontFamily: Fonts.medium, fontSize: 15 }}>{bidi(s.lock.signOut, isRTL)}</Text>
       </Pressable>
     </PinShell>
+  );
+}
+
+/* ---------- App switcher privacy cover ---------- */
+
+/**
+ * Opaque cover while the unlocked app is out of the foreground, so the app switcher snapshot
+ * shows the brand instead of balances (P-018; when it shows: state/privacy-cover.ts).
+ * Same colour and logo as the lock screen. Decorative only: hidden from screen readers and
+ * touches pass through (the app is not in front while it shows).
+ */
+export function PrivacyCover() {
+  const { s, isRTL } = useApp();
+  return (
+    <View
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[StyleSheet.absoluteFill, { backgroundColor: BG, zIndex: 100, alignItems: 'center', justifyContent: 'center', gap: 10, direction: isRTL ? 'rtl' : 'ltr' }]}>
+      <Image source={require('@/assets/images/splash-icon.png')} style={{ width: 64, height: 64 }} contentFit="contain" />
+      <Text style={{ color: '#FFFFFF', fontFamily: Fonts.bold, fontSize: 24, textAlign: 'center' }}>{bidi(s.appName, isRTL)}</Text>
+    </View>
   );
 }
 

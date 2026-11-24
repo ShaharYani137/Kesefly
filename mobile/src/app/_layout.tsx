@@ -4,7 +4,7 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useState } from 'react';
-import { Appearance, AppState, Platform, useColorScheme, View } from 'react-native';
+import { Appearance, AppState, type AppStateStatus, Platform, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -18,9 +18,10 @@ import { AiProvider } from '@/state/ai-store';
 import { LabMonitor } from '@/state/lab-monitor';
 import { LabProvider, useLab } from '@/state/lab-store';
 import { ensureChannel, scheduleWeeklyTips } from '@/state/notifications';
+import { hideAppFromA11y, showPrivacyCover } from '@/state/privacy-cover';
 import { AnimatedSplash } from '@/ui/animated-splash';
 import { AppTour } from '@/ui/app-tour';
-import { AuthScreen, LockScreen, PinSetup } from '@/ui/auth-screens';
+import { AuthScreen, LockScreen, PinSetup, PrivacyCover } from '@/ui/auth-screens';
 import { DialogHost } from '@/ui/dialog';
 import { OfflineBanner } from '@/ui/offline-banner';
 import { syncIosWidget } from '@/widget/ios';
@@ -43,6 +44,8 @@ function RootStack() {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
   if (!ready) return null;
+  // Behind the PIN cover the app stays mounted: keep screen readers out of it (P-018).
+  const a11yHidden = hideAppFromA11y(auth.status);
   return (
     <View style={{ flex: 1 }}>
       <ThemeSync />
@@ -51,7 +54,9 @@ function RootStack() {
         <AuthScreen />
       ) : (
         <>
-          <AppStack />
+          <View style={{ flex: 1 }} accessibilityElementsHidden={a11yHidden} importantForAccessibility={a11yHidden ? 'no-hide-descendants' : 'auto'}>
+            <AppStack />
+          </View>
           <NotificationSync />
           <NotificationTaps />
           <LabMonitor />
@@ -64,8 +69,26 @@ function RootStack() {
       <OfflineBanner />
       <DialogHost />
       {intro ? <AnimatedSplash onDone={endIntro} /> : null}
+      <AppSwitcherCover />
     </View>
   );
+}
+
+/**
+ * Covers the unlocked app while it is out of the foreground, so the app switcher snapshot shows
+ * no balances (P-018, rules in state/privacy-cover.ts). iOS goes 'inactive' before it takes the
+ * snapshot, which gives React time to draw the cover.
+ */
+function AppSwitcherCover() {
+  const { status } = useAuth();
+  // RN types allow currentState to be null/undefined before the first state is known; treat
+  // that as 'active' (no cover), the same as before. The 'change' listener sets the real state.
+  const [phase, setPhase] = useState<AppStateStatus>(() => (AppState.currentState as AppStateStatus | null | undefined) ?? 'active');
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', setPhase);
+    return () => sub.remove();
+  }, []);
+  return showPrivacyCover(status, phase) ? <PrivacyCover /> : null;
 }
 
 /** Keeps the weekly tips in line with the plan, and the event-alert task with its switch. */
