@@ -256,7 +256,7 @@ function AccountForm({
         <>
           {label(s.savings.opened)}
           <Row>
-            <Field value={opened} onChange={(t) => setOpened(cleanDate(t))} placeholder="2021-05-01" numeric />
+            <Field value={opened} onChange={(t) => setOpened(cleanDate(t))} placeholder="2021-05-01" numeric="digits" />
           </Row>
         </>
       ) : null}

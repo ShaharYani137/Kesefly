@@ -9,6 +9,7 @@ import { useApp } from '@/state/app-store';
 import { bidi, ltr } from '@/ui/bidi';
 import { useKeyboardInset } from '@/ui/keyboard';
 import { enterItem, Springs } from '@/ui/motion';
+import { cleanNum, formatNum, parseNum } from '@/ui/num-input';
 import { Fonts, Metrics, type TypeRole, useTokens } from '@/ui/theme';
 
 /* ---------- Text ---------- */
@@ -360,6 +361,9 @@ export function NumberField({
 }) {
   const { colors, type, isIOS } = useTokens();
   const { isRTL } = useApp();
+  // While focused (text is not null) the field shows the text as typed ("12.", "0"; a comma shows as ".").
+  // Otherwise it shows the stored number, so blur and outside changes resync it.
+  const [text, setText] = useState<string | null>(null);
   return (
     <View style={{ gap: 6 }}>
       <Txt variant="subhead" color="textSecondary">
@@ -382,12 +386,14 @@ export function NumberField({
           accessibilityLabel={label}
           keyboardType="decimal-pad"
           inputMode="decimal"
-          value={value ? String(value) : ''}
+          value={text ?? formatNum(value)}
           placeholder="0"
           placeholderTextColor={colors.textSecondary}
+          onFocus={() => setText(formatNum(value))}
+          onBlur={() => setText(null)}
           onChangeText={(t) => {
-            const n = Number(t.replace(/[^\d.]/g, ''));
-            onChange(Number.isFinite(n) ? n : 0);
+            setText(cleanNum(t));
+            onChange(parseNum(t));
           }}
           style={[
             type.body,

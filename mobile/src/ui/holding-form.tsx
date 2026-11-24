@@ -7,6 +7,7 @@ import { searchSymbols, type SymbolMatch } from '@/engine/search';
 import { fill, type Holding, useApp } from '@/state/app-store';
 import { guessCurrency } from '@/state/portfolio';
 import { Button, Card, Row, SymbolBadge, Txt } from '@/ui/components';
+import { cleanNum } from '@/ui/num-input';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const HEBREW = /[֐-׿]/;
@@ -23,8 +24,7 @@ export const cleanDate = (t: string) => {
   const d = t.replace(/\D/g, '').slice(0, 8);
   return d.length > 6 ? `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}` : d.length > 4 ? `${d.slice(0, 4)}-${d.slice(4)}` : d;
 };
-/** Keeps digits and one decimal point. */
-export const cleanNum = (t: string) => t.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1');
+export { cleanNum };
 
 /** Live quote for a symbol, fetched 400 ms after it stops changing. Null until it arrives or when not found. */
 export function useQuote(symbol: string): Quote | null {
@@ -176,7 +176,7 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
         <Field value={price} onChange={(t) => setPrice(cleanNum(t))} placeholder={cur ? `${s.stocks.buyPrice} (${cur})` : s.stocks.buyPrice} numeric />
       </Row>
       <Row>
-        <Field value={date} onChange={(t) => setDate(cleanDate(t))} placeholder={s.ledger.date} numeric />
+        <Field value={date} onChange={(t) => setDate(cleanDate(t))} placeholder={s.ledger.date} numeric="digits" />
         <Field value={fee} onChange={(t) => setFee(cleanNum(t))} placeholder={cur ? `${s.ledger.fee} (${cur})` : s.ledger.fee} numeric />
       </Row>
       <Txt variant="footnote" color="textSecondary">
@@ -215,7 +215,8 @@ export function Field({
   placeholder: string;
   onSubmit?: () => void;
   caps?: boolean;
-  numeric?: boolean;
+  /** true: decimal pad. 'digits': number pad, for dates (cleanDate adds the dashes). */
+  numeric?: boolean | 'digits';
 }) {
   const { colors, type, isIOS } = useTokens();
   const { isRTL } = useApp();
@@ -228,7 +229,7 @@ export function Field({
       placeholderTextColor={colors.textSecondary}
       autoCapitalize={caps ? 'characters' : 'none'}
       autoCorrect={false}
-      keyboardType={numeric ? 'decimal-pad' : 'default'}
+      keyboardType={numeric === 'digits' ? 'number-pad' : numeric ? 'decimal-pad' : 'default'}
       onSubmitEditing={onSubmit}
       style={[
         type.body,
