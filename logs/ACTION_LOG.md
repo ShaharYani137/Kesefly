@@ -321,3 +321,10 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-24 08:50 | Recorded P-017…P-027; decided approved P-018, P-022, P-023, P-026, P-027; needs-human P-017, P-019, P-020, P-021, P-024, P-025; P-004/P-012 in-review | `logs/PROPOSALS.md` | Done |
 | 2026-11-24 08:52 | Morning Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-24 08:58 | PR checks green on #6 (run 45343226741) and #7 (run 45343233209); P-004 and P-012 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |
+| 2026-11-24 19:41 | Boss evening cycle started: no human replies or merges since morning; npm registry still unreachable | git, PRs #2–#7 | Checked |
+| 2026-11-24 19:45 | Briefed connectivity-engineer and product-ux (AUDIT); security-guardian (IMPLEMENT P-018) and android-specialist (IMPLEMENT P-022) on branches stacked on PR #5 | `agents/2026-11-24-lock-privacy`, `agents/2026-11-24-notif-permission` | Commits f02d45e, ad0b526 |
+| 2026-11-24 19:55 | qa-tester review P-018 + P-022: static PASS both. security-guardian: PASS both, one low sign-out ordering finding on P-022, sent back, fixed in 29e4a11 | `mobile/src/app/_layout.tsx`, `mobile/src/state/*`, `mobile/src/i18n/*` | PASS |
+| 2026-11-24 19:58 | Pushed both branches, opened PR #8 (P-018) and PR #9 (P-022) | GitHub | PR checks running |
+| 2026-11-24 20:00 | PR #8 typecheck failed (AppState.currentState may be null); sent back, fixed in e4dc9e1, pushed; checks green (run 45455105616). PR #9 green (run 45454363445) | PR #8, #9 | Done |
+| 2026-11-24 20:05 | Recorded P-028…P-041; approved P-028, P-030–P-038, P-040; needs-human P-029, P-039, P-041; P-018 and P-022 marked done (awaiting merge) | `logs/PROPOSALS.md` | Done |
+| 2026-11-24 20:08 | Evening Boss update; committed logs to `agents/boss-log` (already on `main`) | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

@@ -379,3 +379,10 @@ One section per working session. Newest at bottom.
 - **Work done:** no human replies or merges since last evening. Audits gave P-017…P-026; P-027 from review follow-ups. Implemented P-012 (PR #6) and P-004 (PR #7), both stacked on PR #5 so GitHub PR checks run (npm is still unreachable from the cloud run). QA static PASS on both, security PASS on P-004.
 - **Decisions:** approved P-018, P-022, P-023, P-026, P-027. Needs-human P-017, P-019, P-020, P-021, P-024, P-025.
 - **Next:** watch #6/#7 checks; then P-018 and P-022; audit connectivity-engineer + product-ux.
+
+## Session 16 — 2026-11-24 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** Boss evening cycle: check changes, audit (connectivity-engineer + product-ux), implement P-018 and P-022, log, update.
+- **Work done:** 14 new proposals (P-028…P-041). P-018 → PR #8 (typecheck fix after the first CI run), P-022 → PR #9 (sign-out fix after security review). Both have QA/security PASS and green PR checks.
+- **Decisions:** approved P-028, P-030–P-038, P-040; needs-human P-029 (schema), P-039 (new dependency, blocks screenshots), P-041 (sign-out data).
+- **Next steps:** humans merge #5, then #6–#9; implement P-035 + P-036; audit security-guardian + performance-engineer.

@@ -65,3 +65,38 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 **Approved since last update:** P-018 hide the app behind the lock from screen readers and the app switcher · P-022 Android notification permission flow · P-023 widget shows when prices are old, plus an RTL fix · P-026 M3 tab bar colours · P-027 small link follow-ups after #7. Needs-human: P-017, P-019, P-020, P-021, P-024, P-025 (release signing key, only before a store release).
 
 **Next:** implement P-018 and P-022. Next audit: connectivity-engineer + product-ux.
+
+## 2026-11-24 evening
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry. Fixes are stacked on PR #5, so GitHub runs the checks on every agent PR. No human replies or merges since this morning.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Four checked fixes (#6, #7, #8, #9) are stacked on it and are ready after it.
+2. **P-019: stop the confirmation email link from carrying sign-in tokens?** **Recommendation: yes,** with an https "Email confirmed" page. This is still the top security item.
+3. **P-017: make the PIN lockout survive a force-quit?** **Recommendation: yes.**
+4. **P-039: block screenshots and the Android Recents preview (FLAG_SECURE, new package `expo-screen-capture`)?** Tonight's app switcher cover is not reliable on Android. **Recommendation: yes,** unless you want users to be able to screenshot their numbers.
+5. **P-024: Android backup on or off?** **Recommendation: off,** if cloud sync covers restore.
+6. **Still open:** P-020 and P-041 (what sign-out keeps on the phone), P-021 (AI auto mode), P-001 / P-002 / P-003 (Supabase chat), P-029 (server de-duplication of chat messages), PR #2 (agent team) merge, and PR #3 (web app) hold.
+
+**Done (awaiting your merge, after #5)**
+- P-018: while locked, screen readers can't reach the app, the app switcher shows a cover, and iOS lock-screen widgets hide money values. [#8](https://github.com/ShaharYani137/Kesefly/pull/8). QA and security PASS. GitHub checks are green after a typecheck fix. Please test with VoiceOver and TalkBack.
+- P-022: the app explains before it asks for notification permission, offers "Turn on in Settings" once the phone can't ask again, stops chat alert polling when alerts are off, and removes old Android channels. [#9](https://github.com/ShaharYani137/Kesefly/pull/9). QA and security PASS, GitHub checks green. Please test on Android 13+.
+- From before: P-012 [#6](https://github.com/ShaharYani137/Kesefly/pull/6), P-004 [#7](https://github.com/ShaharYani137/Kesefly/pull/7), P-016 [#5](https://github.com/ShaharYani137/Kesefly/pull/5).
+- #8 and #9 conflict in one import line and the action log. Keep both sides.
+
+**Security:** P-040 low (dialogs show above the lock screen and stay tappable), P-041 low (the last account's chat marks survive sign-out), and P-039 (Android preview, see above). The P-018 and P-022 reviews passed.
+
+**Approved since last update**
+- P-028: chat sends no longer duplicate, and failed sends are kept.
+- P-030: news alerts are not lost after time offline.
+- P-031: news is kept offline, with an "as of" time.
+- P-032: news refreshes every 5 min, not every 1.
+- P-033: polls pause while offline.
+- P-034: each chat message gets its own text direction.
+- P-035: remove the "advice group" wording from chat.
+- P-036: not-advice line in Helper, and fixed wording on the debt answer.
+- P-037: Israeli surtax note on the Tax screen.
+- P-038: chips announce "selected" to screen readers.
+- P-040: close dialogs while locked.
+
+**Next:** implement P-035 and P-036 (copy and framing). Next audit: security-guardian + performance-engineer.
