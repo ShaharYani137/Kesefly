@@ -56,12 +56,12 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 5. **P-020 / P-021:** add "remove my data from this phone" on sign-out, and stop the AI "auto" mode from trying your key with other companies. **Recommendation: yes to both.**
 6. **Still open from before:** PR #2 (agent team) merge, PR #3 (web app) hold, P-001 / P-002 / P-003 (Supabase chat fixes).
 
-**In progress**
-- P-012: "0,5" is read as 0.5, not 5. [#6](https://github.com/ShaharYani137/Kesefly/pull/6). QA static PASS; GitHub checks are running.
-- P-004: news opens only http(s) links. [#7](https://github.com/ShaharYani137/Kesefly/pull/7). QA static PASS, security PASS; GitHub checks are running.
+**Done (awaiting your merge, after #5)**
+- P-012: "0,5" is now read as 0.5, not 5, and typed "12." stays. [#6](https://github.com/ShaharYani137/Kesefly/pull/6). QA static PASS; GitHub checks green (tests, typecheck, lint). Please try "0,5" shares on a phone.
+- P-004: news opens only http(s) links. [#7](https://github.com/ShaharYani137/Kesefly/pull/7). QA static PASS, security PASS, GitHub checks green.
 
 **Security:** P-019 medium (tokens in the confirmation link), P-017 medium (PIN brute-force after force-quit), P-018 low (screen readers and app switcher can see behind the lock), P-020 low, P-021 low, P-024 medium (Android backup).
 
 **Approved since last update:** P-018 hide the app behind the lock from screen readers and the app switcher · P-022 Android notification permission flow · P-023 widget shows when prices are old, plus an RTL fix · P-026 M3 tab bar colours · P-027 small link follow-ups after #7. Needs-human: P-017, P-019, P-020, P-021, P-024, P-025 (release signing key, only before a store release).
 
-**Next:** fix #6 / #7 if their checks fail. Then implement P-018 and P-022. Next audit: connectivity-engineer + product-ux.
+**Next:** implement P-018 and P-022. Next audit: connectivity-engineer + product-ux.

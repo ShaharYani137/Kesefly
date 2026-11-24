@@ -320,3 +320,4 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-24 08:48 | Pushed both branches, opened PR #6 (P-012) and PR #7 (P-004), subscribed to their activity | GitHub | PR checks running |
 | 2026-11-24 08:50 | Recorded P-017…P-027; decided approved P-018, P-022, P-023, P-026, P-027; needs-human P-017, P-019, P-020, P-021, P-024, P-025; P-004/P-012 in-review | `logs/PROPOSALS.md` | Done |
 | 2026-11-24 08:52 | Morning Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-24 08:58 | PR checks green on #6 (run 45343226741) and #7 (run 45343233209); P-004 and P-012 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |
