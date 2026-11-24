@@ -81,7 +81,9 @@ function RootStack() {
  */
 function AppSwitcherCover() {
   const { status } = useAuth();
-  const [phase, setPhase] = useState<AppStateStatus>(AppState.currentState);
+  // RN types allow currentState to be null/undefined before the first state is known; treat
+  // that as 'active' (no cover), the same as before. The 'change' listener sets the real state.
+  const [phase, setPhase] = useState<AppStateStatus>(() => (AppState.currentState as AppStateStatus | null | undefined) ?? 'active');
   useEffect(() => {
     const sub = AppState.addEventListener('change', setPhase);
     return () => sub.remove();
