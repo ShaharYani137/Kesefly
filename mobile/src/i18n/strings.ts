@@ -7,6 +7,7 @@ import { AI, type AiStrings } from './ai';
 import { CHAT, type ChatStrings } from './chat';
 import { LAB, type LabStrings } from './lab';
 import { MONEY, type MoneyStrings } from './money';
+import { NOTIF_PERM, type NotifPermStrings } from './notif-perm';
 import { TOUR, type TourStrings } from './tour';
 
 const en = {
@@ -358,7 +359,6 @@ const en = {
     notifications: 'Notifications',
     notifyLabel: 'Weekly money tips',
     notifyBody: 'One short idea a week, based on your plan. Created on this device.',
-    notifyDenied: 'Notifications are blocked. Allow them for Kesefly in your phone settings.',
     notifyTest: 'Send a test tip',
     notifyOn: 'On',
     notifyOff: 'Off',
@@ -369,7 +369,7 @@ const en = {
 };
 
 type BaseStrings = typeof en;
-export type Strings = BaseStrings & ExtraStrings & MoneyStrings & LabStrings & AiStrings & TourStrings & ChatStrings;
+export type Strings = BaseStrings & ExtraStrings & MoneyStrings & LabStrings & AiStrings & TourStrings & ChatStrings & NotifPermStrings;
 
 const he: BaseStrings = {
   appName: 'כספלי',
@@ -717,7 +717,6 @@ const he: BaseStrings = {
     notifications: 'התראות',
     notifyLabel: 'טיפים שבועיים לכסף',
     notifyBody: 'רעיון קצר אחד בשבוע, לפי התוכנית שלכם. נוצר במכשיר הזה.',
-    notifyDenied: 'ההתראות חסומות. אפשרו אותן לכספלי בהגדרות הטלפון.',
     notifyTest: 'שליחת טיפ לדוגמה',
     notifyOn: 'פועל',
     notifyOff: 'כבוי',
@@ -727,6 +726,6 @@ const he: BaseStrings = {
 };
 
 export const STRINGS: Record<'en' | 'he', Strings> = {
-  en: { ...en, ...EXTRA.en, ...MONEY.en, ...LAB.en, ...AI.en, ...TOUR.en, ...CHAT.en },
-  he: { ...he, ...EXTRA.he, ...MONEY.he, ...LAB.he, ...AI.he, ...TOUR.he, ...CHAT.he },
+  en: { ...en, ...EXTRA.en, ...MONEY.en, ...LAB.en, ...AI.en, ...TOUR.en, ...CHAT.en, ...NOTIF_PERM.en },
+  he: { ...he, ...EXTRA.he, ...MONEY.he, ...LAB.he, ...AI.he, ...TOUR.he, ...CHAT.he, ...NOTIF_PERM.he },
 };

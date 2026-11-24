@@ -37,15 +37,6 @@ export async function ensureChannel(s: Strings, sound: SoundId = DEFAULT_SOUNDS.
   await ensureSoundChannel('tips', sound, `${s.settings.notifyLabel} · ${s.settings3.soundNames[sound]}`);
 }
 
-/** Asks for permission if needed. Returns true when notifications may be shown. */
-export async function requestPermission(): Promise<boolean> {
-  const current = await Notifications.getPermissionsAsync();
-  if (current.granted) return true;
-  if (!current.canAskAgain) return false;
-  const asked = await Notifications.requestPermissionsAsync();
-  return asked.granted;
-}
-
 /** Next Sunday at 10:00 local time, `weeksAhead` weeks out (0 = the coming Sunday). */
 function sunday(weeksAhead: number): Date {
   const now = new Date();
