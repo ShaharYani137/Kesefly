@@ -2,7 +2,11 @@
  * Chats: the list of the user's 1:1 and group chats, newest first, with unread counts.
  * First visit: pick a @username (ProfileSetup). Updates live (Realtime) and every 30 s.
  * Device-only accounts see why chat needs a cloud account.
+ * Notifications not allowed: a card explains why message alerts help and asks the OS only
+ * when the user taps "Turn on alerts", or offers "Turn on in Settings" when the OS will not
+ * ask again (notify-permission.ts). "Not now" hides the card on this phone.
  */
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
@@ -12,12 +16,14 @@ import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
 import { useAuth } from '@/state/auth';
 import { updateChatBadge } from '@/state/chat-alerts';
-import { requestPermission } from '@/state/notifications';
-import { Card, Icon, IconButton, Row, Screen, Txt } from '@/ui/components';
+import { askOsPermission, openAppSettings, useNotifyPermission } from '@/state/notify-permission';
+import { permissionStep } from '@/state/notify-rules';
+import { Button, Card, Icon, IconButton, Row, Screen, Txt } from '@/ui/components';
 import { ChatAvatar, chatTime, isVerified, ProfileSetup, useChatError, VerifiedBadge } from '@/ui/chat-ui';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const POLL_MS = 30_000;
+const ALERTS_CARD_HIDDEN_KEY = 'investapp/chat/alerts-card-hidden/v1';
 
 export default function ChatsScreen() {
   const { s, lang } = useApp();
@@ -62,11 +68,20 @@ export default function ChatsScreen() {
 
   const ready = cloud && profile && !editing;
 
-  // Ask once for notification permission when chat is ready: new messages notify in the background.
-  const hasProfile = !!profile;
+  // Message alerts card: shown only when notifications are not allowed and the user has not
+  // tapped "Not now". The OS prompt appears only after the user taps "Turn on alerts".
+  const perm = useNotifyPermission();
+  const [cardHidden, setCardHidden] = useState(true);
   useEffect(() => {
-    if (cloud && hasProfile) requestPermission().catch(() => false);
-  }, [cloud, hasProfile]);
+    AsyncStorage.getItem(ALERTS_CARD_HIDDEN_KEY)
+      .then((v) => setCardHidden(v === '1'))
+      .catch(() => setCardHidden(false));
+  }, []);
+  const hideCard = () => {
+    setCardHidden(true);
+    AsyncStorage.setItem(ALERTS_CARD_HIDDEN_KEY, '1').catch(() => {});
+  };
+  const permStep = perm ? permissionStep(perm) : 'granted';
 
   return (
     <Screen
@@ -110,6 +125,16 @@ export default function ChatsScreen() {
             <Txt variant="subhead" color="danger">
               {error}
             </Txt>
+          ) : null}
+          {permStep !== 'granted' && !cardHidden ? (
+            <AlertsCard
+              blocked={permStep === 'settings'}
+              onAllow={() => {
+                askOsPermission().catch(() => false);
+              }}
+              onSettings={openAppSettings}
+              onHide={hideCard}
+            />
           ) : null}
           {chats && chats.length === 0 ? (
             <Card>
@@ -174,5 +199,35 @@ export default function ChatsScreen() {
         </>
       )}
     </Screen>
+  );
+}
+
+/**
+ * Message alerts are off. Reuses the app's Card (accent tone) and Button.
+ * M3 references: components/containment.md (cards), components/buttons.md (filled button for
+ * the high-emphasis action, text button for the low-emphasis one; in cards, align buttons to
+ * keep emphasis on the content). The Row mirrors in Hebrew because Screen sets the layout
+ * direction, so the buttons sit at the trailing edge in both languages.
+ * Icon at the default 24 (M3 foundations.md: 24dp icon grid).
+ * DESIGN DECISION (not in M3): buttons at the trailing edge, 8dp apart.
+ */
+function AlertsCard({ blocked, onAllow, onSettings, onHide }: { blocked: boolean; onAllow: () => void; onSettings: () => void; onHide: () => void }) {
+  const { s } = useApp();
+  const { colors } = useTokens();
+  const t = s.notifPerm;
+  return (
+    <Card tone="accent">
+      <Row style={{ gap: 8 }}>
+        <Icon sf="bell.slash" md="notifications_off" color={colors.accent} />
+        <Txt variant="headline" style={{ flex: 1 }}>
+          {t.cardTitle}
+        </Txt>
+      </Row>
+      <Txt variant="subhead">{`${t.why.chat} ${blocked ? t.blockedBody : t.next}`}</Txt>
+      <Row style={{ gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        <Button kind="plain" label={t.notNow} onPress={onHide} />
+        <Button label={blocked ? t.openSettings : t.allow} onPress={blocked ? onSettings : onAllow} />
+      </Row>
+    </Card>
   );
 }

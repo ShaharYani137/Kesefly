@@ -13,6 +13,9 @@
  *
  * The task reads language and sound straight from AsyncStorage, because it may run with no UI
  * mounted. Signed out or device mode: nothing is checked and the badge is cleared.
+ * Notifications not allowed (Android 13+ / iOS permission): the task is not registered (see
+ * app/_layout.tsx), and if it still runs it skips the check and posts nothing. In-app chat
+ * keeps working either way.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as BackgroundTask from 'expo-background-task';
@@ -80,6 +83,11 @@ function chatName(c: Conversation, lang: Lang): string {
   return c.peer_name || (c.peer_username ? `@${c.peer_username}` : s.title);
 }
 
+/** True when the OS lets the app show notifications (no prompt). */
+async function notificationsAllowed(): Promise<boolean> {
+  return (await Notifications.getPermissionsAsync()).granted;
+}
+
 /**
  * Checks for new messages and posts notifications. Returns the number posted.
  * `quiet`: update the badge and the "already notified" marks, but post nothing (app on screen).
@@ -99,7 +107,7 @@ export async function checkChats(quiet = false): Promise<number> {
   for (const c of convs) if (notified[c.id]) next[c.id] = notified[c.id];
 
   let sent = 0;
-  if (!quiet && fresh.length) {
+  if (!quiet && fresh.length && (await notificationsAllowed())) {
     const { lang, sound } = await readSaved();
     const s = STRINGS[lang].chat;
     const he = lang === 'he';
@@ -127,6 +135,8 @@ export async function checkChats(quiet = false): Promise<number> {
 // Must be defined at module scope, so the OS can run it when the app is not open.
 TaskManager.defineTask(CHAT_TASK, async () => {
   try {
+    // Permission turned off in Settings since the task was registered: do not poll at all.
+    if (!(await notificationsAllowed())) return BackgroundTask.BackgroundTaskResult.Success;
     // App on screen: the chat pages show new messages live, so only the badge is updated.
     await checkChats(AppState.currentState === 'active');
     return BackgroundTask.BackgroundTaskResult.Success;

@@ -8,7 +8,8 @@ import { fill, useApp } from '@/state/app-store';
 import { useAuth } from '@/state/auth';
 import { previewSound, sendTestEventAlert } from '@/state/event-alerts';
 import { type NotifType, SOUND_IDS, type SoundId } from '@/state/sounds';
-import { cancelTips, requestPermission, scheduleWeeklyTips, sendTestTip } from '@/state/notifications';
+import { cancelTips, scheduleWeeklyTips, sendTestTip } from '@/state/notifications';
+import { confirmNotifyPermission } from '@/state/notify-permission';
 import { alertDir, bidi } from '@/ui/bidi';
 import { Button, Card, Chip, Disclaimer, Row, Screen, SectionHeader, Segmented, Txt } from '@/ui/components';
 import { ToolRow } from '@/ui/money-ui';
@@ -20,10 +21,8 @@ export default function SettingsScreen() {
   const { colors } = useTokens();
 
   const toggleEvents = async (on: boolean) => {
-    if (on && !(await requestPermission())) {
-      alertDir(isRTL, s.events.settingsLabel, s.settings.notifyDenied);
-      return;
-    }
+    // Explains why before the OS prompt, or offers "Turn on in Settings" (notify-permission.ts).
+    if (on && !(await confirmNotifyPermission(s, 'events'))) return;
     setEventAlerts(on);
   };
 
@@ -44,10 +43,7 @@ export default function SettingsScreen() {
       await cancelTips();
       return;
     }
-    if (!(await requestPermission())) {
-      alertDir(isRTL, s.settings.notifications, s.settings.notifyDenied);
-      return;
-    }
+    if (!(await confirmNotifyPermission(s, 'tips'))) return;
     setNotify(true);
     await scheduleWeeklyTips(profile, s, lang, prefs.sounds.tips);
   };

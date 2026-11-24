@@ -18,6 +18,7 @@ import { AiProvider } from '@/state/ai-store';
 import { LabMonitor } from '@/state/lab-monitor';
 import { LabProvider, useLab } from '@/state/lab-store';
 import { ensureChannel, scheduleWeeklyTips } from '@/state/notifications';
+import { deleteOldChannels, useNotifyPermission } from '@/state/notify-permission';
 import { AnimatedSplash } from '@/ui/animated-splash';
 import { AppTour } from '@/ui/app-tour';
 import { AuthScreen, LockScreen, PinSetup } from '@/ui/auth-screens';
@@ -30,6 +31,11 @@ SplashScreen.preventAutoHideAsync();
 
 /** Foreground event check interval. Background checks run about every 30 min (event-alerts.ts). */
 const FOREGROUND_CHECK_MS = 10 * 60_000;
+/**
+ * DESIGN DECISION: wait this long after the last sound change before deleting old Android
+ * channels, so a sound preview that is still playing on its channel is not cut off.
+ */
+const CHANNEL_CLEANUP_DELAY_MS = 5_000;
 
 function RootStack() {
   const { hydrated, onboarded } = useApp();
@@ -94,18 +100,29 @@ function NotificationSync() {
     const id = setInterval(() => checkEvents().catch(() => {}), FOREGROUND_CHECK_MS);
     return () => clearInterval(id);
   }, [eventAlerts, hydrated]);
-  // New-message checks run only for cloud accounts (chat needs one). Signing out or a device
-  // account stops them and clears the icon badge.
-  const cloudAccount = useAuth().account?.mode === 'cloud';
+  // Old Android channels (an older version's single tips channel, sounds no longer chosen).
   useEffect(() => {
     if (!hydrated) return;
-    if (!cloudAccount) {
+    const id = setTimeout(() => deleteOldChannels(sounds).catch(() => {}), CHANNEL_CLEANUP_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [hydrated, sounds]);
+  // New-message checks run only for cloud accounts (chat needs one) and only while the phone
+  // lets Kesefly show notifications. Signing out, a device account or a denied permission stops
+  // them and clears the icon badge. Allowing notifications later (chats card or Settings)
+  // starts them again. In-app chat works either way.
+  const cloudAccount = useAuth().account?.mode === 'cloud';
+  const perm = useNotifyPermission();
+  const permKnown = perm !== null;
+  const canNotify = perm?.granted === true;
+  useEffect(() => {
+    if (!hydrated || !permKnown) return;
+    if (!cloudAccount || !canNotify) {
       disableChatAlerts().catch(() => {});
       return;
     }
     ensureChatChannel(lang, sounds.chat).catch(() => {});
     enableChatAlerts().catch(() => {});
-  }, [cloudAccount, hydrated, lang, sounds.chat]);
+  }, [cloudAccount, hydrated, lang, sounds.chat, permKnown, canNotify]);
   return null;
 }
 
