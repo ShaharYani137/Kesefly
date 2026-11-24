@@ -115,8 +115,14 @@ function NotificationSync() {
   const permKnown = perm !== null;
   const canNotify = perm?.granted === true;
   useEffect(() => {
-    if (!hydrated || !permKnown) return;
-    if (!cloudAccount || !canNotify) {
+    if (!hydrated) return;
+    // Sign-out / device account: clean up at once, without waiting for the permission read.
+    if (!cloudAccount) {
+      disableChatAlerts().catch(() => {});
+      return;
+    }
+    if (!permKnown) return;
+    if (!canNotify) {
       disableChatAlerts().catch(() => {});
       return;
     }
