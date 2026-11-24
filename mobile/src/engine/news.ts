@@ -150,6 +150,18 @@ function hash(s: string): string {
   return (h >>> 0).toString(36);
 }
 
+/**
+ * Returns the trimmed link only when it is an absolute http(s) URL with a host, else null.
+ * Feed links are third-party data: `javascript:`, `data:`, `intent:` and other schemes must
+ * never reach Linking.openURL. A regex, not `new URL`, so it behaves the same on every runtime.
+ */
+export function safeHttpUrl(raw: string): string | null {
+  const s = typeof raw === 'string' ? raw.trim() : '';
+  // No whitespace or control characters anywhere (they can hide a scheme from simple checks).
+  if (/\s/.test(s) || [...s].some((c) => c.charCodeAt(0) < 0x20 || c.charCodeAt(0) === 0x7f)) return null;
+  return /^https?:\/\/[^/?#\\\s]/i.test(s) ? s : null;
+}
+
 async function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   return Promise.race([p, new Promise<T>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))]);
 }
@@ -160,7 +172,7 @@ export function parseRss(xml: string, source: string, lang: 'en' | 'he'): NewsIt
     .slice(1)
     .map((raw) => {
       const title = tag(raw, 'title');
-      const link = tag(raw, 'link');
+      const link = safeHttpUrl(tag(raw, 'link')) ?? '';
       const time = Date.parse(tag(raw, 'pubDate')) || Date.now();
       return { id: hash(link || title), title, link, source, time, lang, tickers: [] };
     })
@@ -183,7 +195,7 @@ async function fetchTickerNews(symbol: string, count = 4): Promise<NewsItem[]> {
   return (body.news ?? []).map((n) => ({
     id: hash(n.link || n.uuid),
     title: n.title,
-    link: n.link,
+    link: safeHttpUrl(n.link) ?? '',
     source: n.publisher,
     time: n.providerPublishTime * 1000,
     lang: 'en' as const,

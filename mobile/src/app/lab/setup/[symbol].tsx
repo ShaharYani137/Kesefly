@@ -7,7 +7,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, View } from 'react-native';
 
-import { getEvents, type MarketEvent } from '@/engine/news';
+import { getEvents, type MarketEvent, safeHttpUrl } from '@/engine/news';
 import { type Chart, getCandles } from '@/lab/candles';
 import { evaluateEntry, type EntryResult } from '@/lab/entry';
 import { zoneOf } from '@/lab/sessions';
@@ -20,6 +20,12 @@ import { useTokens } from '@/ui/theme';
 
 const REFRESH_MS = 30_000;
 const MOVING = 0.03;
+
+/** Opens a news link only if it is http(s); feed links are untrusted. */
+function openNews(link: string) {
+  const url = safeHttpUrl(link);
+  if (url) Linking.openURL(url).catch(() => {});
+}
 
 export default function SetupPage() {
   return (
@@ -157,7 +163,7 @@ function Setup() {
           <ActivityIndicator color={colors.accent} />
         ) : news.length ? (
           news.map((n, i) => (
-            <Pressable key={n.id} accessibilityRole="link" onPress={() => Linking.openURL(n.link).catch(() => {})} style={{ paddingVertical: 10, borderTopWidth: i ? 0.5 : 0, borderColor: colors.separator, gap: 2 }}>
+            <Pressable key={n.id} accessibilityRole="link" onPress={() => openNews(n.link)} style={{ paddingVertical: 10, borderTopWidth: i ? 0.5 : 0, borderColor: colors.separator, gap: 2 }}>
               <Txt variant="subhead">{n.title}</Txt>
               <Txt variant="caption" color="textSecondary">
                 {n.source}
