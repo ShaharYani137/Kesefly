@@ -314,3 +314,9 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-23 20:00 | qa-tester implemented P-016 on `agents/2026-11-23-pr-checks` (b9e1bd1); qa-tester and security-guardian reviews PASS (static); pushed, opened PR #5 | `.github/workflows/pr-checks.yml` | PR #5 |
 | 2026-11-23 20:05 | Evening Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-23 19:50 | PR #5 first `PR checks` run green (run 45231488757); P-016 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |
+| 2026-11-24 08:41 | Boss morning cycle started: no human replies or merges since last update; npm registry still unreachable | git, PRs #2–#5 | Checked |
+| 2026-11-24 08:45 | Briefed security-guardian and android-specialist (AUDIT); ios-specialist (IMPLEMENT P-012) and security-guardian (IMPLEMENT P-004) on branches stacked on PR #5 | `agents/2026-11-24-decimal-input`, `agents/2026-11-24-news-link-scheme` | Commits 6babc75, 7efaa27 |
+| 2026-11-24 08:47 | qa-tester review P-012: static PASS. qa-tester + security review P-004: static PASS / security PASS; QA added bypass tests (96737b9) | `mobile/src/ui/*`, `mobile/src/engine/news.ts`, tests | PASS |
+| 2026-11-24 08:48 | Pushed both branches, opened PR #6 (P-012) and PR #7 (P-004), subscribed to their activity | GitHub | PR checks running |
+| 2026-11-24 08:50 | Recorded P-017…P-027; decided approved P-018, P-022, P-023, P-026, P-027; needs-human P-017, P-019, P-020, P-021, P-024, P-025; P-004/P-012 in-review | `logs/PROPOSALS.md` | Done |
+| 2026-11-24 08:52 | Morning Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

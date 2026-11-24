@@ -372,3 +372,10 @@ One section per working session. Newest at bottom.
 - **Work done:** 7 new proposals (P-009…P-015), all approved. Added P-016, a PR check workflow, implemented in PR #5 with QA and security PASS (static).
 - **Decisions:** no app code this cycle, because the npm registry is still unreachable. CI on PRs is the workaround.
 - **Next steps:** once #5 is merged (or npm is reachable): P-012 first, then P-004 and P-006. Next audit: security-guardian + android-specialist.
+
+## Session 15 — 2026-11-24 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (security-guardian + android-specialist), decide, implement up to 2 approved items, log.
+- **Work done:** no human replies or merges since last evening. Audits gave P-017…P-026; P-027 from review follow-ups. Implemented P-012 (PR #6) and P-004 (PR #7), both stacked on PR #5 so GitHub PR checks run (npm is still unreachable from the cloud run). QA static PASS on both, security PASS on P-004.
+- **Decisions:** approved P-018, P-022, P-023, P-026, P-027. Needs-human P-017, P-019, P-020, P-021, P-024, P-025.
+- **Next:** watch #6/#7 checks; then P-018 and P-022; audit connectivity-engineer + product-ux.

@@ -43,3 +43,25 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-015: pin the iOS CI Xcode version.
 
 **Next:** if #5 is merged or npm is reachable, implement P-012, then P-004. Next audit: security-guardian + android-specialist.
+
+## 2026-11-24 morning
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry. The team now works around it by stacking each fix on PR #5, so the GitHub PR checks run on every agent PR. No human replies or merges since last evening.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks)?** **Recommendation: merge first.** PRs #6 and #7 are stacked on it.
+2. **P-019: stop the confirmation email link from carrying sign-in tokens?** Today the link sends tokens to `kesefly://`, and another Android app could catch them. **Recommendation: yes.** Point the redirect to a plain https "Email confirmed, go back to the app" page. It is a Supabase auth setting plus a small app change.
+3. **P-017: make the PIN lockout survive a force-quit, with longer waits?** Right now a force-quit resets the counter, so the 4-digit PIN can be guessed. **Recommendation: yes.**
+4. **P-024: Android backup.** Holdings are included in Google backup by default. Turn backup off (private, but data is lost on a new phone) or keep it and say so? **Recommendation: turn off,** if cloud sync already covers restore.
+5. **P-020 / P-021:** add "remove my data from this phone" on sign-out, and stop the AI "auto" mode from trying your key with other companies. **Recommendation: yes to both.**
+6. **Still open from before:** PR #2 (agent team) merge, PR #3 (web app) hold, P-001 / P-002 / P-003 (Supabase chat fixes).
+
+**In progress**
+- P-012: "0,5" is read as 0.5, not 5. [#6](https://github.com/ShaharYani137/Kesefly/pull/6). QA static PASS; GitHub checks are running.
+- P-004: news opens only http(s) links. [#7](https://github.com/ShaharYani137/Kesefly/pull/7). QA static PASS, security PASS; GitHub checks are running.
+
+**Security:** P-019 medium (tokens in the confirmation link), P-017 medium (PIN brute-force after force-quit), P-018 low (screen readers and app switcher can see behind the lock), P-020 low, P-021 low, P-024 medium (Android backup).
+
+**Approved since last update:** P-018 hide the app behind the lock from screen readers and the app switcher · P-022 Android notification permission flow · P-023 widget shows when prices are old, plus an RTL fix · P-026 M3 tab bar colours · P-027 small link follow-ups after #7. Needs-human: P-017, P-019, P-020, P-021, P-024, P-025 (release signing key, only before a store release).
+
+**Next:** fix #6 / #7 if their checks fail. Then implement P-018 and P-022. Next audit: connectivity-engineer + product-ux.
