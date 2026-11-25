@@ -227,6 +227,12 @@ function OfflineHelper({ onClaude }: { onClaude?: () => void }) {
             reading.current = contentSize.height - (contentOffset.y + layoutMeasurement.height) > 80;
           }}
           renderItem={({ item, index }) => <Bubble msg={item} onRate={rate} last={index === msgs.length - 1} onAsk={ask} />}
+          // Not-advice footnote under the conversation, same style as the Claude chat footer.
+          ListFooterComponent={
+            <Txt variant="caption" color="textSecondary" style={{ textAlign: 'center', paddingTop: 4 }}>
+              {s.disclaimer}
+            </Txt>
+          }
         />
 
         {/* Composer: quick commands + one rounded input bar with the send button inside.
