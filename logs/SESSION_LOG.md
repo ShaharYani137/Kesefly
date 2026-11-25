@@ -358,3 +358,45 @@ One section per working session. Newest at bottom.
 - User: create the Supabase project, run the chat migration, put the URL and anon key in `mobile/.env.local`, rebuild, test chat with two accounts.
 - Revert `mobile/.env.example`: it holds an email address as `EXPO_PUBLIC_SUPABASE_URL`. Never commit it.
 - Pick one: email code verification (restore from `3e20212`) or Google sign-in; chat push notifications; block and report users.
+
+## Session 13 — 2026-11-23 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (security-guardian + performance-engineer), decide, implement up to 2, log.
+- **Work done:** audits returned 8 proposals (P-001…P-008), including a FAIL security review of PR #3 (web app). Decisions recorded in `logs/PROPOSALS.md`; morning update in `logs/BOSS_UPDATES.md`.
+- **Decisions:** P-004–P-007 approved; P-001–P-003 (Supabase) and P-008 (web data storage) need the humans. No implementation: the npm registry was unreachable, so QA could not run.
+- **Next steps:** implement P-004 and P-006 when `npm ci` works; next audit connectivity-engineer + ios-specialist. Note: `logs/PROPOSALS.md` and `logs/BOSS_UPDATES.md` also exist on `Shavit` (PR #2); merge #2 first, then this branch (append-only, easy conflict).
+
+## Session 14 — 2026-11-23 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (connectivity-engineer + ios-specialist), decide, implement up to 2, log.
+- **Work done:** 7 new proposals (P-009…P-015), all approved. Added P-016, a PR check workflow, implemented in PR #5 with QA and security PASS (static).
+- **Decisions:** no app code this cycle, because the npm registry is still unreachable. CI on PRs is the workaround.
+- **Next steps:** once #5 is merged (or npm is reachable): P-012 first, then P-004 and P-006. Next audit: security-guardian + android-specialist.
+
+## Session 15 — 2026-11-24 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (security-guardian + android-specialist), decide, implement up to 2 approved items, log.
+- **Work done:** no human replies or merges since last evening. Audits gave P-017…P-026; P-027 from review follow-ups. Implemented P-012 (PR #6) and P-004 (PR #7), both stacked on PR #5 so GitHub PR checks run (npm is still unreachable from the cloud run). QA static PASS on both, security PASS on P-004.
+- **Decisions:** approved P-018, P-022, P-023, P-026, P-027. Needs-human P-017, P-019, P-020, P-021, P-024, P-025.
+- **Next:** watch #6/#7 checks; then P-018 and P-022; audit connectivity-engineer + product-ux.
+
+## Session 16 — 2026-11-24 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** Boss evening cycle: check changes, audit (connectivity-engineer + product-ux), implement P-018 and P-022, log, update.
+- **Work done:** 14 new proposals (P-028…P-041). P-018 → PR #8 (typecheck fix after the first CI run), P-022 → PR #9 (sign-out fix after security review). Both have QA/security PASS and green PR checks.
+- **Decisions:** approved P-028, P-030–P-038, P-040; needs-human P-029 (schema), P-039 (new dependency, blocks screenshots), P-041 (sign-out data).
+- **Next steps:** humans merge #5, then #6–#9; implement P-035 + P-036; audit security-guardian + performance-engineer.
+
+## Session 17 — 2026-11-25 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** Boss morning cycle: check changes, audit (security-guardian + performance-engineer), implement P-035 + P-036, log, update.
+- **Work done:** no human replies or merges since last evening. Audits gave P-042…P-048; P-049 came from the P-036 work. P-035 + P-036 → PR #10 (stacked on #5), qa-tester static PASS.
+- **Decisions:** approved P-042 (CI token permissions), P-043 (AI memory injection), P-044–P-047 (performance), P-049 (leftover "guaranteed return" copy). Needs-human P-048 (shorter intro is a brand choice).
+- **Next steps:** watch #10 checks; implement P-042 and P-043 (security first); next audit connectivity-engineer + qa-tester.
+
+## Session 18 — 2026-11-25 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** Boss evening cycle: check changes, audit (connectivity-engineer + qa-tester), implement P-042 + P-043, log, update.
+- **Work done:** no human replies or merges since the morning. P-042 → PR #11, P-043 → PR #12, both stacked on #5. qa-tester and security-guardian PASS on both. Audits gave P-050…P-059, and the reviews gave P-060 and P-061.
+- **Decisions:** approved P-050–P-053, P-055–P-059 and P-061. Needs-human: P-054 (session handling) and P-060 (memory confirm is a product choice).
+- **Next steps:** watch the #11 and #12 checks; implement P-055 + P-056; next audit security-guardian + ios-specialist.

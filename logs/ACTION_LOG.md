@@ -302,3 +302,43 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-21 | Verified badge (app only, no server field, at user request) for @shasha: seal icon (SF `checkmark.seal.fill`, Material `verified`, accent colour) after the name in the chats list, search results, chat header and group sender names; screen readers say "Verified account" (English + Hebrew). List in `VERIFIED_USERNAMES` (`mobile/src/ui/chat-ui.tsx`). Badge colour and sizes (16, 12 in bubbles) are Kesefly design decisions. tsc 0, eslint 0, vitest 52 passed. Started `npm run apk` | `mobile/src/ui/chat-ui.tsx`, `mobile/src/app/chats/index.tsx`, `mobile/src/app/chats/new.tsx`, `mobile/src/app/chats/[id].tsx`, `mobile/src/i18n/chat.ts` | Done |
 | 2026-11-21 | APK with the verified badge built and installed on the Android phone | `mobile/` | Installed and opened on the phone |
 | 2026-11-21 | DONE: scanned changes and logs for keys and private data (none); committed everything except the deletion of `mobile/.env.example`; pushed `feature/user-chat`, merged it into `main` (fast-forward), pushed `main`, deleted the branch locally and on GitHub | git | Done |
+| 2026-11-23 08:40 | Boss morning cycle (scheduled, cloud). Used `Shavit` for team defs (`main` has no `.claude/agents`). Checked PRs #2, #3: no human comments | — | OK |
+| 2026-11-23 08:45 | `npm ci` in `mobile/` failed: npm registry unreachable from the cloud run (DNS fail direct, 403 via proxy) | `mobile/node_modules` (partial, untracked) | Blocked: no typecheck/lint/tests |
+| 2026-11-23 08:55 | Audits: security-guardian (main + PR #3 review) and performance-engineer, read-only | — | 8 proposals |
+| 2026-11-23 09:05 | Recorded P-001…P-008 with decisions: P-004–P-007 approved (queued, no QA possible), P-001–P-003 and P-008 needs-human. No code implemented | `logs/PROPOSALS.md` | Done |
+| 2026-11-23 09:05 | Wrote morning Boss update; committed logs to `agents/boss-log` from `main` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-23 19:40 | Boss evening cycle (scheduled, cloud) from `Shavit` team defs. No new commits on `main`; no human comments on PRs #2–#4 | — | OK |
+| 2026-11-23 19:42 | npm registry check: DNS fails for registry.npmjs.org | — | Blocked: no local typecheck/lint/tests |
+| 2026-11-23 19:45 | Audits: connectivity-engineer and ios-specialist, read-only on `main` a69a977 | — | 7 proposals (P-009…P-015) |
+| 2026-11-23 19:55 | Decided P-009…P-015 approved (queued). Opened P-016 (PR check workflow) to work around the npm block | `logs/PROPOSALS.md` | Done |
+| 2026-11-23 20:00 | qa-tester implemented P-016 on `agents/2026-11-23-pr-checks` (b9e1bd1); qa-tester and security-guardian reviews PASS (static); pushed, opened PR #5 | `.github/workflows/pr-checks.yml` | PR #5 |
+| 2026-11-23 20:05 | Evening Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-23 19:50 | PR #5 first `PR checks` run green (run 45231488757); P-016 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |
+| 2026-11-24 08:41 | Boss morning cycle started: no human replies or merges since last update; npm registry still unreachable | git, PRs #2–#5 | Checked |
+| 2026-11-24 08:45 | Briefed security-guardian and android-specialist (AUDIT); ios-specialist (IMPLEMENT P-012) and security-guardian (IMPLEMENT P-004) on branches stacked on PR #5 | `agents/2026-11-24-decimal-input`, `agents/2026-11-24-news-link-scheme` | Commits 6babc75, 7efaa27 |
+| 2026-11-24 08:47 | qa-tester review P-012: static PASS. qa-tester + security review P-004: static PASS / security PASS; QA added bypass tests (96737b9) | `mobile/src/ui/*`, `mobile/src/engine/news.ts`, tests | PASS |
+| 2026-11-24 08:48 | Pushed both branches, opened PR #6 (P-012) and PR #7 (P-004), subscribed to their activity | GitHub | PR checks running |
+| 2026-11-24 08:50 | Recorded P-017…P-027; decided approved P-018, P-022, P-023, P-026, P-027; needs-human P-017, P-019, P-020, P-021, P-024, P-025; P-004/P-012 in-review | `logs/PROPOSALS.md` | Done |
+| 2026-11-24 08:52 | Morning Boss update; rebased `agents/boss-log` on `main` and committed logs | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-24 08:58 | PR checks green on #6 (run 45343226741) and #7 (run 45343233209); P-004 and P-012 marked done (awaiting merge) | `logs/PROPOSALS.md`, `logs/BOSS_UPDATES.md` | Done |
+| 2026-11-24 19:41 | Boss evening cycle started: no human replies or merges since morning; npm registry still unreachable | git, PRs #2–#7 | Checked |
+| 2026-11-24 19:45 | Briefed connectivity-engineer and product-ux (AUDIT); security-guardian (IMPLEMENT P-018) and android-specialist (IMPLEMENT P-022) on branches stacked on PR #5 | `agents/2026-11-24-lock-privacy`, `agents/2026-11-24-notif-permission` | Commits f02d45e, ad0b526 |
+| 2026-11-24 19:55 | qa-tester review P-018 + P-022: static PASS both. security-guardian: PASS both, one low sign-out ordering finding on P-022, sent back, fixed in 29e4a11 | `mobile/src/app/_layout.tsx`, `mobile/src/state/*`, `mobile/src/i18n/*` | PASS |
+| 2026-11-24 19:58 | Pushed both branches, opened PR #8 (P-018) and PR #9 (P-022) | GitHub | PR checks running |
+| 2026-11-24 20:00 | PR #8 typecheck failed (AppState.currentState may be null); sent back, fixed in e4dc9e1, pushed; checks green (run 45455105616). PR #9 green (run 45454363445) | PR #8, #9 | Done |
+| 2026-11-24 20:05 | Recorded P-028…P-041; approved P-028, P-030–P-038, P-040; needs-human P-029, P-039, P-041; P-018 and P-022 marked done (awaiting merge) | `logs/PROPOSALS.md` | Done |
+| 2026-11-24 20:08 | Evening Boss update; committed logs to `agents/boss-log` (already on `main`) | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-25 08:41 | Boss morning cycle start: no human replies, merges or new commits since last evening; npm registry still unreachable | GitHub PRs #2–#9, `origin/*` | Checked |
+| 2026-11-25 08:45 | Briefed security-guardian (AUDIT: CSV import, AI keys, logging, config, workflows) and performance-engineer (AUDIT: startup, render, timers) in parallel; product-ux IMPLEMENT P-035 + P-036 on `agents/2026-11-25-not-advice-copy` (from PR #5 branch) | worktree `wt-copy` | Done |
+| 2026-11-25 08:50 | product-ux committed 72a6eef (P-035, P-036). qa-tester static review PASS; copy only, no security review needed | `mobile/src/i18n/*`, `mobile/src/app/(tabs)/helper.tsx` | PASS |
+| 2026-11-25 08:52 | Pushed branch, opened PR #10 (P-035, P-036) | GitHub | PR checks running |
+| 2026-11-25 08:55 | Recorded P-042…P-049; approved P-042–P-047, P-049; needs-human P-048; P-035/P-036 marked done (awaiting checks and merge) | `logs/PROPOSALS.md` | Done |
+| 2026-11-25 08:57 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-25 08:58 | PR #10 checks green (run 45563471931) | PR #10 | Done |
+| 2026-11-25 19:41 | Evening Boss cycle start; main unchanged (a69a977), no PR comments or human replies since morning; npm registry still unreachable | repo, PRs #2–#10 | Checked |
+| 2026-11-25 19:45 | Briefed connectivity-engineer + qa-tester (AUDIT) and security-guardian IMPLEMENT P-042, P-043 in parallel | subagents | Done |
+| 2026-11-25 20:05 | qa-tester + security-guardian reviewed P-042 (7593ecb) and P-043 (aa4173e): both PASS | review | Done |
+| 2026-11-25 20:08 | Pushed branches; opened PR #11 (P-042) and PR #12 (P-043), stacked on #5 | GitHub | Done |
+| 2026-11-25 20:12 | Recorded P-050…P-061; approved P-050–P-053, P-055–P-059, P-061; needs-human P-054, P-060; P-042/P-043 marked done; P-009 and P-041 notes widened | `logs/PROPOSALS.md` | Done |
+| 2026-11-25 20:14 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-25 20:16 | PR #11 checks green (run 45669284357), PR #12 checks green (run 45669298184) | PRs #11, #12 | Done |
