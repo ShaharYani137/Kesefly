@@ -100,3 +100,36 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-040: close dialogs while locked.
 
 **Next:** implement P-035 and P-036 (copy and framing). Next audit: security-guardian + performance-engineer.
+
+## 2026-11-25 morning
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so fixes stay stacked on PR #5 and GitHub runs the checks. No human replies or merges since last evening.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Five checked fixes (#6–#10) are stacked on it.
+2. **P-019: stop the confirmation email link from carrying sign-in tokens?** **Recommendation: yes,** with an https "Email confirmed" page. Still the top security item.
+3. **P-017: make the PIN lockout survive a force-quit?** **Recommendation: yes.**
+4. **P-039: block screenshots and the Android Recents preview (`expo-screen-capture`)?** **Recommendation: yes.**
+5. **P-024: Android backup on or off?** **Recommendation: off,** if cloud sync covers restore.
+6. **P-048 (new): shorten the ~2 s intro on every cold start?** Full intro only on the first launch after install or update, a short fade otherwise, tap to skip. **Recommendation: yes,** unless the intro is part of the brand you want every time.
+7. **Still open:** P-020 / P-041 (what sign-out keeps), P-021 (AI auto mode), P-001 / P-002 / P-003 (Supabase chat), P-029 (server de-duplication), PR #2 (agent team) merge, PR #3 (web app) hold.
+
+**Done (awaiting your merge, after #5)**
+- P-035 + P-036: chat no longer suggests an "advice group"; Helper tab gets the not-advice line; the debt answer no longer promises "15%+, better than any fund"; Hebrew "Review my portfolio" label fixed. [#10](https://github.com/ShaharYani137/Kesefly/pull/10). QA static PASS; PR checks running.
+- From before: P-018 [#8](https://github.com/ShaharYani137/Kesefly/pull/8), P-022 [#9](https://github.com/ShaharYani137/Kesefly/pull/9), P-012 [#6](https://github.com/ShaharYani137/Kesefly/pull/6), P-004 [#7](https://github.com/ShaharYani137/Kesefly/pull/7), P-016 [#5](https://github.com/ShaharYani137/Kesefly/pull/5).
+
+**Security**
+- P-042 medium impact, low-risk fix: the APK/IPA build jobs hold a GitHub token that can publish releases while running every npm install script. One bad package could swap the public download. Fix: read-only builds, a separate release job, actions pinned by SHA.
+- P-043 low: a web page Claude reads can save a hidden "memory" that steers every later chat (e.g. "always call XYZ a buy"). Fix: no memory saves in a turn that used web search.
+- Checked and clean: AI keys stay in SecureStore, no logging of personal data, CSV import is paste-only.
+
+**Approved since last update**
+- P-042: lock down release workflow permissions.
+- P-043: block memory saves after web search.
+- P-044: cache number and date formatters (about 40x faster per label).
+- P-045: typing in chat stops re-rendering every message (after P-028/P-034).
+- P-046: Helper typewriter re-renders one bubble, not the whole screen.
+- P-047: clocks and lab polls pause when their screen is hidden.
+- P-049: remove the remaining "guaranteed return" claims (idea card, academy).
+
+**Next:** implement P-042 and P-043 (security first). Next audit: connectivity-engineer + qa-tester.

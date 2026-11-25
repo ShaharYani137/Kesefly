@@ -386,3 +386,10 @@ One section per working session. Newest at bottom.
 - **Work done:** 14 new proposals (P-028…P-041). P-018 → PR #8 (typecheck fix after the first CI run), P-022 → PR #9 (sign-out fix after security review). Both have QA/security PASS and green PR checks.
 - **Decisions:** approved P-028, P-030–P-038, P-040; needs-human P-029 (schema), P-039 (new dependency, blocks screenshots), P-041 (sign-out data).
 - **Next steps:** humans merge #5, then #6–#9; implement P-035 + P-036; audit security-guardian + performance-engineer.
+
+## Session 17 — 2026-11-25 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** Boss morning cycle: check changes, audit (security-guardian + performance-engineer), implement P-035 + P-036, log, update.
+- **Work done:** no human replies or merges since last evening. Audits gave P-042…P-048; P-049 came from the P-036 work. P-035 + P-036 → PR #10 (stacked on #5), qa-tester static PASS.
+- **Decisions:** approved P-042 (CI token permissions), P-043 (AI memory injection), P-044–P-047 (performance), P-049 (leftover "guaranteed return" copy). Needs-human P-048 (shorter intro is a brand choice).
+- **Next steps:** watch #10 checks; implement P-042 and P-043 (security first); next audit connectivity-engineer + qa-tester.

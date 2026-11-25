@@ -328,3 +328,9 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-24 20:00 | PR #8 typecheck failed (AppState.currentState may be null); sent back, fixed in e4dc9e1, pushed; checks green (run 45455105616). PR #9 green (run 45454363445) | PR #8, #9 | Done |
 | 2026-11-24 20:05 | Recorded P-028…P-041; approved P-028, P-030–P-038, P-040; needs-human P-029, P-039, P-041; P-018 and P-022 marked done (awaiting merge) | `logs/PROPOSALS.md` | Done |
 | 2026-11-24 20:08 | Evening Boss update; committed logs to `agents/boss-log` (already on `main`) | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-25 08:41 | Boss morning cycle start: no human replies, merges or new commits since last evening; npm registry still unreachable | GitHub PRs #2–#9, `origin/*` | Checked |
+| 2026-11-25 08:45 | Briefed security-guardian (AUDIT: CSV import, AI keys, logging, config, workflows) and performance-engineer (AUDIT: startup, render, timers) in parallel; product-ux IMPLEMENT P-035 + P-036 on `agents/2026-11-25-not-advice-copy` (from PR #5 branch) | worktree `wt-copy` | Done |
+| 2026-11-25 08:50 | product-ux committed 72a6eef (P-035, P-036). qa-tester static review PASS; copy only, no security review needed | `mobile/src/i18n/*`, `mobile/src/app/(tabs)/helper.tsx` | PASS |
+| 2026-11-25 08:52 | Pushed branch, opened PR #10 (P-035, P-036) | GitHub | PR checks running |
+| 2026-11-25 08:55 | Recorded P-042…P-049; approved P-042–P-047, P-049; needs-human P-048; P-035/P-036 marked done (awaiting checks and merge) | `logs/PROPOSALS.md` | Done |
+| 2026-11-25 08:57 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
