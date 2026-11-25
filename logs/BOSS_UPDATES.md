@@ -115,7 +115,7 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 7. **Still open:** P-020 / P-041 (what sign-out keeps), P-021 (AI auto mode), P-001 / P-002 / P-003 (Supabase chat), P-029 (server de-duplication), PR #2 (agent team) merge, PR #3 (web app) hold.
 
 **Done (awaiting your merge, after #5)**
-- P-035 + P-036: chat no longer suggests an "advice group"; Helper tab gets the not-advice line; the debt answer no longer promises "15%+, better than any fund"; Hebrew "Review my portfolio" label fixed. [#10](https://github.com/ShaharYani137/Kesefly/pull/10). QA static PASS; PR checks running.
+- P-035 + P-036: chat no longer suggests an "advice group"; Helper tab gets the not-advice line; the debt answer no longer promises "15%+, better than any fund"; Hebrew "Review my portfolio" label fixed. [#10](https://github.com/ShaharYani137/Kesefly/pull/10). QA static PASS; GitHub checks green (tests, typecheck, lint).
 - From before: P-018 [#8](https://github.com/ShaharYani137/Kesefly/pull/8), P-022 [#9](https://github.com/ShaharYani137/Kesefly/pull/9), P-012 [#6](https://github.com/ShaharYani137/Kesefly/pull/6), P-004 [#7](https://github.com/ShaharYani137/Kesefly/pull/7), P-016 [#5](https://github.com/ShaharYani137/Kesefly/pull/5).
 
 **Security**
