@@ -147,8 +147,8 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 6. **Still open:** P-020 / P-041 (what sign-out keeps), P-021 (AI auto mode), P-001 / P-002 / P-003 (Supabase chat), P-029, PR #2 (agent team) merge, PR #3 (web app) hold.
 
 **Done (awaiting your merge, after #5)**
-- P-042: build jobs can no longer publish or replace releases. Only a separate release job can write; actions are pinned by SHA, and each APK/IPA gets a SHA-256 file. [#11](https://github.com/ShaharYani137/Kesefly/pull/11). qa-tester and security-guardian PASS (static). Before merging, run Android build once with workflow_dispatch on the branch.
-- P-043: the AI can no longer save a memory in a turn where it read the web, and the prompt forbids buy/sell notes. [#12](https://github.com/ShaharYani137/Kesefly/pull/12). qa-tester PASS (9 tests passed against the real SDK in a scratch harness), security-guardian PASS.
+- P-042: build jobs can no longer publish or replace releases. Only a separate release job can write; actions are pinned by SHA, and each APK/IPA gets a SHA-256 file. [#11](https://github.com/ShaharYani137/Kesefly/pull/11). qa-tester and security-guardian PASS (static); GitHub checks green. Before merging, run Android build once with workflow_dispatch on the branch.
+- P-043: the AI can no longer save a memory in a turn where it read the web, and the prompt forbids buy/sell notes. [#12](https://github.com/ShaharYani137/Kesefly/pull/12). qa-tester PASS (9 tests passed against the real SDK in a scratch harness), security-guardian PASS. GitHub checks green.
 - From before: P-035 + P-036 [#10](https://github.com/ShaharYani137/Kesefly/pull/10), P-018 [#8](https://github.com/ShaharYani137/Kesefly/pull/8), P-022 [#9](https://github.com/ShaharYani137/Kesefly/pull/9), P-012 [#6](https://github.com/ShaharYani137/Kesefly/pull/6), P-004 [#7](https://github.com/ShaharYani137/Kesefly/pull/7), P-016 [#5](https://github.com/ShaharYani137/Kesefly/pull/5).
 
 **Security**
