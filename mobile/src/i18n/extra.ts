@@ -697,7 +697,7 @@ const he: ExtraStrings = {
       vs: '{s} מול SPY',
       more: 'ספר לי עוד',
       market: 'מה קורה בשווקים?',
-      portfolio: 'ניתוח התיק שלי',
+      portfolio: 'סקירת התיק שלי',
       fx: 'שער הדולר',
       news: 'חדשות שחשובות לי',
       learn: 'מסלול הלמידה שלי',
