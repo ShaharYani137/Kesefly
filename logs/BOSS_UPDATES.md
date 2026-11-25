@@ -133,3 +133,38 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-049: remove the remaining "guaranteed return" claims (idea card, academy).
 
 **Next:** implement P-042 and P-043 (security first). Next audit: connectivity-engineer + qa-tester.
+
+## 2026-11-25 evening
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so fixes stay stacked on PR #5 and GitHub runs the checks. No human replies or merges since this morning.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Seven checked fixes (#6–#12) are stacked on it.
+2. **P-019: stop the confirmation email link from carrying sign-in tokens?** **Recommendation: yes,** with an https "Email confirmed" page. Still the top security item.
+3. **P-054 (new): chat says "Sign in again" when you are only offline, and a lost token refresh can silently kill cloud chat?** Tell "no network" apart from "token revoked", and use one shared refresh. **Recommendation: yes** (session handling, so it needs you).
+4. **P-060 (new): after a web search, should the AI ask "Save to memory?" before saving?** This closes the gap that #12 leaves across turns. **Recommendation: yes, a one-tap confirm.**
+5. **P-017 (PIN lockout survives force-quit), P-039 (block screenshots on Android), P-024 (Android backup off), P-048 (shorter intro):** recommendations unchanged (yes / yes / off / yes).
+6. **Still open:** P-020 / P-041 (what sign-out keeps), P-021 (AI auto mode), P-001 / P-002 / P-003 (Supabase chat), P-029, PR #2 (agent team) merge, PR #3 (web app) hold.
+
+**Done (awaiting your merge, after #5)**
+- P-042: build jobs can no longer publish or replace releases. Only a separate release job can write; actions are pinned by SHA, and each APK/IPA gets a SHA-256 file. [#11](https://github.com/ShaharYani137/Kesefly/pull/11). qa-tester and security-guardian PASS (static). Before merging, run Android build once with workflow_dispatch on the branch.
+- P-043: the AI can no longer save a memory in a turn where it read the web, and the prompt forbids buy/sell notes. [#12](https://github.com/ShaharYani137/Kesefly/pull/12). qa-tester PASS (9 tests passed against the real SDK in a scratch harness), security-guardian PASS.
+- From before: P-035 + P-036 [#10](https://github.com/ShaharYani137/Kesefly/pull/10), P-018 [#8](https://github.com/ShaharYani137/Kesefly/pull/8), P-022 [#9](https://github.com/ShaharYani137/Kesefly/pull/9), P-012 [#6](https://github.com/ShaharYani137/Kesefly/pull/6), P-004 [#7](https://github.com/ShaharYani137/Kesefly/pull/7), P-016 [#5](https://github.com/ShaharYani137/Kesefly/pull/5).
+
+**Security**
+- Medium, inherent: a poisoned npm or Gradle dependency can still ship a bad APK. #11 stops it from replacing releases, but the checksum only proves the file did not change between the build and release jobs.
+- Low: P-060 (see above). Low: P-061, pin the PR-checks actions too.
+
+**Approved since last update**
+- P-050: AI replies time out after 45 s of silence and stop when you leave the chat.
+- P-051: other AI providers retry busy errors; a clear "no credit left" message.
+- P-052: the iOS widget no longer drops a holding from the total or writes too late.
+- P-053: the Android widget "Updated" time no longer freezes because of one symbol.
+- P-055: CSV import reads "182,50" correctly (today the cost comes out 100× too high), does not skip IBKR trades silently, and adds tests.
+- P-056: US tax rule for a sale on the one-year anniversary across Feb 29 (today the tax shows as half).
+- P-057: tests for positions, projection and portfolio totals.
+- P-058: one market-holiday list, with Yom Ha'atzmaut checked at TASE and a reminder when the list runs out.
+- P-059: EN/HE string parity test.
+- P-061: pin the PR-checks actions.
+
+**Next:** implement P-055 (CSV money bug) and P-056 (tax). Next audit: security-guardian + ios-specialist.

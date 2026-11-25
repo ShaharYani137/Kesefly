@@ -393,3 +393,10 @@ One section per working session. Newest at bottom.
 - **Work done:** no human replies or merges since last evening. Audits gave P-042…P-048; P-049 came from the P-036 work. P-035 + P-036 → PR #10 (stacked on #5), qa-tester static PASS.
 - **Decisions:** approved P-042 (CI token permissions), P-043 (AI memory injection), P-044–P-047 (performance), P-049 (leftover "guaranteed return" copy). Needs-human P-048 (shorter intro is a brand choice).
 - **Next steps:** watch #10 checks; implement P-042 and P-043 (security first); next audit connectivity-engineer + qa-tester.
+
+## Session 18 — 2026-11-25 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** Boss evening cycle: check changes, audit (connectivity-engineer + qa-tester), implement P-042 + P-043, log, update.
+- **Work done:** no human replies or merges since the morning. P-042 → PR #11, P-043 → PR #12, both stacked on #5. qa-tester and security-guardian PASS on both. Audits gave P-050…P-059, and the reviews gave P-060 and P-061.
+- **Decisions:** approved P-050–P-053, P-055–P-059 and P-061. Needs-human: P-054 (session handling) and P-060 (memory confirm is a product choice).
+- **Next steps:** watch the #11 and #12 checks; implement P-055 + P-056; next audit security-guardian + ios-specialist.
