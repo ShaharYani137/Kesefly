@@ -27,7 +27,6 @@ export const IL_DIVIDEND_RATE = 0.25;
 export const US_TREATY_WITHHOLDING = 0.25;
 /** US withholding with no W-8BEN on file. */
 export const US_DEFAULT_WITHHOLDING = 0.3;
-const YEAR_MS = 365 * 86400_000;
 
 export type TaxRules = { country: Country; usShort: number; usLong: number };
 
@@ -159,11 +158,52 @@ function replay(lots: LotIn[], sales: SaleIn[], country: Country): { open: OpenL
   return { open: open.filter((l) => l.shares > 1e-9), realized };
 }
 
-/** Held more than one year. Undated lots are old (saved before dates existed): long-term. */
+/**
+ * Calendar dates. Lot and sale dates are local YYYY-MM-DD strings (holding-form.tsx `today()`,
+ * csv-import.ts `parseDate`), so `now` is turned into the local calendar day too. Day arithmetic
+ * runs on UTC midnights, where every day is exactly 24 hours.
+ */
+type Ymd = { y: number; m: number; d: number };
+const DAY_MS = 86400_000;
+const pad = (n: number) => String(n).padStart(2, '0');
+const ymdText = ({ y, m, d }: Ymd) => `${y}-${pad(m)}-${pad(d)}`;
+const ymdMs = ({ y, m, d }: Ymd) => Date.UTC(y, m - 1, d);
+function parseYmd(t: string): Ymd | undefined {
+  const r = /^(\d{4})-(\d{2})-(\d{2})/.exec(t);
+  return r ? { y: +r[1], m: +r[2], d: +r[3] } : undefined;
+}
+function localYmd(ms: number): Ymd {
+  const t = new Date(ms);
+  return { y: t.getFullYear(), m: t.getMonth() + 1, d: t.getDate() };
+}
+function addDays(v: Ymd, n: number): Ymd {
+  const t = new Date(ymdMs(v) + n * DAY_MS);
+  return { y: t.getUTCFullYear(), m: t.getUTCMonth() + 1, d: t.getUTCDate() };
+}
+/**
+ * First day a lot bought on `buy` counts as long-term (US). IRS Pub. 550: long-term means held
+ * more than one year, and the holding period starts the day after purchase. So a sale on the
+ * one-year anniversary is still short-term; it is long-term from the day after. A Feb 29 buy
+ * has no anniversary in a non-leap year: we use Feb 28 (common practice), so long-term from
+ * Mar 1. Compared by calendar date, not a fixed 365 days, which is a day off across a Feb 29.
+ */
+function longFrom(buy: Ymd): Ymd {
+  const y = buy.y + 1;
+  const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+  const anniversary = buy.m === 2 && buy.d === 29 && !leap ? { y, m: 2, d: 28 } : { y, m: buy.m, d: buy.d };
+  return addDays(anniversary, 1);
+}
+
+/**
+ * Held more than one year. Undated lots are old (saved before dates existed): long-term.
+ * A date that cannot be read counts as short-term (the cautious estimate).
+ */
 function isLong(buy?: string, sell?: string | number): boolean {
   if (!buy) return true;
-  const end = typeof sell === 'number' ? sell : sell ? Date.parse(sell) : Date.now();
-  return end - Date.parse(buy) > YEAR_MS;
+  const b = parseYmd(buy);
+  const end = typeof sell === 'string' ? parseYmd(sell) : localYmd(sell ?? Date.now());
+  if (!b || !end) return false;
+  return ymdText(end) >= ymdText(longFrom(b));
 }
 
 export function taxReport(input: TaxInput): TaxReport {
@@ -211,11 +251,12 @@ export function taxReport(input: TaxInput): TaxReport {
       const g = conv(l.shares * price - l.cost, symbol);
       const long = rules.country === 'IL' || isLong(l.date, now);
       split = add(split, long ? { short: 0, long: g } : { short: g, long: 0 });
-      if (!long && g > 0 && l.date) {
-        const at = Date.parse(l.date) + YEAR_MS + 86400_000;
-        const days = Math.ceil((at - now) / 86400_000);
+      const bought = l.date ? parseYmd(l.date) : undefined;
+      if (!long && g > 0 && bought) {
+        const from = longFrom(bought);
+        const days = Math.round((ymdMs(from) - ymdMs(localYmd(now))) / DAY_MS);
         const saves = g * (rules.usShort - rules.usLong);
-        if (!longSoon || days < longSoon.days) longSoon = { date: new Date(at).toISOString().slice(0, 10), days, shares: l.shares, saves };
+        if (!longSoon || days < longSoon.days) longSoon = { date: ymdText(from), days, shares: l.shares, saves };
       }
     }
     allSplit = add(allSplit, split);
