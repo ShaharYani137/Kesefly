@@ -350,3 +350,4 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-26 09:02 | Pushed both branches; opened PR #13 (P-055) and PR #14 (P-056), stacked on #5 | GitHub | Done |
 | 2026-11-26 09:05 | Recorded P-062…P-072; approved P-064–P-072; needs-human P-062 (account deletion), P-063 (profiles directory RLS); P-055/P-056 marked done | `logs/PROPOSALS.md` | Done |
 | 2026-11-26 09:07 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-26 09:10 | PR #13 checks green (run 45771001240), PR #14 checks green (run 45771006848) | PRs #13, #14 | Done |

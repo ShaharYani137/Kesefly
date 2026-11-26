@@ -184,7 +184,7 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 **Done (awaiting your merge, after #5)**
 - P-055: CSV import reads "182,50" in `;` files as 182.50 (was 18250, cost 100× too high), reports IBKR files with a missing column instead of skipping every trade, rejects 31/02, divides agorot once. [#13](https://github.com/ShaharYani137/Kesefly/pull/13). qa-tester PASS (28 tests). Dates in unknown formats now show as an issue instead of importing undated.
 - P-056: US tax: a sale on the one-year anniversary is short-term again, also across Feb 29; "turns long-term on" date fixed. [#14](https://github.com/ShaharYani137/Kesefly/pull/14). qa-tester PASS (23 tests, 6 time zones).
-- GitHub checks on #13 and #14 were still running at report time.
+- GitHub checks (tests, typecheck, lint) green on both: #13 run 45771001240, #14 run 45771006848.
 - From before: #6–#12, #5.
 
 **Security**
