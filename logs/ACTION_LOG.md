@@ -351,3 +351,10 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-26 09:05 | Recorded P-062…P-072; approved P-064–P-072; needs-human P-062 (account deletion), P-063 (profiles directory RLS); P-055/P-056 marked done | `logs/PROPOSALS.md` | Done |
 | 2026-11-26 09:07 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-26 09:10 | PR #13 checks green (run 45771001240), PR #14 checks green (run 45771006848) | PRs #13, #14 | Done |
+| 2026-11-26 19:45 | Boss evening cycle: no human replies, comments or merges since the morning; `main` unchanged (a69a977) | — | Checked |
+| 2026-11-26 19:50 | Briefed connectivity-engineer and performance-engineer (AUDIT) in parallel; security-guardian (IMPLEMENT P-064, P-065) | — | Done |
+| 2026-11-26 20:05 | qa-tester PASS on P-064 (53aa501) with follow-up fixes 9dd5d61 re-checked PASS; qa-tester + security-guardian PASS on P-065 (91eaaef) | — | PASS |
+| 2026-11-26 20:08 | Pushed `agents/2026-11-26-privacy-text` and `agents/2026-11-26-deep-links`; opened PR #15 (P-064) and PR #16 (P-065), stacked on #5 | GitHub | Done |
+| 2026-11-26 20:12 | Recorded P-073…P-083; approved P-073–P-077, P-079–P-083; rejected P-078 (duplicate of P-032, evidence added there); P-064/P-065 marked done | `logs/PROPOSALS.md` | Done |
+| 2026-11-26 20:15 | PR #15 checks green (run 45871652319), PR #16 checks green (run 45871658559) | PRs #15, #16 | Done |
+| 2026-11-26 20:16 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

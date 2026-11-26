@@ -204,3 +204,36 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-072: "1 days" → "1 day" on the tax screen.
 
 **Next:** implement P-064 (privacy text) and P-065 (deep links). Next audit: connectivity-engineer + performance-engineer.
+
+## 2026-11-26 evening
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so fixes stay stacked on PR #5 and GitHub runs the real checks. No human replies or merges since the morning.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Eleven checked fixes (#6–#16) are stacked on it.
+2. **P-062: add "Delete my account"?** Store blocker (Apple/Google) and privacy law. **Recommendation: yes,** anonymise messages in shared chats.
+3. **P-063: any signed-in user can list every user's id, @username and real name.** **Recommendation: yes,** one migration with P-001/P-002/P-003.
+4. **P-019: confirmation email link carries sign-in tokens.** **Recommendation: yes,** https "Email confirmed" page. (#16 now also keeps those tokens out of the app's routes.)
+5. **Still open, recommendations unchanged:** P-054 (yes), P-060 (yes), P-017 (yes), P-039 (yes), P-024 (off), P-048 (yes), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge, after #5)**
+- P-064: privacy text now says what really leaves the phone (Supabase for cloud accounts, Wikipedia, Yahoo/TASE, Google Translate for Hebrew headlines, AI memory notes). Full EN/HE wording in [#15](https://github.com/ShaharYani137/Kesefly/pull/15), please read it. qa-tester PASS. Checks green (run 45871652319).
+- P-065: outside `kesefly://` links can't auto-run Helper questions or show fake chat titles; bad chat ids show "Chat not found". [#16](https://github.com/ShaharYani137/Kesefly/pull/16). qa-tester and security-guardian PASS, checks green (run 45871658559). Needs a dev-build test: the Expo SDK 58 docs could not be read from here.
+- From before: #5–#14.
+
+**Security**
+- Nothing new above low. P-063 and P-062 (medium) still wait for you.
+
+**Approved since last update**
+- P-074: when the USD/ILS rate is missing (offline start, rate limit), US holdings are added as shekels 1:1, so totals are about 3.6× off. Keep the last good rate, show "—" when none. Top of the queue.
+- P-073: group chats can lose messages after a long connection gap; first chat load never retries.
+- P-075: "big move" alerts fire twice (again after UTC midnight).
+- P-076: Yahoo rate-limit cooldown and max 4 parallel quote requests.
+- P-077, P-081: Lab stops polling when markets are closed and stops rewriting its store every 30 s.
+- P-079: fast Plan taps can schedule duplicate weekly tips.
+- P-080: smoother typing on the Stocks watchlist field.
+- P-082: remove 3 unused native packages (waits for a run with npm access).
+- P-083: small follow-ups to #16.
+- Rejected: P-078, duplicate of P-032.
+
+**Next:** implement P-074 (currency rate) and P-075 (duplicate alerts). Next audit: security-guardian + android-specialist.

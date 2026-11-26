@@ -407,3 +407,10 @@ One section per working session. Newest at bottom.
 - **Work done:** no human replies or merges since last evening. P-055 → PR #13, P-056 → PR #14, both stacked on #5, qa-tester PASS (bun + static). Audits gave P-062…P-070; QA reviews gave P-071, P-072.
 - **Decisions:** approved P-064–P-072. Needs-human: P-062 (account deletion), P-063 (profiles directory RLS).
 - **Next steps:** watch #13/#14 checks; implement P-064 (privacy text) and P-065 (deep links); next audit connectivity-engineer + performance-engineer.
+
+## Session 20 — 2026-11-26 (branch `agents/boss-log`, scheduled Boss evening cycle)
+
+- **Goal:** Boss evening cycle: check changes, audit (connectivity-engineer + performance-engineer), implement P-064 + P-065, log, update.
+- **Work done:** no human replies or merges since the morning. P-064 → PR #15, P-065 → PR #16, both stacked on #5, QA (and security for #16) PASS, checks green. Audits gave P-073…P-082; the P-065 review gave P-083.
+- **Decisions:** approved P-073–P-077 and P-079–P-083; rejected P-078 (duplicate of P-032). No new needs-human items.
+- **Next steps:** implement P-074 (USD/ILS fallback) and P-075 (duplicate move alerts); next audit security-guardian + android-specialist.
