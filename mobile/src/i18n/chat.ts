@@ -46,6 +46,8 @@ const en = {
     cancel: 'Cancel',
     today: 'Today',
     yesterday: 'Yesterday',
+    notFound: 'Chat not found',
+    notFoundBody: 'This chat does not exist or you are not in it.',
     errors: {
       offline: 'Chats need a Kesefly cloud account.',
       signedOut: 'Sign in again to use chats.',
@@ -100,6 +102,8 @@ const he: ChatStrings = {
     cancel: 'ביטול',
     today: 'היום',
     yesterday: 'אתמול',
+    notFound: "הצ'אט לא נמצא",
+    notFoundBody: "הצ'אט הזה לא קיים או שאינכם חברים בו.",
     errors: {
       offline: "צ'אטים דורשים חשבון ענן של כספלי.",
       signedOut: "היכנסו שוב לחשבון כדי להשתמש בצ'אטים.",
