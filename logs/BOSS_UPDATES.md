@@ -168,3 +168,39 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-061: pin the PR-checks actions.
 
 **Next:** implement P-055 (CSV money bug) and P-056 (tax). Next audit: security-guardian + ios-specialist.
+
+## 2026-11-26 morning
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so fixes stay stacked on PR #5 and GitHub runs the real checks. No human replies or merges since last evening.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Nine checked fixes (#6–#14) are stacked on it.
+2. **P-062 (new): add "Delete my account"?** Today a cloud user cannot delete their account, which Apple and Google require before any store release, and Israeli privacy law expects. **Recommendation: yes;** messages in other people's chats are anonymised, not deleted. Needs a Supabase function, so it needs you.
+3. **P-063 (new): any signed-in user can download the full list of users (ids, @usernames, real names).** Limit profiles to yourself and people you chat with, plus a server-side search. **Recommendation: yes,** in one migration with P-001/P-002/P-003.
+4. **P-019: stop the confirmation email link from carrying sign-in tokens?** **Recommendation: yes,** https "Email confirmed" page. Still the top security item.
+5. **P-054 (offline shows "Sign in again"), P-060 (confirm AI memory saves), P-017, P-039, P-024, P-048:** recommendations unchanged (yes / yes / yes / yes / off / yes).
+6. **Still open:** P-020 / P-041, P-021, P-001 / P-002 / P-003, P-029, PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge, after #5)**
+- P-055: CSV import reads "182,50" in `;` files as 182.50 (was 18250, cost 100× too high), reports IBKR files with a missing column instead of skipping every trade, rejects 31/02, divides agorot once. [#13](https://github.com/ShaharYani137/Kesefly/pull/13). qa-tester PASS (28 tests). Dates in unknown formats now show as an issue instead of importing undated.
+- P-056: US tax: a sale on the one-year anniversary is short-term again, also across Feb 29; "turns long-term on" date fixed. [#14](https://github.com/ShaharYani137/Kesefly/pull/14). qa-tester PASS (23 tests, 6 time zones).
+- GitHub checks on #13 and #14 were still running at report time.
+- From before: #6–#12, #5.
+
+**Security**
+- Medium: P-063 user directory open to any account (see above). P-062 no account deletion.
+- Low: P-064, the privacy text says data never goes to a server; not true for cloud accounts, Helper (Wikipedia) and AI memory notes. Low: P-065, outside `kesefly://` links can auto-run a Helper question or show a fake chat title.
+- Checked clean: all Supabase definer functions, anon access, no keys in code, AI share-data default off.
+
+**Approved since last update**
+- P-064: honest privacy text (EN/HE); you'll see the wording in the PR.
+- P-065: outside links can't auto-run questions or fake chat titles.
+- P-066: big text sizes no longer break the PIN keypad and amounts (iOS).
+- P-067: iOS widget readable in tinted/clear Home Screen modes.
+- P-068: VoiceOver names the savings fields (today "0, text field").
+- P-069: iOS Bold Text setting works.
+- P-070: Hebrew iPhone install guide gets the troubleshooting table.
+- P-071: "0,500" no longer read as 500 in import.
+- P-072: "1 days" → "1 day" on the tax screen.
+
+**Next:** implement P-064 (privacy text) and P-065 (deep links). Next audit: connectivity-engineer + performance-engineer.
