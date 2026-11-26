@@ -363,7 +363,7 @@ const en = {
     notifyOn: 'On',
     notifyOff: 'Off',
     privacy:
-      'Your numbers stay on this device and are never sent to a server. Only stock symbols go to Yahoo Finance (prices and news), and the app reads public news feeds (CNBC, MarketWatch, Globes). Your PIN and password are stored encrypted on the phone. If you add your own AI API key (Settings > AI chat), your chat messages go to that AI company; your numbers go only if you turn on sharing.',
+      "Your money numbers stay on this device and are never sent to Kesefly's servers. With a Kesefly cloud account, your email, name, username, messages and chat groups are stored in the Kesefly cloud (Supabase); with an account on this phone only, nothing is uploaded. Stock and fund lookups go to Yahoo Finance and the Tel Aviv Stock Exchange, general questions to the built-in helper go to Wikipedia, and the app reads public news feeds (such as CNBC, MarketWatch, Globes); in Hebrew mode, English headlines are translated by Google Translate. Your PIN and sign-in are stored encrypted on the phone. If you add your own AI API key (Settings > AI chat), your chat messages and memory notes go to that AI company; your numbers go only if you turn on sharing.",
     version: 'Kesefly {v}',
   },
 };
@@ -721,7 +721,7 @@ const he: BaseStrings = {
     notifyTest: 'שליחת טיפ לדוגמה',
     notifyOn: 'פועל',
     notifyOff: 'כבוי',
-    privacy: 'המספרים שלכם נשארים במכשיר ולא נשלחים לשום שרת. רק סימולי מניות נשלחים ל-Yahoo Finance (מחירים וחדשות), והאפליקציה קוראת פידים ציבוריים של חדשות (CNBC, MarketWatch, גלובס). הקוד והסיסמה נשמרים מוצפנים בטלפון. אם תוסיפו מפתח API משלכם (הגדרות > צ׳אט AI), הודעות הצ׳אט נשלחות לחברת ה-AI; המספרים שלכם נשלחים רק אם תפעילו שיתוף.',
+    privacy: 'המספרים הכספיים שלכם נשארים במכשיר ולא נשלחים לשרתים של כספלי. בחשבון ענן של כספלי, האימייל, השם, שם המשתמש, ההודעות וקבוצות הצ׳אט שלכם נשמרים בענן של כספלי (Supabase); בחשבון ששמור רק בטלפון, שום דבר לא עולה לרשת. חיפושי מניות וקרנות נשלחים ל-Yahoo Finance ולבורסה לניירות ערך בתל אביב, שאלות כלליות לעוזר המובנה נשלחות לוויקיפדיה, והאפליקציה קוראת פידים ציבוריים של חדשות (כמו CNBC, MarketWatch, גלובס); במצב עברית, כותרות באנגלית מתורגמות על ידי Google Translate. הקוד ופרטי ההתחברות נשמרים מוצפנים בטלפון. אם תוסיפו מפתח API משלכם (הגדרות > צ׳אט AI), הודעות הצ׳אט והערות הזיכרון נשלחות לחברת ה-AI; המספרים שלכם נשלחים רק אם תפעילו שיתוף.',
     version: 'כספלי {v}',
   },
 };
