@@ -10,7 +10,10 @@
  *   when their headers use the usual words (symbol / סימול / מספר נייר, date / תאריך,
  *   quantity / כמות, price / שער, fee / עמלה, action / סוג פעולה ...).
  * Tel Aviv security numbers become Yahoo symbols through the bundled TASE list. Prices in a
- * column named in agorot are divided by 100.
+ * column named in agorot are divided by 100 here, once (`agorotConverted`); for other files the
+ * Import screen asks and converts with `toShekelRows`.
+ * Numbers: in a ;-delimited file a comma is the decimal mark ("182,50" = 182.5); otherwise a
+ * comma before exactly 3 digits groups thousands ("1,234.56", "1,234").
  */
 import TASE from '@/data/tase-securities.json';
 
@@ -33,7 +36,8 @@ export type ImportRow = {
   line: number;
 };
 
-export type ImportIssue = { line: number; reason: 'symbol' | 'number' | 'action' };
+/** `date`: a date that does not exist (31/02) or cannot be read. `column`: the section's header lacks a needed column. */
+export type ImportIssue = { line: number; reason: 'symbol' | 'number' | 'action' | 'date' | 'column' };
 
 export type ImportResult = {
   format: 'ibkr' | 'table' | 'unknown';
@@ -41,6 +45,8 @@ export type ImportResult = {
   issues: ImportIssue[];
   /** Rows that were not trades (deposits, interest, totals): skipped quietly. */
   skipped: number;
+  /** True when the price column was named in agorot and prices were already divided by 100. */
+  agorotConverted: boolean;
 };
 
 type TaseRow = [string, string, string, string, string];
@@ -56,12 +62,17 @@ const HEBREW = /[֐-׿]/;
 
 // ---------- CSV ----------
 
+/** Guesses the delimiter (, ; or tab) from the first non-empty line. */
+export function detectDelimiter(text: string): ',' | ';' | '\t' {
+  const first = text.replace(/^﻿/, '').split(/\r?\n/).find((l) => l.trim()) ?? '';
+  const counts = ([',', ';', '\t'] as const).map((d) => ({ d, n: first.split(d).length }));
+  return counts.sort((a, b) => b.n - a.n)[0].d;
+}
+
 /** Splits CSV text into rows of cells. Handles quotes, "" escapes, CRLF, BOM; guesses , ; or tab. */
 export function parseCsv(text: string): string[][] {
   const src = text.replace(/^﻿/, '');
-  const first = src.split(/\r?\n/).find((l) => l.trim()) ?? '';
-  const counts = [',', ';', '\t'].map((d) => ({ d, n: first.split(d).length }));
-  const delim = counts.sort((a, b) => b.n - a.n)[0].d;
+  const delim = detectDelimiter(src);
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -98,15 +109,36 @@ export function parseCsv(text: string): string[][] {
 
 // ---------- Values ----------
 
-/** "1,234.50", "(12.3)", "$45", "₪ 12", "-3" → number; NaN when not a number. */
-export function parseNumber(t: string | undefined): number {
+/**
+ * "1,234.50", "1.234,50", "182,50", "(12.3)", "$45", "₪ 12", "-3" → number; NaN when not a number.
+ * `decimalComma` (the file is ;-delimited): a lone comma is the decimal mark, so "1,234" = 1.234.
+ * Otherwise a lone comma before exactly 3 digits groups thousands ("1,234" = 1234) and any other
+ * lone comma is a decimal mark ("182,50" = 182.5: thousands groups always have 3 digits).
+ * Mixed or badly grouped separators that fit neither style give NaN, so the line is reported.
+ */
+export function parseNumber(t: string | undefined, decimalComma = false): number {
   if (t === undefined) return NaN;
   let s = t.trim();
   if (!s) return NaN;
   const neg = /^\(.*\)$/.test(s) || /-$/.test(s);
   s = s.replace(/[()$₪€£\s‎‏]/g, '').replace(/-$/, '');
-  if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); // 1.234,50
-  else s = s.replace(/,/g, '');
+  const comma = s.lastIndexOf(',');
+  const dot = s.lastIndexOf('.');
+  if (comma >= 0 && dot >= 0) {
+    if (comma > dot) {
+      // 1.234,50
+      if (!/^-?\d{1,3}(\.\d{3})*,\d+$/.test(s)) return NaN;
+      s = s.replace(/\./g, '').replace(',', '.');
+    } else {
+      // 1,234.50
+      if (!/^-?\d{1,3}(,\d{3})*\.\d+$/.test(s)) return NaN;
+      s = s.replace(/,/g, '');
+    }
+  } else if (comma >= 0) {
+    if (s.indexOf(',') === comma && (decimalComma || !/^-?\d{1,3},\d{3}$/.test(s))) s = s.replace(',', '.'); // 182,50
+    else if (/^-?\d{1,3}(,\d{3})+$/.test(s)) s = s.replace(/,/g, ''); // 1,234,567
+    else return NaN;
+  } else if (decimalComma && /^-?\d{1,3}(\.\d{3}){2,}$/.test(s)) s = s.replace(/\./g, ''); // 1.234.567
   const n = Number(s);
   return neg ? -Math.abs(n) : n;
 }
@@ -128,7 +160,8 @@ export function parseDate(t: string | undefined, dayFirst: boolean): string | un
     y = +r[3] < 100 ? 2000 + +r[3] : +r[3];
     [d, m] = dayFirst ? [a, b] : [b, a];
   } else return undefined;
-  if (m < 1 || m > 12 || d < 1 || d > 31) return undefined;
+  // Days in the month, leap years included (31/02 and 29/02/2025 do not exist).
+  if (m < 1 || m > 12 || d < 1 || d > new Date(Date.UTC(y, m, 0)).getUTCDate()) return undefined;
   return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
@@ -171,7 +204,17 @@ function actionOf(t: string | undefined): ImportKind | 'other' | undefined {
 
 // ---------- Interactive Brokers ----------
 
-function parseIbkr(rows: string[][]): ImportResult {
+/** Columns a row of each IBKR section cannot be read without. */
+const IBKR_REQUIRED: Record<string, string[]> = {
+  Trades: ['Symbol', 'Quantity', 'T. Price'],
+  Dividends: ['Description', 'Amount'],
+  'Withholding Tax': ['Description', 'Amount'],
+};
+
+/** A date cell that has text but no real date (31/02, an unknown format) is an error, not "no date". */
+const badDate = (raw: string | undefined, date: string | undefined) => !!raw?.trim() && !date;
+
+function parseIbkr(rows: string[][], decimalComma: boolean): ImportResult {
   const out: ImportRow[] = [];
   const issues: ImportIssue[] = [];
   let skipped = 0;
@@ -186,34 +229,46 @@ function parseIbkr(rows: string[][]): ImportResult {
     }
     if (kind !== 'Data') return;
     const h = headers.get(section) ?? [];
-    const get = (name: string) => r[2 + h.indexOf(name)];
+    // A column missing from the header reads as undefined (not r[1], the "Data" marker).
+    const get = (name: string) => {
+      const at = h.indexOf(name);
+      return at < 0 ? undefined : r[2 + at];
+    };
+    const num = (name: string) => parseNumber(get(name), decimalComma);
+    const missing = (IBKR_REQUIRED[section] ?? []).some((c) => !h.includes(c));
     if (section === 'Trades') {
       if (get('DataDiscriminator') && get('DataDiscriminator') !== 'Order') return skipped++;
       if (!/stock|etf|fund/i.test(get('Asset Category') ?? 'Stocks')) return skipped++;
-      const qty = parseNumber(get('Quantity'));
-      const price = parseNumber(get('T. Price'));
+      if (missing) return issues.push({ line, reason: 'column' });
+      const qty = num('Quantity');
+      const price = num('T. Price');
       const symbol = resolveSymbol(get('Symbol') ?? '', get('Currency'));
       if (!symbol) return issues.push({ line, reason: 'symbol' });
       if (!Number.isFinite(qty) || !qty || !Number.isFinite(price)) return issues.push({ line, reason: 'number' });
+      const date = parseDate(get('Date/Time'), false);
+      if (badDate(get('Date/Time'), date)) return issues.push({ line, reason: 'date' });
       out.push({
         kind: qty < 0 ? 'sell' : 'buy',
         symbol,
-        date: parseDate(get('Date/Time'), false),
+        date,
         shares: Math.abs(qty),
         price,
-        fee: Math.abs(parseNumber(get('Comm/Fee')) || 0),
+        fee: Math.abs(num('Comm/Fee') || 0),
         amount: 0,
         tax: 0,
         line,
       });
     } else if (section === 'Dividends' || section === 'Withholding Tax') {
+      if (/^total/i.test(get('Currency') ?? '')) return skipped++;
+      if (missing) return issues.push({ line, reason: 'column' });
       const desc = get('Description') ?? '';
-      const amount = parseNumber(get('Amount'));
-      if (/^total/i.test(get('Currency') ?? '') || !desc) return skipped++;
+      const amount = num('Amount');
+      if (!desc) return skipped++;
       const symbol = resolveSymbol(desc.split(/[(\s]/)[0], get('Currency'));
       if (!symbol) return issues.push({ line, reason: 'symbol' });
       if (!Number.isFinite(amount)) return issues.push({ line, reason: 'number' });
       const date = parseDate(get('Date'), false);
+      if (badDate(get('Date'), date)) return issues.push({ line, reason: 'date' });
       if (section === 'Withholding Tax') withholding.push({ symbol, date, amount: -amount });
       else out.push({ kind: 'dividend', symbol, date, shares: 0, price: 0, fee: 0, amount, tax: 0, line });
     } else skipped++;
@@ -223,7 +278,7 @@ function parseIbkr(rows: string[][]): ImportResult {
     const d = out.find((x) => x.kind === 'dividend' && x.symbol === w.symbol && x.date === w.date);
     if (d) d.tax += w.amount;
   }
-  return { format: 'ibkr', rows: out, issues, skipped };
+  return { format: 'ibkr', rows: out, issues, skipped, agorotConverted: false };
 }
 
 // ---------- Generic table ----------
@@ -261,12 +316,12 @@ function mapHeader(cells: string[]): Partial<Record<Col, number>> {
   return m;
 }
 
-function parseTable(rows: string[][]): ImportResult {
+function parseTable(rows: string[][], decimalComma: boolean): ImportResult {
   const hi = rows.findIndex((r) => {
     const m = mapHeader(r);
     return (m.symbol ?? m.id ?? m.name) !== undefined && (m.qty !== undefined || m.amount !== undefined);
   });
-  if (hi < 0) return { format: 'unknown', rows: [], issues: [], skipped: rows.length };
+  if (hi < 0) return { format: 'unknown', rows: [], issues: [], skipped: rows.length, agorotConverted: false };
   const header = rows[hi];
   const m = mapHeader(header);
   const agorot = m.price !== undefined && /אגורות|agorot|ila/i.test(header[m.price]);
@@ -287,7 +342,8 @@ function parseTable(rows: string[][]): ImportResult {
       skipped++;
       continue;
     }
-    const qty = parseNumber(cell('qty'));
+    const num = (c: Col) => parseNumber(cell(c), decimalComma);
+    const qty = num('qty');
     const action = actionOf(cell('action'));
     if (action === 'other') {
       skipped++;
@@ -304,32 +360,48 @@ function parseTable(rows: string[][]): ImportResult {
       continue;
     }
     const date = parseDate(cell('date'), dayFirst);
-    const fee = Math.abs(parseNumber(cell('fee')) || 0);
-    const amount = Math.abs(parseNumber(cell('amount')));
+    if (badDate(cell('date'), date)) {
+      issues.push({ line, reason: 'date' });
+      continue;
+    }
+    const fee = Math.abs(num('fee') || 0);
+    const amount = Math.abs(num('amount'));
     if (kind === 'dividend') {
       if (!Number.isFinite(amount) || !amount) {
         issues.push({ line, reason: 'number' });
         continue;
       }
-      out.push({ kind, symbol, date, shares: 0, price: 0, fee: 0, amount, tax: Math.abs(parseNumber(cell('tax')) || 0), line });
+      out.push({ kind, symbol, date, shares: 0, price: 0, fee: 0, amount, tax: Math.abs(num('tax') || 0), line });
       continue;
     }
-    let price = Math.abs(parseNumber(cell('price')));
+    let price = Math.abs(num('price'));
+    // Only a price read from the agorot column is in agorot; amount / quantity is already in shekels.
+    if (agorot) price /= 100;
     const shares = Math.abs(qty);
-    // No price column: amount / quantity.
+    // No price: amount / quantity.
     if (!Number.isFinite(price) && Number.isFinite(amount) && shares) price = amount / shares;
     if (!Number.isFinite(shares) || !shares || !Number.isFinite(price) || !price) {
       issues.push({ line, reason: 'number' });
       continue;
     }
-    if (agorot) price /= 100;
     out.push({ kind, symbol, date, shares, price, fee, amount: 0, tax: 0, line });
   }
-  return { format: 'table', rows: out, issues, skipped };
+  return { format: 'table', rows: out, issues, skipped, agorotConverted: agorot };
 }
 
 export function parseImport(text: string): ImportResult {
   const rows = parseCsv(text);
-  if (rows.some((r) => r[1] === 'Header' && (r[0] === 'Trades' || r[0] === 'Dividends'))) return parseIbkr(rows);
-  return parseTable(rows);
+  const decimalComma = detectDelimiter(text) === ';';
+  if (rows.some((r) => r[1] === 'Header' && (r[0] === 'Trades' || r[0] === 'Dividends'))) return parseIbkr(rows, decimalComma);
+  return parseTable(rows, decimalComma);
+}
+
+/**
+ * The Import screen's "Tel Aviv prices are in shekels / agorot" choice. With 'ila', Tel Aviv buy
+ * and sell prices and fees are divided by 100, unless the engine already converted the file
+ * (`agorotConverted`), so agorot are never divided twice.
+ */
+export function toShekelRows(result: ImportResult, unit: 'ils' | 'ila'): ImportRow[] {
+  if (unit === 'ils' || result.agorotConverted) return result.rows;
+  return result.rows.map((r) => (r.kind !== 'dividend' && r.symbol.endsWith('.TA') ? { ...r, price: r.price / 100, fee: r.fee / 100 } : r));
 }

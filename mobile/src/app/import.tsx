@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { TextInput, View } from 'react-native';
 
-import { type ImportResult, type ImportRow, parseImport } from '@/engine/csv-import';
+import { type ImportResult, type ImportRow, parseImport, toShekelRows } from '@/engine/csv-import';
 import { formatPrice } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
 import { alertDir } from '@/ui/bidi';
@@ -46,15 +46,12 @@ export default function ImportScreen() {
     [holdings, sales, dividends],
   );
 
-  const rows = useMemo(() => {
-    if (!result) return [];
-    const k = agorot === 'ila' ? 0.01 : 1;
-    return result.rows.map((r) => (r.kind !== 'dividend' && r.symbol.endsWith('.TA') ? { ...r, price: r.price * k, fee: r.fee * k } : r));
-  }, [result, agorot]);
+  // A file whose price column is named in agorot is converted by the engine; never divide it again.
+  const rows = useMemo(() => (result ? toShekelRows(result, agorot) : []), [result, agorot]);
   const rowKey = (r: ImportRow) => `${r.kind}|${r.kind === 'dividend' ? key({ symbol: r.symbol, date: r.date, amount: r.amount }) : key({ symbol: r.symbol, date: r.date, shares: r.shares, price: r.price })}`;
   const fresh = rows.filter((r) => !existing.has(rowKey(r)));
   const count = (k: ImportRow['kind']) => rows.filter((r) => r.kind === k).length;
-  const hasTA = rows.some((r) => r.kind !== 'dividend' && r.symbol.endsWith('.TA'));
+  const hasTA = !result?.agorotConverted && rows.some((r) => r.kind !== 'dividend' && r.symbol.endsWith('.TA'));
 
   const read = () => {
     setResult(parseImport(text));
