@@ -5,6 +5,10 @@
  *
  * New messages arrive live (Realtime) with a 15 s catch-up poll as a safety net. Sending shows
  * the message at once; a failed send stays in the list and can be tapped to try again.
+ *
+ * The id must be a uuid; anything else, or a chat the server does not return (missing, or the
+ * user is not a member), shows "Chat not found" and loads nothing. The `title` param is only a
+ * placeholder until the server's title or the other member's name arrives.
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -12,6 +16,7 @@ import { ActivityIndicator, FlatList, Keyboard, Pressable, TextInput, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getConversation, leaveConversation, listMembers, listMessages, markRead, MAX_BODY, type Member, type Message, myUserId, sendMessage } from '@/chat/api';
+import { isChatId } from '@/chat/ids';
 import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
 import { BackButton, IconButton, Row, Txt } from '@/ui/components';
@@ -27,6 +32,7 @@ type Item = { kind: 'msg'; m: Message } | { kind: 'pending'; p: Pending };
 
 export default function ChatRoomScreen() {
   const { id, title: titleParam } = useLocalSearchParams<{ id: string; title?: string }>();
+  const valid = isChatId(id);
   const { s, lang, isRTL } = useApp();
   const { colors, type, isIOS } = useTokens();
   const errorText = useChatError();
@@ -40,8 +46,11 @@ export default function ChatRoomScreen() {
   const [isGroup, setIsGroup] = useState(false);
   /** 1:1 chat with a verified account: badge after the name in the header. */
   const [peerVerified, setPeerVerified] = useState(false);
-  const [title, setTitle] = useState(titleParam ?? '');
-  const [loading, setLoading] = useState(true);
+  const [title, setTitle] = useState(valid && typeof titleParam === 'string' ? titleParam : '');
+  const [loading, setLoading] = useState(valid);
+  /** The server returned no such chat for this user. */
+  const [missing, setMissing] = useState(false);
+  const notFound = !valid || missing;
   const [older, setOlder] = useState(true);
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
@@ -57,14 +66,21 @@ export default function ChatRoomScreen() {
 
   // First load: who am I, the chat, its members, the latest messages.
   useEffect(() => {
+    if (!isChatId(id)) return;
     let live = true;
     Promise.all([myUserId(), getConversation(id), listMembers(id), listMessages(id)])
       .then(([uid, conv, mem, msgs]) => {
         if (!live) return;
+        if (!conv) {
+          setMissing(true);
+          setTitle('');
+          return;
+        }
         setMe(uid);
-        setIsGroup(conv?.is_group ?? false);
-        if (conv?.is_group && conv.title) setTitle(conv.title);
-        if (!conv?.is_group) {
+        setIsGroup(conv.is_group);
+        // The server's title wins over the `title` param.
+        if (conv.is_group && conv.title) setTitle(conv.title);
+        if (!conv.is_group) {
           const peer = mem.find((m) => m.user_id !== uid)?.profile;
           if (peer) {
             setTitle(peer.display_name || `@${peer.username}`);
@@ -91,6 +107,7 @@ export default function ChatRoomScreen() {
 
   // Live messages + catch-up poll.
   useEffect(() => {
+    if (!isChatId(id) || missing) return;
     const unsubscribe = subscribeMessages((m) => {
       merge([m]);
       markRead(id).catch(() => {});
@@ -109,7 +126,7 @@ export default function ChatRoomScreen() {
       unsubscribe();
       clearInterval(poll);
     };
-  }, [id, merge]);
+  }, [id, merge, missing]);
 
   const loadOlder = () => {
     const last = messages[messages.length - 1];
@@ -212,6 +229,24 @@ export default function ChatRoomScreen() {
       </View>
     );
   };
+
+  if (notFound) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
+        <Row style={{ paddingHorizontal: 4, paddingVertical: 6, gap: 8, borderBottomWidth: 0.5, borderColor: colors.separator }}>
+          <BackButton onPress={() => router.back()} />
+        </Row>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Metrics.margin, gap: 8 }}>
+          <Txt variant="headline" accessibilityRole="header" style={{ textAlign: 'center' }}>
+            {s.chat.notFound}
+          </Txt>
+          <Txt variant="subhead" color="textSecondary" style={{ textAlign: 'center' }}>
+            {s.chat.notFoundBody}
+          </Txt>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background, direction: isRTL ? 'rtl' : 'ltr' }}>
