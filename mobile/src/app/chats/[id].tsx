@@ -3,7 +3,8 @@
  * the trailing side (left in Hebrew, mirrored), the sender's name above others' messages in
  * groups, and day headers.
  *
- * New messages arrive live (Realtime) with a 15 s catch-up poll as a safety net. Sending shows
+ * New messages arrive live (Realtime) with a 15 s catch-up poll, and a catch-up after the socket
+ * reconnects, as a safety net. A failed first load is retried while the screen is open. Sending shows
  * the message at once; a failed send stays in the list and can be tapped to try again.
  *
  * The id must be a uuid; anything else, or a chat the server does not return (missing, or the
@@ -15,7 +16,7 @@ import { type ComponentRef, useCallback, useEffect, useMemo, useRef, useState } 
 import { ActivityIndicator, FlatList, Keyboard, Pressable, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { getConversation, leaveConversation, listMembers, listMessages, markRead, MAX_BODY, type Member, type Message, myUserId, sendMessage } from '@/chat/api';
+import { ChatError, getConversation, leaveConversation, listMembers, listMessages, listMessagesSince, markRead, MAX_BODY, type Member, type Message, myUserId, PAGE, sendMessage } from '@/chat/api';
 import { isChatId } from '@/chat/ids';
 import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
@@ -64,12 +65,25 @@ export default function ChatRoomScreen() {
     });
   }, []);
 
-  // First load: who am I, the chat, its members, the latest messages.
+  /**
+   * Catch-up goes on from this id: we hold every message up to it. Only the first load and
+   * catch-up move it, never a live message, so messages missed before a live one are still
+   * fetched. Null until the first load succeeds (no catch-up before that).
+   */
+  const syncedRef = useRef<number | null>(null);
+
+  // First load: who am I (first, so own messages sit on the right side), then the chat, its
+  // members and the latest messages. A failure that may pass (network, token refresh) is
+  // retried while the screen is open: 2 s, 4 s, 8 s ... up to 30 s apart (Kesefly design decision).
   useEffect(() => {
     if (!isChatId(id)) return;
     let live = true;
-    Promise.all([myUserId(), getConversation(id), listMembers(id), listMessages(id)])
-      .then(([uid, conv, mem, msgs]) => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    syncedRef.current = null;
+    const attempt = async (n: number) => {
+      try {
+        const uid = await myUserId();
+        const [conv, mem, msgs] = await Promise.all([getConversation(id), listMembers(id), listMessages(id)]);
         if (!live) return;
         if (!conv) {
           setMissing(true);
@@ -88,41 +102,74 @@ export default function ChatRoomScreen() {
           }
         }
         setMembers(mem);
-        setMessages(msgs);
-        setOlder(msgs.length >= 50);
+        // Merge, not replace: live messages may have arrived while an earlier attempt failed.
+        merge(msgs);
+        setOlder(msgs.length >= PAGE);
+        setError('');
+        syncedRef.current = msgs[0]?.id ?? 0; // newest first; an empty chat starts from 0
         markRead(id).catch(() => {});
-      })
-      .catch((e) => live && setError(errorText(e)))
-      .finally(() => live && setLoading(false));
+      } catch (e) {
+        if (!live) return;
+        setError(errorText(e));
+        const permanent = e instanceof ChatError && (e.code === 'offline' || e.code === 'invalid' || e.code === 'notSetUp');
+        if (!permanent) timer = setTimeout(() => void attempt(n + 1), Math.min(2000 * 2 ** n, 30_000));
+      } finally {
+        if (live) setLoading(false);
+      }
+    };
+    void attempt(0);
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [id, errorText]);
+  }, [id, errorText, merge]);
 
-  const newest = messages[0]?.id;
-  const newestRef = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    newestRef.current = newest;
-  }, [newest]);
-
-  // Live messages + catch-up poll.
+  // Live messages + catch-up (every 15 s, and after the socket reconnects): pages forward from
+  // the sync point, so a long gap loses nothing (merge drops the ones already shown). One catch-up at a time; a request
+  // made while one runs starts another right after it.
   useEffect(() => {
     if (!isChatId(id) || missing) return;
-    const unsubscribe = subscribeMessages((m) => {
-      merge([m]);
-      markRead(id).catch(() => {});
-    }, id);
-    const poll = setInterval(() => {
-      listMessages(id, newestRef.current ? { after: newestRef.current } : {})
-        .then((r) => {
+    let live = true;
+    let running = false;
+    let again = false;
+    const catchUp = async () => {
+      if (syncedRef.current === null) return;
+      if (running) {
+        again = true;
+        return;
+      }
+      running = true;
+      try {
+        do {
+          again = false;
+          const from = syncedRef.current;
+          if (from === null) return;
+          const { messages: r } = await listMessagesSince(id, from);
+          if (!live) return;
           if (r.length) {
             merge(r);
+            // Oldest first and gap-free: the last one is the new sync point.
+            syncedRef.current = Math.max(from, r[r.length - 1].id);
             markRead(id).catch(() => {});
           }
-        })
-        .catch(() => {});
-    }, POLL_MS);
+        } while (again && live);
+      } catch {
+        // Next poll tries again.
+      } finally {
+        running = false;
+      }
+    };
+    const unsubscribe = subscribeMessages(
+      (m) => {
+        merge([m]);
+        markRead(id).catch(() => {});
+      },
+      id,
+      () => void catchUp(),
+    );
+    const poll = setInterval(() => void catchUp(), POLL_MS);
     return () => {
+      live = false;
       unsubscribe();
       clearInterval(poll);
     };
@@ -135,7 +182,7 @@ export default function ChatRoomScreen() {
     listMessages(id, { before: last.id })
       .then((r) => {
         setMessages((cur) => [...cur, ...r.filter((m) => !cur.some((c) => c.id === m.id))]);
-        setOlder(r.length >= 50);
+        setOlder(r.length >= PAGE);
       })
       .catch(() => setOlder(true));
   };
