@@ -277,8 +277,8 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 3. **Still open, recommendations unchanged:** P-088 (yes), P-089 (yes), P-062 delete account (yes), P-063 (yes), P-019 (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
 
 **Done (awaiting your merge)**
-- P-073: group chats no longer lose messages after a connection gap of more than 50 messages; a failed first load retries by itself. [#19](https://github.com/ShaharYani137/Kesefly/pull/19), stacked on #16. qa-tester PASS, security-guardian PASS.
-- P-076 step 1: after Yahoo says "too many requests", the app pauses quote requests (60 s, doubling up to 15 min), sends at most 4 at once, and never shows an old price as a fresh forced refresh. [#20](https://github.com/ShaharYani137/Kesefly/pull/20). qa-tester PASS after one fix round, security-guardian PASS.
+- P-073: group chats no longer lose messages after a connection gap of more than 50 messages; a failed first load retries by itself. [#19](https://github.com/ShaharYani137/Kesefly/pull/19), stacked on #16. qa-tester PASS, security-guardian PASS, checks green (run 46045388387).
+- P-076 step 1: after Yahoo says "too many requests", the app pauses quote requests (60 s, doubling up to 15 min), sends at most 4 at once, and never shows an old price as a fresh forced refresh. [#20](https://github.com/ShaharYani137/Kesefly/pull/20). qa-tester PASS after one fix round, security-guardian PASS, checks green (run 46045394242).
 - From before: #5–#18.
 
 **Approved / rejected since last update**
