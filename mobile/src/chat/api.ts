@@ -150,12 +150,40 @@ export async function listMembers(conv: string): Promise<Member[]> {
 
 /* ---------- Messages ---------- */
 
-const PAGE = 50;
+export const PAGE = 50;
+/** Most pages one catch-up reads (500 messages); the next catch-up goes on from there. Kesefly design decision. */
+export const CATCH_UP_MAX_PAGES = 10;
 
-/** Newest first. `before`: load older than this message id. `after`: only newer (catch-up). */
-export function listMessages(conv: string, opts: { before?: number; after?: number } = {}): Promise<Message[]> {
-  const range = opts.before ? `&id=lt.${opts.before}` : opts.after ? `&id=gt.${opts.after}` : '';
-  return request<Message[]>(`messages?conversation_id=eq.${conv}${range}&select=id,conversation_id,sender_id,body,created_at&order=id.desc&limit=${PAGE}`);
+const MESSAGE_FIELDS = 'select=id,conversation_id,sender_id,body,created_at';
+
+/** Newest first, one page. `before`: load older than this message id. */
+export function listMessages(conv: string, opts: { before?: number } = {}): Promise<Message[]> {
+  const range = opts.before ? `&id=lt.${opts.before}` : '';
+  return request<Message[]>(`messages?conversation_id=eq.${conv}${range}&${MESSAGE_FIELDS}&order=id.desc&limit=${PAGE}`);
+}
+
+/**
+ * Catch-up: every message newer than `after`, oldest first. Pages forward in ascending id order
+ * until a short page, so a long gap (socket down, app in background) loses nothing. Stops after
+ * `maxPages`, or when a later page fails, with `more: true`: the caller merges what came and the
+ * next catch-up goes on from the newest id it now has. A failed first page throws.
+ */
+export async function listMessagesSince(conv: string, after: number, maxPages = CATCH_UP_MAX_PAGES): Promise<{ messages: Message[]; more: boolean }> {
+  const messages: Message[] = [];
+  let from = after;
+  for (let page = 0; page < maxPages; page++) {
+    let rows: Message[];
+    try {
+      rows = await request<Message[]>(`messages?conversation_id=eq.${conv}&id=gt.${from}&${MESSAGE_FIELDS}&order=id.asc&limit=${PAGE}`);
+    } catch (e) {
+      if (page === 0) throw e;
+      return { messages, more: true };
+    }
+    messages.push(...rows);
+    if (rows.length < PAGE) return { messages, more: false };
+    from = rows[rows.length - 1].id;
+  }
+  return { messages, more: true };
 }
 
 export async function sendMessage(conv: string, body: string): Promise<Message> {

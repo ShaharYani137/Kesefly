@@ -7,13 +7,14 @@
  *
  * The socket sends a heartbeat every 25 s, reconnects with a growing delay (1 s up to 30 s)
  * and re-joins every channel with a fresh token. It closes when nothing is subscribed.
- * Screens still poll now and then, so a missed event only delays a message.
+ * After a reconnect, `onRejoin` tells the screen to fetch what it missed while the socket was
+ * down. Screens still poll now and then, so a missed event only delays a message.
  */
 import { getAccessToken, SUPABASE_KEY, SUPABASE_URL } from '@/state/auth';
 
 import { chatAvailable, type Message } from './api';
 
-type Sub = { topic: string; filter?: string; onInsert: (m: Message) => void; joinRef?: string };
+type Sub = { topic: string; filter?: string; onInsert: (m: Message) => void; onRejoin?: () => void; joinRef?: string };
 
 const HEARTBEAT_MS = 25_000;
 
@@ -69,7 +70,13 @@ function connect() {
   ws = socket;
   socket.onopen = () => {
     backoff = 1000;
-    subs.forEach((s) => void join(s));
+    subs.forEach((s) => {
+      // Joined on an earlier socket: events may have been missed while it was down.
+      const rejoin = s.joinRef !== undefined;
+      void join(s).then(() => {
+        if (rejoin) s.onRejoin?.();
+      });
+    });
     heartbeat = setInterval(() => {
       send({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: nextRef() });
       // Keep the token on the channels fresh (tokens last about an hour).
@@ -106,15 +113,17 @@ function connect() {
 
 /**
  * Calls `onInsert` for each new message: of one conversation, or of all the user's
- * conversations when `conversationId` is left out. Returns an unsubscribe function.
+ * conversations when `conversationId` is left out. `onRejoin` runs after the socket reconnects,
+ * so the caller can catch up on messages sent while it was down. Returns an unsubscribe function.
  */
-export function subscribeMessages(onInsert: (m: Message) => void, conversationId?: string): () => void {
+export function subscribeMessages(onInsert: (m: Message) => void, conversationId?: string, onRejoin?: () => void): () => void {
   if (!chatAvailable()) return () => {};
   const key = `${++seq}`;
   const sub: Sub = {
     topic: `realtime:kesefly-chat-${conversationId ?? 'inbox'}-${key}`,
     filter: conversationId ? `conversation_id=eq.${conversationId}` : undefined,
     onInsert,
+    onRejoin,
   };
   subs.set(key, sub);
   if (ws?.readyState === WebSocket.OPEN) void join(sub);
