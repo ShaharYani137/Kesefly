@@ -16,7 +16,7 @@ import { ago } from '@/engine/news';
 import { formatPrice, formatSigned, type Quote } from '@/engine/stocks';
 import { ACADEMY } from '@/i18n/academy';
 import { fill, useApp } from '@/state/app-store';
-import { usePortfolio } from '@/state/portfolio';
+import { gainPct, usePortfolio } from '@/state/portfolio';
 import { Sparkline } from '@/ui/charts';
 import { Button, Card, ChangeBadge, CountUp, LiveDot, Pill, ProgressBar, Row, SymbolBadge, Txt } from '@/ui/components';
 import { useEvents } from '@/ui/events';
@@ -227,7 +227,7 @@ export function PortfolioCard({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
             {`${s.stock.dayChange} ${formatSigned(pf.day, pf.cur, lang)}`}
           </Txt>
           <Txt variant="subhead" style={{ color: gain >= 0 ? '#7EE2A8' : '#FF8A80', writingDirection: 'ltr' }}>
-            {`${s.stock.totalGain} ${formatSigned(pf.invested ? gain / pf.invested : 0, pf.cur, lang, true)}`}
+            {`${s.stock.totalGain} ${formatSigned(gainPct(gain, pf.invested), pf.cur, lang, true)}`}
           </Txt>
         </Row>
         {pf.rows.slice(0, 3).map((r) => (

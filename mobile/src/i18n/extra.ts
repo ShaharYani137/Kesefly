@@ -177,6 +177,8 @@ const en = {
     sortDefault: 'My order',
     sortMovers: 'Top movers',
     convertedNote: 'Total in {cur} at 1 USD = {rate} ILS.',
+    rateAsOf: 'Rate as of {time}.',
+    rateMissing: 'No USD/ILS rate yet, so converted amounts show —. They fill in once the rate loads.',
   },
   assistant: {
     stock:
@@ -603,6 +605,8 @@ const he: ExtraStrings = {
     sortDefault: 'הסדר שלי',
     sortMovers: 'הכי זזות',
     convertedNote: 'סה״כ ב-{cur} לפי 1 דולר = {rate} ש״ח.',
+    rateAsOf: 'שער נכון ל-{time}.',
+    rateMissing: 'עדיין אין שער דולר-שקל, לכן סכומים מומרים מוצגים כ-—. הם יתמלאו כשהשער ייטען.',
   },
   assistant: {
     stock: '{name} ({symbol}): {price}, {pct} היום.\n• חודש: {m1} · שנה: {y1}\n• טווח 52 שבועות: {low} – {high} (עכשיו ב-{pos}% מהטווח)',

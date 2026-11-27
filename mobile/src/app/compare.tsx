@@ -64,6 +64,8 @@ export default function CompareScreen() {
         ];
         const now = Date.now();
         const replay = replayIndex(flows, idx, meta.currency, pf.cur, fx, now);
+        // NaN = a USD/ILS conversion with no rate at all: show the error and retry, not a fake comparison.
+        if (!Number.isFinite(replay.value) || !Number.isFinite(pf.total)) throw new Error('no fx rate');
         setResult({ key, status: 'done', idx: replay, yourIrr: xirr([...flows, { t: now, amount: pf.total }]) });
       })
       .catch(() => alive && setResult({ key, status: 'error' }));

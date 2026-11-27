@@ -688,7 +688,8 @@ export function CountUp({ value, format, style }: { value: number; format: (v: n
   const [shown, setShown] = useState(value);
   const from = useRef(0);
   useEffect(() => {
-    const start = from.current;
+    // A value that was not a number (shown as "—") has no start to count from.
+    const start = Number.isFinite(from.current) ? from.current : value;
     const t0 = Date.now();
     let raf = 0;
     const tick = () => {

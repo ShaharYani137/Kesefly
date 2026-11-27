@@ -287,6 +287,8 @@ async function portfolioAnswer(c: Ctx): Promise<AssistantReply> {
   }
   if (!rows.length) return { text: s.assistant.offline };
   const total = rows.reduce((x, r) => x + r.value, 0);
+  // NaN = a USD/ILS conversion with no rate at all: say live data is missing, not a wrong total.
+  if (!Number.isFinite(total)) return { text: s.assistant.offline };
   const cost = rows.reduce((x, r) => x + r.cost, 0);
   const day = rows.reduce((x, r) => x + r.day, 0);
   const bySym = new Map<string, Row>();

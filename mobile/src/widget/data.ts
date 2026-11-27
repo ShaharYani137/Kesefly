@@ -7,7 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { bySymbol, type DividendIn, type LotIn, position, type SaleIn } from '@/engine/positions';
 import { marketStatus, formatDuration } from '@/engine/clock';
-import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote } from '@/engine/stocks';
+import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIlsInfo, type HistoryPoint, type Quote } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
 import { openOrders, type PaperAccount } from '@/lab/paper';
@@ -141,13 +141,14 @@ export async function widgetData(): Promise<WidgetData> {
   const symbols = [...new Set([...holdings, ...(saved.sales ?? [])].map((h) => h.symbol.toUpperCase()))];
   const [fresh, freshRate, cache] = await Promise.all([
     symbols.length ? withTimeout(getQuotes(symbols, true), {} as Record<string, Quote>) : Promise.resolve<Record<string, Quote>>({}),
-    withTimeout(getUsdIls(), null),
+    withTimeout(getUsdIlsInfo(), { rate: null, at: null, fresh: false }),
     readCache(),
   ]);
   // Missing quotes (offline, locked phone, timeout) come from the last good fetch.
   const quotes: Record<string, Quote> = { ...cache?.quotes, ...fresh };
-  const rate = freshRate ?? cache?.rate ?? null;
-  const stale = symbols.some((sym) => !fresh[sym]) || (freshRate == null && rate != null);
+  // getUsdIlsInfo already falls back to the app's last good rate; `fresh` says whether it is live.
+  const rate = freshRate.rate ?? cache?.rate ?? null;
+  const stale = symbols.some((sym) => !fresh[sym]) || (!freshRate.fresh && rate != null);
   const charts: Record<string, Spark> = { ...cache?.charts };
   if (holdings.length) {
     // Same math as the app (engine/positions.ts): sales, dividends and fees count in the gain.
@@ -168,7 +169,10 @@ export async function widgetData(): Promise<WidgetData> {
       gainSum += conv(q.price * p.shares - p.cost + p.realized + p.dividends);
       invested += conv(lots.reduce((a, l) => a + l.shares * l.buyPrice + (l.fee ?? 0), 0));
     }
-    if (total > 0) {
+    if (!Number.isFinite(total)) {
+      // USD/ILS conversion with no rate at all: a dash, not a 1:1 number.
+      value = '—';
+    } else if (total > 0) {
       value = formatPrice(total, cur, lang);
       day = `${s.stock.dayChange} ${formatSigned(dayChange, cur, lang)}`;
       dayUp = dayChange >= 0;
