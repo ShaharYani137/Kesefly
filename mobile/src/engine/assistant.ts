@@ -18,6 +18,7 @@
 import { buildPath } from '@/engine/academy';
 import { upcoming } from '@/engine/calendar';
 import { formatHebrewDate, hebrewFromGregorian, marketStatus, type MarketStatus, formatDuration } from '@/engine/clock';
+import { getUsdIls } from '@/engine/fx';
 import { getEvents, getSymbolNews } from '@/engine/news';
 import { webAnswer } from '@/engine/web';
 import {
@@ -27,7 +28,6 @@ import {
   getHistory,
   getQuote,
   getQuotes,
-  getUsdIls,
   seriesStats,
 } from '@/engine/stocks';
 import { ACADEMY } from '@/i18n/academy';

@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { bySymbol, type DividendIn, type LotIn, position, type SaleIn } from '@/engine/positions';
 import { marketStatus, formatDuration } from '@/engine/clock';
-import { convert, formatPrice, formatSigned, getHistory, getQuotes, getUsdIlsInfo, type HistoryPoint, type Quote } from '@/engine/stocks';
+import { getUsdIlsInfo } from '@/engine/fx';
+import { convert, formatPrice, formatSigned, getHistory, getQuotes, type HistoryPoint, type Quote } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
 import { openOrders, type PaperAccount } from '@/lab/paper';

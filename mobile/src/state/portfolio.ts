@@ -4,8 +4,9 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { getUsdIlsInfo, lastUsdIls, type UsdIls } from '@/engine/fx';
 import { bySymbol, position } from '@/engine/positions';
-import { convert, getHistory, getQuotes, getUsdIlsInfo, type HistoryPoint, lastUsdIls, type Quote, type RangeKey, type UsdIls } from '@/engine/stocks';
+import { convert, getHistory, getQuotes, type HistoryPoint, type Quote, type RangeKey } from '@/engine/stocks';
 
 import { type Dividend, type Holding, type Sale, useApp } from './app-store';
 

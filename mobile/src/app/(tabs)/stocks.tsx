@@ -358,7 +358,10 @@ function PortfolioHero({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
       <Txt variant="footnote" style={{ color: muted }}>
         {s.stock.allocation}
       </Txt>
-      <Donut slices={pf.rows.map((r) => ({ label: r.symbol, value: r.value }))} textColor={onHero} mutedColor={muted} surface="rgba(255,255,255,0.08)" />
+      {/* No allocation without a total (USD/ILS conversion with no rate). */}
+      {Number.isFinite(pf.total) ? (
+        <Donut slices={pf.rows.map((r) => ({ label: r.symbol, value: r.value }))} textColor={onHero} mutedColor={muted} surface="rgba(255,255,255,0.08)" />
+      ) : null}
       {pf.rate ? (
         <Txt variant="caption" style={{ color: muted }}>
           {fill(s.stock.convertedNote, { cur: pf.cur, rate: pf.rate.toFixed(3) })}

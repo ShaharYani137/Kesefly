@@ -1,6 +1,10 @@
 /** USD/ILS rate (P-074): no 1:1 conversion without a rate, last good rate kept and stored. */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { convertAt } from '@/engine/benchmark';
+import { formatMoney } from '@/engine/format';
+import { convert, formatPrice, formatSigned } from '@/engine/stocks';
+
 const store = new Map<string, string>();
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -32,27 +36,21 @@ const fetchMock = vi.fn(async () => {
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
 // Loaded after the storage mock is in place.
-let stocks: typeof import('@/engine/stocks');
-let convertAt: typeof import('@/engine/benchmark').convertAt;
-let formatMoney: typeof import('@/engine/format').formatMoney;
+let fx: typeof import('@/engine/fx');
 beforeAll(async () => {
-  stocks = await import('@/engine/stocks');
-  convertAt = (await import('@/engine/benchmark')).convertAt;
-  formatMoney = (await import('@/engine/format')).formatMoney;
+  fx = await import('@/engine/fx');
 });
-const convert = (...a: Parameters<typeof stocks.convert>) => stocks.convert(...a);
-const formatPrice = (...a: Parameters<typeof stocks.formatPrice>) => stocks.formatPrice(...a);
-const formatSigned = (...a: Parameters<typeof stocks.formatSigned>) => stocks.formatSigned(...a);
-const getUsdIls = () => stocks.getUsdIls();
-const getUsdIlsInfo = (force?: boolean) => stocks.getUsdIlsInfo(force);
-const lastUsdIls = () => stocks.lastUsdIls();
+const getUsdIls = () => fx.getUsdIls();
+/** Always past the 60 s quote cache, so each call is a real (mocked) fetch. */
+const getUsdIlsInfo = () => fx.getUsdIlsInfo(true);
+const lastUsdIls = () => fx.lastUsdIls();
 
 beforeEach(() => {
   store.clear();
   replies = [];
   fetchMock.mockClear();
   globalThis.fetch = fetchMock as unknown as typeof fetch;
-  stocks.resetUsdIlsForTests();
+  fx.resetUsdIlsForTests();
 });
 afterEach(() => {
   globalThis.fetch = realFetch;
@@ -64,6 +62,11 @@ describe('convert without a rate', () => {
     expect(convert(360, 'ILS', 'USD', null)).toBeNaN();
     expect(convertAt(100, 'USD', 'ILS', null)).toBeNaN();
     expect(convertAt(360, 'ILS', 'USD', null)).toBeNaN();
+  });
+
+  it('zero stays zero without a rate', () => {
+    expect(convert(0, 'USD', 'ILS', null)).toBe(0);
+    expect(convertAt(0, 'ILS', 'USD', null)).toBe(0);
   });
 
   it('keeps same-currency and other-currency amounts as before', () => {
@@ -107,9 +110,9 @@ describe('getUsdIlsInfo', () => {
   it('does not overwrite a good rate after a 429 or a network failure', async () => {
     replies = [() => ok(3.7), tooMany];
     const good = await getUsdIlsInfo();
-    const after429 = await getUsdIlsInfo(true);
+    const after429 = await getUsdIlsInfo();
     expect(after429).toEqual({ rate: 3.7, at: good.at, fresh: false });
-    const offline = await getUsdIlsInfo(true);
+    const offline = await getUsdIlsInfo();
     expect(offline).toEqual({ rate: 3.7, at: good.at, fresh: false });
     await flush();
     expect(JSON.parse(store.get(FX_KEY)!).rate).toBe(3.7);
@@ -120,15 +123,33 @@ describe('getUsdIlsInfo', () => {
     store.set(FX_KEY, JSON.stringify({ rate: 3.65, at: 1_700_000_000_000 }));
     expect(lastUsdIls()).toBeNull();
     expect(await getUsdIlsInfo()).toEqual({ rate: 3.65, at: 1_700_000_000_000, fresh: false });
-    expect(await getUsdIls()).toBe(3.65);
+    expect(lastUsdIls()).toEqual({ rate: 3.65, at: 1_700_000_000_000 });
   });
 
   it('ignores a broken stored value', async () => {
     store.set(FX_KEY, JSON.stringify({ rate: 0, at: 1 }));
     expect((await getUsdIlsInfo()).rate).toBeNull();
-    stocks.resetUsdIlsForTests();
+    fx.resetUsdIlsForTests();
     store.set(FX_KEY, '{not json');
     expect((await getUsdIlsInfo()).rate).toBeNull();
+  });
+
+  it('ignores a stored rate outside 1..10 or a stored time that is not real', async () => {
+    const bad = [JSON.stringify({ rate: 1e6, at: 1 }), JSON.stringify({ rate: 1, at: 1 }), '{"rate":3.6,"at":1e999}', JSON.stringify({ rate: 3.6, at: Date.now() + 86400_000 }), JSON.stringify({ rate: 3.6 })];
+    for (const raw of bad) {
+      fx.resetUsdIlsForTests();
+      store.set(FX_KEY, raw);
+      expect((await getUsdIlsInfo()).rate).toBeNull();
+    }
+  });
+
+  it('does not take or store an implausible live rate', async () => {
+    replies = [() => ok(3.7), () => ok(1e6), () => ok(0.5)];
+    const good = await getUsdIlsInfo();
+    expect(await getUsdIlsInfo()).toEqual({ rate: 3.7, at: good.at, fresh: false });
+    expect(await getUsdIlsInfo()).toEqual({ rate: 3.7, at: good.at, fresh: false });
+    await flush();
+    expect(JSON.parse(store.get(FX_KEY)!).rate).toBe(3.7);
   });
 
   it('a live rate wins over an older stored one', async () => {
@@ -137,6 +158,6 @@ describe('getUsdIlsInfo', () => {
     const r = await getUsdIlsInfo();
     expect(r).toMatchObject({ rate: 3.8, fresh: true });
     // A later failure falls back to the live rate, not the older stored one.
-    expect((await getUsdIlsInfo(true)).rate).toBe(3.8);
+    expect((await getUsdIlsInfo()).rate).toBe(3.8);
   });
 });

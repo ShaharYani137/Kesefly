@@ -37,7 +37,8 @@ export default function CompareScreen() {
     return dates.length ? Math.min(...dates.map((d) => Date.parse(d))) : null;
   }, [holdings]);
   // Every symbol needs a price before the totals mean anything.
-  // (No FX rate needed: fxFrom falls back to today's rate, and same-currency flows need none.)
+  // (fxFrom falls back to today's rate; same-currency flows need none. With no USD/ILS rate at
+  // all, cross-currency flows are NaN and the effect below shows the error card.)
   const loaded = pf.updated !== null && !pf.loading;
   const missing = loaded && pf.rows.some((r) => !r.quote);
   const ready = loaded && !missing;

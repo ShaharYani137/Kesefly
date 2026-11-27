@@ -19,8 +19,9 @@ import { ExtensionStorage } from '@bacons/apple-targets';
 import Constants from 'expo-constants';
 
 import { marketStatus, type Zone } from '@/engine/clock';
+import { getUsdIls } from '@/engine/fx';
 import { bySymbol, type DividendIn, type LotIn, position, type SaleIn } from '@/engine/positions';
-import { getQuotes, getUsdIls } from '@/engine/stocks';
+import { getQuotes } from '@/engine/stocks';
 import type { Lang } from '@/engine/types';
 import { STRINGS } from '@/i18n/strings';
 import { STORAGE_KEY } from '@/state/app-store';

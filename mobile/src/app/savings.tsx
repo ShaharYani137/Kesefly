@@ -11,7 +11,8 @@ import { View } from 'react-native';
 
 import { formatMoney } from '@/engine/format';
 import { feeCheck, ISRAELI, liquidDate, type SavingsAccount, type SavingsKind, US_KINDS } from '@/engine/savings';
-import { convert, getUsdIls, lastUsdIls } from '@/engine/stocks';
+import { getUsdIls, lastUsdIls } from '@/engine/fx';
+import { convert } from '@/engine/stocks';
 import type { Currency } from '@/engine/types';
 import { fill, newId, useApp } from '@/state/app-store';
 import { Appear, Button, Card, Chip, Disclaimer, Pill, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
