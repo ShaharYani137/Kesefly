@@ -367,3 +367,11 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-27 09:22 | Recorded P-084…P-090; approved P-084–P-087, P-090; P-088, P-089 needs-human; P-074/P-075 done | `logs/PROPOSALS.md` | Done |
 | 2026-11-27 09:24 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-27 09:30 | PR #17 checks green (run 45955121715), PR #18 checks green (run 45955124700): typecheck, lint, vitest pass | PRs #17, #18 | Done |
+| 2026-11-27 19:41 | Scheduled Boss evening cycle: fetched repo; `main` has no team files, used `Shavit` definitions; no human replies, merges or new comments since the morning; npm registry still unreachable | GitHub | Done |
+| 2026-11-27 19:45 | Created worktrees `agents/2026-11-27-chat-catchup` (from `agents/2026-11-26-deep-links`, same file as P-065) and `agents/2026-11-27-yahoo-429` (from `agents/2026-11-23-pr-checks`) | git | Done |
+| 2026-11-27 19:46 | Briefed connectivity-engineer IMPLEMENT P-073 and P-076; connectivity-engineer and performance-engineer AUDIT, in parallel | agents | Done |
+| 2026-11-27 19:55 | P-073 7ae8967: qa-tester PASS (test 0d0e457), security-guardian PASS. P-076 a5ab179: security PASS, qa-tester FAIL (forced refresh served any-age cache); Boss decision: force → rateLimit, others cache ≤15 min | review | Sent back |
+| 2026-11-27 20:05 | P-076 fix cbba9aa; qa-tester re-review PASS | review | PASS |
+| 2026-11-27 20:08 | Pushed both branches; opened PR #19 (P-073, stacked on #16) and PR #20 (P-076, stacked on #5) | GitHub | Done |
+| 2026-11-27 20:10 | Recorded P-091…P-098; approved P-091, P-092, P-094–P-096, P-098; P-093 needs-human; P-097 rejected (dup of P-010); P-073/P-076 done; scope notes on P-010, P-044 | `logs/PROPOSALS.md` | Done |
+| 2026-11-27 20:12 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

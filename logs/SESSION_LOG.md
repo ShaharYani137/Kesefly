@@ -421,3 +421,9 @@ One section per working session. Newest at bottom.
 - **Work done:** no human replies or merges since last evening. P-074 → PR #17, P-075 → PR #18, both stacked on #5, each needed one QA fix round, then PASS (security PASS for #17). Audits gave P-084…P-089; the P-074 review gave P-090.
 - **Decisions:** approved P-084–P-087 and P-090; P-088 and P-089 needs-human (app lock / session handling).
 - **Next steps:** implement P-073 (group chat catch-up) and P-076 (Yahoo rate limits); next audit connectivity-engineer + performance-engineer.
+
+## Session 22 — 2026-11-27 (branch `agents/boss-log`, scheduled Boss evening cycle)
+- **Goal:** evening cycle: check changes, audit connectivity + performance, implement P-073 and P-076.
+- **Work done:** no human replies or merges since the morning. P-073 → PR #19 (stacked on #16), P-076 step 1 → PR #20 (stacked on #5); P-076 needed one QA fix round. Audits gave P-091…P-098.
+- **Decisions:** approved P-091, P-092, P-094, P-095, P-096, P-098; P-093 needs-human (sign-in); P-097 rejected as duplicate of P-010; during a Yahoo pause forced refreshes get `rateLimit`, normal callers cache ≤15 min.
+- **Next steps:** implement P-092 (after #18) and P-091; next audit security-guardian + product-ux.

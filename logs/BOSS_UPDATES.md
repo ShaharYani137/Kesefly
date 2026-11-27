@@ -266,3 +266,23 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-066 test plan now covers Android at 200% font size too.
 
 **Next:** implement P-073 (lost group messages) and P-076 (Yahoo rate limits). Next audit: connectivity-engineer + performance-engineer.
+
+## 2026-11-27 evening
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so real typecheck, lint and vitest run only on GitHub (PR #5 checks). No human replies, merges or new comments since this morning.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Fifteen checked fixes (#6–#20) are stacked on it.
+2. **P-093: sign-in and sign-up can spin forever on a stalled network.** Add a 15 s timeout, and after a sign-up timeout tell the user to check email or sign in instead of "account exists". **Recommendation: yes**, together with P-054.
+3. **Still open, recommendations unchanged:** P-088 (yes), P-089 (yes), P-062 delete account (yes), P-063 (yes), P-019 (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge)**
+- P-073: group chats no longer lose messages after a connection gap of more than 50 messages; a failed first load retries by itself. [#19](https://github.com/ShaharYani137/Kesefly/pull/19), stacked on #16. qa-tester PASS, security-guardian PASS.
+- P-076 step 1: after Yahoo says "too many requests", the app pauses quote requests (60 s, doubling up to 15 min), sends at most 4 at once, and never shows an old price as a fresh forced refresh. [#20](https://github.com/ShaharYani137/Kesefly/pull/20). qa-tester PASS after one fix round, security-guardian PASS.
+- From before: #5–#18.
+
+**Approved / rejected since last update**
+- Approved P-091 (search shows Tel Aviv matches at once, no endless spinner), P-092 (no duplicate event alerts), P-094 (Compare keeps its result offline, day cache), P-095 (faster Wikipedia answers that expire and respect language), P-096 (fewer re-renders: split language out of the app store), P-098 (a real "too many requests" message).
+- Rejected P-097: duplicate of P-010 (history part added there).
+
+**Next:** implement P-092 (after #18) and P-091. Next audit: security-guardian + product-ux.
