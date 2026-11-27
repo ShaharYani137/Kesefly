@@ -10,6 +10,8 @@ const COMPACT: Record<Lang, { k: string; m: string }> = {
 };
 
 export function formatMoney(value: number, currency: Currency, lang: Lang, compact = false): string {
+  // No number to show (e.g. a USD/ILS conversion without a rate): a dash, never "NaN".
+  if (!Number.isFinite(value)) return '—';
   if (compact && Math.abs(value) >= 1000) {
     const big = Math.abs(value) >= 1e6;
     const n = new Intl.NumberFormat(LOCALE[lang], {
@@ -34,6 +36,7 @@ export function formatMoney(value: number, currency: Currency, lang: Lang, compa
 }
 
 export function formatPercent(fraction: number, lang: Lang): string {
+  if (!Number.isFinite(fraction)) return '—';
   return new Intl.NumberFormat(LOCALE[lang], {
     style: 'percent',
     maximumFractionDigits: 0,

@@ -4,8 +4,9 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { getUsdIlsInfo, lastUsdIls, type UsdIls } from '@/engine/fx';
 import { bySymbol, position } from '@/engine/positions';
-import { convert, getHistory, getQuotes, getUsdIls, type HistoryPoint, type Quote, type RangeKey } from '@/engine/stocks';
+import { convert, getHistory, getQuotes, type HistoryPoint, type Quote, type RangeKey } from '@/engine/stocks';
 
 import { type Dividend, type Holding, type Sale, useApp } from './app-store';
 
@@ -33,11 +34,20 @@ export type PositionRow = {
 /** Currency of a symbol before its quote arrives: Tel Aviv (incl. funds) is ILS, the rest USD. */
 export const guessCurrency = (symbol: string) => (symbol.endsWith('.TA') ? 'ILS' : 'USD');
 
+/** Gain as a fraction of the money put in; NaN (shown as "—") when amounts could not be converted. */
+export const gainPct = (gain: number, invested: number) => (!Number.isFinite(invested) ? NaN : invested ? gain / invested : 0);
+
 export function usePortfolio(extraSymbols: string[] = []) {
   const { holdings, sales, dividends, profile } = useApp();
   const cur = profile.currency;
   const [quotes, setQuotes] = useState<Record<string, Quote>>({});
-  const [rate, setRate] = useState<number | null>(null);
+  // Start from the last good rate already in memory, so a remount never renders without one.
+  // (Treated as live until the mount fetch below answers, a moment later.)
+  const [fx, setFx] = useState<UsdIls>(() => {
+    const last = lastUsdIls();
+    return last ? { ...last, fresh: true } : { rate: null, at: null, fresh: false };
+  });
+  const rate = fx.rate;
   const [loading, setLoading] = useState(false);
   const [updated, setUpdated] = useState<Date | null>(null);
   const [failed, setFailed] = useState(false);
@@ -48,11 +58,12 @@ export function usePortfolio(extraSymbols: string[] = []) {
     [holdings, sales, extraKey],
   );
 
-  const fetchAll = useCallback((force: boolean) => Promise.all([getQuotes(symbols, force), getUsdIls()]), [symbols]);
+  const fetchAll = useCallback((force: boolean) => Promise.all([getQuotes(symbols, force), getUsdIlsInfo()]), [symbols]);
   const apply = useCallback(
-    ([q, r]: [Record<string, Quote>, number | null]) => {
+    ([q, r]: [Record<string, Quote>, UsdIls]) => {
       setQuotes(q);
-      setRate(r);
+      // A missing rate never replaces a good one.
+      setFx((prev) => (r.rate != null ? r : prev));
       setFailed(symbols.length > 0 && Object.keys(q).length === 0);
       setUpdated(new Date());
       setLoading(false);
@@ -120,13 +131,17 @@ export function usePortfolio(extraSymbols: string[] = []) {
         }
         if (any) out.push({ t: (range === '1D' || range === '1W' ? k * 1800_000 : k * 86400_000), close: sum });
       }
-      if (out.length < 2) throw new Error('no data');
+      // NaN = a USD/ILS conversion without any rate: no chart rather than a wrong one.
+      if (out.length < 2 || out.some((p) => !Number.isFinite(p.close))) throw new Error('no data');
       return out;
     },
     [rows, cur, rate],
   );
 
-  return { rows, all, total, cost, day, realized, income, fees, gain, invested, cur, rate, quotes, loading, updated, failed, refresh, history };
+  /** Fetch time of the rate when it is an old one (the live fetch failed); null when live or none. */
+  const rateAsOf = fx.rate != null && !fx.fresh && fx.at != null ? new Date(fx.at) : null;
+
+  return { rows, all, total, cost, day, realized, income, fees, gain, invested, cur, rate, rateAsOf, quotes, loading, updated, failed, refresh, history };
 }
 
 function groupRows(

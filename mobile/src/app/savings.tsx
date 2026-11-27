@@ -11,7 +11,8 @@ import { View } from 'react-native';
 
 import { formatMoney } from '@/engine/format';
 import { feeCheck, ISRAELI, liquidDate, type SavingsAccount, type SavingsKind, US_KINDS } from '@/engine/savings';
-import { convert, getUsdIls } from '@/engine/stocks';
+import { getUsdIls, lastUsdIls } from '@/engine/fx';
+import { convert } from '@/engine/stocks';
 import type { Currency } from '@/engine/types';
 import { fill, newId, useApp } from '@/state/app-store';
 import { Appear, Button, Card, Chip, Disclaimer, Pill, Row, Screen, SectionHeader, Segmented, Stepper, Txt } from '@/ui/components';
@@ -22,13 +23,14 @@ const pct = (f: number) => `${Number((f * 100).toFixed(2))}%`;
 
 export default function SavingsScreen() {
   const { s, lang, profile, savings, saveSavings, removeSavings, prefs, setPrefs } = useApp();
-  const [rate, setRate] = useState<number | null>(null);
+  const [rate, setRate] = useState<number | null>(() => lastUsdIls()?.rate ?? null);
   const [editing, setEditing] = useState<SavingsAccount | 'new' | null>(null);
   const cur = profile.currency;
   const years = prefs.retireYears;
 
   useEffect(() => {
-    getUsdIls().then(setRate);
+    // A missing rate never replaces a good one.
+    getUsdIls().then((r) => r != null && setRate(r));
   }, []);
 
   const total = savings.reduce((a, x) => a + convert(x.balance, x.currency, cur, rate), 0);

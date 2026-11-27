@@ -18,6 +18,7 @@
 import { buildPath } from '@/engine/academy';
 import { upcoming } from '@/engine/calendar';
 import { formatHebrewDate, hebrewFromGregorian, marketStatus, type MarketStatus, formatDuration } from '@/engine/clock';
+import { getUsdIls } from '@/engine/fx';
 import { getEvents, getSymbolNews } from '@/engine/news';
 import { webAnswer } from '@/engine/web';
 import {
@@ -27,7 +28,6 @@ import {
   getHistory,
   getQuote,
   getQuotes,
-  getUsdIls,
   seriesStats,
 } from '@/engine/stocks';
 import { ACADEMY } from '@/i18n/academy';
@@ -287,6 +287,8 @@ async function portfolioAnswer(c: Ctx): Promise<AssistantReply> {
   }
   if (!rows.length) return { text: s.assistant.offline };
   const total = rows.reduce((x, r) => x + r.value, 0);
+  // NaN = a USD/ILS conversion with no rate at all: say live data is missing, not a wrong total.
+  if (!Number.isFinite(total)) return { text: s.assistant.offline };
   const cost = rows.reduce((x, r) => x + r.cost, 0);
   const day = rows.reduce((x, r) => x + r.day, 0);
   const bySym = new Map<string, Row>();

@@ -120,6 +120,11 @@ export default function TaxScreen() {
           <Txt variant="headline">{s.tax.sellAllTitle}</Txt>
           {pf.loading && !Object.keys(pf.quotes).length ? (
             <ActivityIndicator color={colors.accent} />
+          ) : !Number.isFinite(report.taxIfSoldAll) ? (
+            // NaN = a USD/ILS conversion with no rate at all: say so, never "no tax".
+            <Txt variant="subhead" color="textSecondary">
+              {s.stock.rateMissing}
+            </Txt>
           ) : (
             <Txt variant="subhead" color={report.taxIfSoldAll > 0 ? 'text' : 'positive'}>
               {report.taxIfSoldAll > 0 ? fill(s.tax.sellAll, { v: money(report.taxIfSoldAll) }) : s.tax.sellAllNone}
@@ -158,12 +163,12 @@ export default function TaxScreen() {
                     <Txt variant="headline" style={{ writingDirection: 'ltr' }}>
                       {p.symbol}
                     </Txt>
-                    <Txt variant="footnote" color={p.gain >= 0 ? 'positive' : 'danger'}>
+                    <Txt variant="footnote" color={!Number.isFinite(p.gain) ? 'textSecondary' : p.gain >= 0 ? 'positive' : 'danger'}>
                       {fill(s.tax.gain, { v: signed(p.gain) })}
                     </Txt>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <Txt variant="subhead">{p.taxIfSold > 0.5 ? fill(s.tax.taxIfSold, { v: money(p.taxIfSold) }) : s.tax.noTax}</Txt>
+                    <Txt variant="subhead">{!Number.isFinite(p.taxIfSold) ? '—' : p.taxIfSold > 0.5 ? fill(s.tax.taxIfSold, { v: money(p.taxIfSold) }) : s.tax.noTax}</Txt>
                     {us ? <Pill label={termLabel(p)} bg={colors.fill} fg={colors.text} /> : null}
                   </View>
                 </Row>
@@ -186,7 +191,8 @@ export default function TaxScreen() {
       {/* ---------- Dividends ---------- */}
       <Card>
         <Txt variant="headline">{fill(s.tax.dividendsTitle, { year })}</Txt>
-        {report.dividends.gross ? (
+        {/* NaN gross (no USD/ILS rate) counts as "has dividends", so the lines show "—". */}
+        {report.dividends.gross || Number.isNaN(report.dividends.gross) ? (
           <>
             <LineItem label={s.tax.divGross} value={money(report.dividends.gross)} />
             <LineItem label={s.tax.divWithheld} value={money(report.dividends.withheld)} />

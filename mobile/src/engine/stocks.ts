@@ -211,6 +211,8 @@ export function isTicker(text: string): boolean {
 const LOCALE = { en: 'en-US', he: 'he-IL' } as const;
 
 export function formatPrice(v: number, currency: string, lang: 'en' | 'he'): string {
+  // No number to show (e.g. a USD/ILS conversion without a rate): a dash, never "NaN".
+  if (!Number.isFinite(v)) return '—';
   try {
     return new Intl.NumberFormat(LOCALE[lang], {
       style: 'currency',
@@ -224,6 +226,7 @@ export function formatPrice(v: number, currency: string, lang: 'en' | 'he'): str
 }
 
 export function formatSigned(v: number, currency: string, lang: 'en' | 'he', pct = false): string {
+  if (!Number.isFinite(v)) return '—';
   try {
     return new Intl.NumberFormat(LOCALE[lang], {
       style: pct ? 'percent' : 'currency',
@@ -361,18 +364,16 @@ export async function getQuotes(symbols: string[], force = false): Promise<Recor
   return out;
 }
 
-/** Shekels per dollar (Yahoo symbol ILS=X). */
-export async function getUsdIls(): Promise<number | null> {
-  try {
-    return (await getQuote('ILS=X')).price;
-  } catch {
-    return null;
-  }
-}
+// The USD/ILS rate (getUsdIls, with its last-good fallback) lives in ./fx.ts, which keeps
+// AsyncStorage out of this file so pure engine code and its tests can import it.
 
-/** Converts between USD and ILS with a USD/ILS rate. Other currencies pass through unchanged. */
+/**
+ * Converts between USD and ILS with a USD/ILS rate. Other currencies pass through unchanged.
+ * USD <-> ILS without a rate gives NaN (shown as "—"), never the amount 1:1.
+ */
 export function convert(v: number, from: string, to: string, usdIls: number | null): number {
-  if (from === to || !usdIls) return v;
+  if (from === to || v === 0) return v;
+  if (!usdIls) return (from === 'USD' && to === 'ILS') || (from === 'ILS' && to === 'USD') ? NaN : v;
   if (from === 'USD' && to === 'ILS') return v * usdIls;
   if (from === 'ILS' && to === 'USD') return v / usdIls;
   return v;

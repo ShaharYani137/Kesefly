@@ -37,7 +37,8 @@ export default function CompareScreen() {
     return dates.length ? Math.min(...dates.map((d) => Date.parse(d))) : null;
   }, [holdings]);
   // Every symbol needs a price before the totals mean anything.
-  // (No FX rate needed: fxFrom falls back to today's rate, and same-currency flows need none.)
+  // (fxFrom falls back to today's rate; same-currency flows need none. With no USD/ILS rate at
+  // all, cross-currency flows are NaN and the effect below shows the error card.)
   const loaded = pf.updated !== null && !pf.loading;
   const missing = loaded && pf.rows.some((r) => !r.quote);
   const ready = loaded && !missing;
@@ -64,6 +65,8 @@ export default function CompareScreen() {
         ];
         const now = Date.now();
         const replay = replayIndex(flows, idx, meta.currency, pf.cur, fx, now);
+        // NaN = a USD/ILS conversion with no rate at all: show the error and retry, not a fake comparison.
+        if (!Number.isFinite(replay.value) || !Number.isFinite(pf.total)) throw new Error('no fx rate');
         setResult({ key, status: 'done', idx: replay, yourIrr: xirr([...flows, { t: now, amount: pf.total }]) });
       })
       .catch(() => alive && setResult({ key, status: 'error' }));

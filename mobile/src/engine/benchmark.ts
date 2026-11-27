@@ -28,8 +28,10 @@ export function fxFrom(series: HistoryPoint[] | null, today: number | null): FxR
   return (t) => (series?.length ? closeAt(series, t) : today);
 }
 
+/** Same rule as `convert` in stocks.ts: USD <-> ILS without a rate is NaN, never 1:1. */
 export function convertAt(v: number, from: string, to: string, rate: number | null): number {
-  if (from === to || !rate) return v;
+  if (from === to || v === 0) return v;
+  if (!rate) return (from === 'USD' && to === 'ILS') || (from === 'ILS' && to === 'USD') ? NaN : v;
   if (from === 'USD' && to === 'ILS') return v * rate;
   if (from === 'ILS' && to === 'USD') return v / rate;
   return v;

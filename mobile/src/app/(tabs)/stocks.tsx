@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { formatPrice, formatSigned, MARKET_TILES, type Quote } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
-import { usePortfolio } from '@/state/portfolio';
+import { gainPct, usePortfolio } from '@/state/portfolio';
 import { Donut, Sparkline } from '@/ui/charts';
 import { HScroll } from '@/ui/hscroll';
 import { AddHolding, Field } from '@/ui/holding-form';
@@ -342,7 +342,7 @@ function PortfolioHero({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
             {`${s.stock.dayChange} ${formatSigned(pf.day, pf.cur, lang)}`}
           </Txt>
           <Txt variant="subhead" style={{ color: gain >= 0 ? up : down, writingDirection: 'ltr' }}>
-            {`${s.stock.totalGain} ${formatSigned(gain, pf.cur, lang)} (${formatSigned(pf.invested ? gain / pf.invested : 0, pf.cur, lang, true)})`}
+            {`${s.stock.totalGain} ${formatSigned(gain, pf.cur, lang)} (${formatSigned(gainPct(gain, pf.invested), pf.cur, lang, true)})`}
           </Txt>
         </Row>
         {extras.length ? (
@@ -358,10 +358,18 @@ function PortfolioHero({ pf }: { pf: ReturnType<typeof usePortfolio> }) {
       <Txt variant="footnote" style={{ color: muted }}>
         {s.stock.allocation}
       </Txt>
-      <Donut slices={pf.rows.map((r) => ({ label: r.symbol, value: r.value }))} textColor={onHero} mutedColor={muted} surface="rgba(255,255,255,0.08)" />
+      {/* No allocation without a total (USD/ILS conversion with no rate). */}
+      {Number.isFinite(pf.total) ? (
+        <Donut slices={pf.rows.map((r) => ({ label: r.symbol, value: r.value }))} textColor={onHero} mutedColor={muted} surface="rgba(255,255,255,0.08)" />
+      ) : null}
       {pf.rate ? (
         <Txt variant="caption" style={{ color: muted }}>
           {fill(s.stock.convertedNote, { cur: pf.cur, rate: pf.rate.toFixed(3) })}
+          {pf.rateAsOf ? ` ${fill(s.stock.rateAsOf, { time: pf.rateAsOf.toLocaleString(lang === 'he' ? 'he-IL' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) })}` : ''}
+        </Txt>
+      ) : !Number.isFinite(pf.total) ? (
+        <Txt variant="caption" style={{ color: muted }}>
+          {s.stock.rateMissing}
         </Txt>
       ) : null}
     </View>

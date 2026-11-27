@@ -14,7 +14,7 @@ import Animated from 'react-native-reanimated';
 import { ago, getSymbolNews, type MarketEvent } from '@/engine/news';
 import { formatPrice, formatSigned, getHistory, getQuote, type HistoryPoint, type Quote, seriesStats, StockError } from '@/engine/stocks';
 import { fill, useApp } from '@/state/app-store';
-import { usePortfolio } from '@/state/portfolio';
+import { gainPct, usePortfolio } from '@/state/portfolio';
 import { Appear, Button, Card, ChangeBadge, CountUp, Icon, IconButton, Pill, Row, Screen, SectionHeader, SymbolBadge, Txt } from '@/ui/components';
 import { AddHolding } from '@/ui/holding-form';
 import { enterFade } from '@/ui/motion';
@@ -198,7 +198,7 @@ export default function StockPage() {
                 <Stat label={s.stock.marketValue} value={formatPrice(pos.value, pf.cur, lang)} />
                 <Stat
                   label={s.stock.totalGain}
-                  value={`${formatSigned(pos.gain, pf.cur, lang)} (${formatSigned(pos.invested ? pos.gain / pos.invested : 0, 'USD', lang, true)})`}
+                  value={`${formatSigned(pos.gain, pf.cur, lang)} (${formatSigned(gainPct(pos.gain, pos.invested), 'USD', lang, true)})`}
                   color={pos.gain >= 0 ? colors.positive : colors.danger}
                 />
                 {pos.realized ? <Stat label={s.ledger.realized} value={formatSigned(pos.realized, pf.cur, lang)} color={pos.realized >= 0 ? colors.positive : colors.danger} /> : null}
