@@ -44,7 +44,8 @@ export function moveToAlert(
   now: number,
 ): string | null {
   if (!q || Math.abs(q.changePct) < thresholdPct / 100) return null;
-  if (now - q.time > MOVE_FRESH_MS) return null;
+  // A missing or unparseable quote time (NaN) would make a bad key that pruning drops, so the alert would repeat.
+  if (!Number.isFinite(q.time) || now - q.time > MOVE_FRESH_MS) return null;
   const key = moveKey(symbol, q);
   return seen.includes(key) ? null : key;
 }

@@ -47,6 +47,8 @@ describe('big move alerts: once per exchange trading day', () => {
     expect(moveToAlert('AAPL', { ...usMove, changePct: 0.01 }, 3, [], now)).toBeNull();
     expect(moveToAlert('AAPL', usMove, 3, [], at('2026-11-28T12:01:00Z'))).toBeNull();
     expect(moveToAlert('AAPL', undefined, 3, [], now)).toBeNull();
+    // Fund quotes use Date.parse(ratesAsOf), which can be NaN.
+    expect(moveToAlert('5117957.TA', { ...usMove, time: NaN }, 3, [], now)).toBeNull();
   });
 
   it('prunes keys older than a few days and bad keys', () => {
