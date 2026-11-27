@@ -43,18 +43,22 @@ afterEach(() => {
 });
 
 describe('Yahoo 429 cooldown', () => {
-  it('starts a 60 s pause after a 429 and serves the cached quote meanwhile', async () => {
+  it('starts a 60 s pause after a 429 and serves a recent cached quote to normal callers', async () => {
     const st = await load();
     let status = 200;
     const urls = mockFetch(() => status);
     expect((await st.getQuote('AAPL')).price).toBe(100);
+    // 5 min later the cache is stale (over 60 s) but younger than 15 min.
+    vi.advanceTimersByTime(5 * 60_000);
     status = 429;
     expect(await code(st.getQuote('AAPL', true))).toBe('rateLimit');
     expect(urls).toHaveLength(2);
 
-    // Inside the pause: no network; the cached quote, even when stale or forced; else rateLimit.
+    // Inside the pause: no network. Normal callers get the cached quote; force callers and
+    // symbols with no cache get rateLimit.
     vi.advanceTimersByTime(59_000);
-    expect((await st.getQuote('AAPL', true)).price).toBe(100);
+    expect((await st.getQuote('AAPL')).price).toBe(100);
+    expect(await code(st.getQuote('AAPL', true))).toBe('rateLimit');
     expect(await code(st.getQuote('MSFT'))).toBe('rateLimit');
     expect(urls).toHaveLength(2);
 
@@ -62,6 +66,26 @@ describe('Yahoo 429 cooldown', () => {
     status = 200;
     vi.advanceTimersByTime(1_000);
     expect((await st.getQuote('MSFT')).price).toBe(100);
+    expect(urls).toHaveLength(3);
+  });
+
+  it('does not serve a cached quote 15 min or older during the pause', async () => {
+    const st = await load();
+    let status = 200;
+    const urls = mockFetch(() => status);
+    expect((await st.getQuote('AAPL')).price).toBe(100);
+    vi.advanceTimersByTime(14 * 60_000);
+    status = 429;
+    expect(await code(st.getQuote('AAPL', true))).toBe('rateLimit');
+    expect((await st.getQuote('AAPL')).price).toBe(100); // 14 min old: served
+    vi.advanceTimersByTime(60_000 - 1);
+    expect((await st.getQuote('AAPL')).price).toBe(100); // just under 15 min: served
+    vi.advanceTimersByTime(1);
+    // Exactly 15 min old, and the pause has just ended: Yahoo is asked again (still 429).
+    expect(await code(st.getQuote('AAPL'))).toBe('rateLimit');
+    expect(urls).toHaveLength(3);
+    // Now inside the second pause, the 15 min old quote is not served.
+    expect(await code(st.getQuote('AAPL'))).toBe('rateLimit');
     expect(urls).toHaveLength(3);
   });
 

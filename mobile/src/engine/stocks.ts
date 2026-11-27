@@ -49,11 +49,14 @@ const CACHE_MS = 60_000;
 const cache = new Map<string, { at: number; quote: Quote }>();
 
 // ---------- Yahoo rate limit (HTTP 429) ----------
-// After a 429 we stop asking Yahoo for quotes for a while and serve what we have. The pause
+// After a 429 we stop asking Yahoo for quotes for a while. Normal callers get the cached quote if
+// it is recent enough; `force` callers (they need a live price) get the rateLimit error. The pause
 // starts at 60 s and doubles on each new 429 (up to 15 min); a successful Yahoo answer resets it.
 // These numbers are a Kesefly design decision, not a documented Yahoo limit.
 const COOLDOWN_START_MS = 60_000;
 const COOLDOWN_MAX_MS = 15 * 60_000;
+/** During the pause, a cached quote is served only if younger than this (design decision). */
+const COOLDOWN_SERVE_MAX_AGE_MS = 15 * 60_000;
 let coolUntil = 0;
 let coolMs = 0;
 
@@ -180,14 +183,14 @@ export async function getQuote(symbol: string, force = false): Promise<Quote> {
     cache.set(sym, { at: Date.now(), quote });
     return quote;
   }
-  return quoteSlot(() => yahooQuote(sym));
+  return quoteSlot(() => yahooQuote(sym, force));
 }
 
-async function yahooQuote(sym: string): Promise<Quote> {
+async function yahooQuote(sym: string, force: boolean): Promise<Quote> {
   if (coolingDown()) {
-    // Rate limited: the last quote we have, however old, or the rate-limit error.
+    // Rate limited: a recent cached quote for normal callers, else the rate-limit error.
     const last = cache.get(sym);
-    if (last) return last.quote;
+    if (!force && last && Date.now() - last.at < COOLDOWN_SERVE_MAX_AGE_MS) return last.quote;
     throw new StockError('rateLimit');
   }
   let res: Response;
