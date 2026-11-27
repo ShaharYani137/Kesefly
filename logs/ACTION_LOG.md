@@ -358,3 +358,11 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-26 20:12 | Recorded P-073…P-083; approved P-073–P-077, P-079–P-083; rejected P-078 (duplicate of P-032, evidence added there); P-064/P-065 marked done | `logs/PROPOSALS.md` | Done |
 | 2026-11-26 20:15 | PR #15 checks green (run 45871652319), PR #16 checks green (run 45871658559) | PRs #15, #16 | Done |
 | 2026-11-26 20:16 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
+| 2026-11-27 08:41 | Scheduled Boss morning cycle: fetched repo; `main` has no team files, used `Shavit` definitions; no human replies, merges or new comments since 2026-11-26 evening | GitHub | Done |
+| 2026-11-27 08:45 | Created worktrees `agents/2026-11-27-fx-rate` and `agents/2026-11-27-move-alerts` from `agents/2026-11-23-pr-checks` (main + b9e1bd1) | git | Done |
+| 2026-11-27 08:46 | Briefed connectivity-engineer IMPLEMENT P-074 and P-075; security-guardian and android-specialist AUDIT, in parallel | agents | Done |
+| 2026-11-27 09:00 | P-074 da58be1: qa-tester FAIL (tax screen NaN, helper.test import), security-guardian PASS with low finding; P-075 e82a78c: qa-tester FAIL (NaN quote time) | review | Sent back |
+| 2026-11-27 09:15 | Fixes e284482 (P-074) and 22b14f2 (P-075); qa-tester re-review PASS on both | review | PASS |
+| 2026-11-27 09:18 | Pushed both branches; opened PR #17 (P-074) and PR #18 (P-075), stacked on #5 | GitHub | Done |
+| 2026-11-27 09:22 | Recorded P-084…P-090; approved P-084–P-087, P-090; P-088, P-089 needs-human; P-074/P-075 done | `logs/PROPOSALS.md` | Done |
+| 2026-11-27 09:24 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

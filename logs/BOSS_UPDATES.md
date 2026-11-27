@@ -237,3 +237,32 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - Rejected: P-078, duplicate of P-032.
 
 **Next:** implement P-074 (currency rate) and P-075 (duplicate alerts). Next audit: security-guardian + android-specialist.
+
+## 2026-11-27 morning
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so typecheck, lint and vitest run only on GitHub (PR #5 checks). No human replies or merges since last evening.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Thirteen checked fixes (#6–#18) are stacked on it.
+2. **P-088: Android face unlock too weak.** Budget-phone 2D face unlock (fooled by a photo) can open the app. Require strong biometrics, PIN still works. **Recommendation: yes.**
+3. **P-089: how secrets are kept on iPhone.** Session, PIN hash and AI key go into backups and survive reinstall; the background chat check probably can't read the session while the phone is locked. Device-only keychain classes + one-time migration. **Recommendation: yes;** the "wipe on reinstall" part is your separate choice.
+4. **Still open from before, recommendations unchanged:** P-062 delete account (yes), P-063 profile listing (yes), P-019 confirmation link (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge, after #5)**
+- P-074: no more 1:1 dollar-to-shekel totals when the rate is missing. The app keeps the last good rate, shows "Rate as of …" when it is old and "—" when it has none (tax screen included). [#17](https://github.com/ShaharYani137/Kesefly/pull/17). qa-tester PASS (after one fix round), security-guardian PASS. Needs a Hebrew device check on Stocks and Tax.
+- P-075: "big move" alerts no longer fire twice around UTC midnight; once per exchange trading day. [#18](https://github.com/ShaharYani137/Kesefly/pull/18). qa-tester PASS (after one fix round).
+- From before: #5–#16.
+
+**Security**
+- P-089 (medium) and P-088 (low): waiting for you, above.
+- P-087 (low, approved): chat notifications show sender and message text on the lock screen, past the app PIN. Will add a "show message text" setting, off when a PIN is set.
+
+**Approved since last update**
+- P-084: Android back button skips onboarding/verify/quiz steps and can change the screen behind the lock.
+- P-085: status-bar icons unreadable on the dark sign-in and lock screens in light theme.
+- P-086: Android chips and switches below the 48dp touch size (with P-014 / P-038).
+- P-087: hide chat text in notifications when a PIN is set.
+- P-090: follow-ups from #17 (iOS widget 1:1 fallback, widget cache check).
+- P-066 test plan now covers Android at 200% font size too.
+
+**Next:** implement P-073 (lost group messages) and P-076 (Yahoo rate limits). Next audit: connectivity-engineer + performance-engineer.

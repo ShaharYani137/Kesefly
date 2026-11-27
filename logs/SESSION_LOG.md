@@ -414,3 +414,10 @@ One section per working session. Newest at bottom.
 - **Work done:** no human replies or merges since the morning. P-064 → PR #15, P-065 → PR #16, both stacked on #5, QA (and security for #16) PASS, checks green. Audits gave P-073…P-082; the P-065 review gave P-083.
 - **Decisions:** approved P-073–P-077 and P-079–P-083; rejected P-078 (duplicate of P-032). No new needs-human items.
 - **Next steps:** implement P-074 (USD/ILS fallback) and P-075 (duplicate move alerts); next audit security-guardian + android-specialist.
+
+## Session 21 — 2026-11-27 (branch `agents/boss-log`, scheduled Boss morning cycle)
+
+- **Goal:** one Boss cycle: check changes, audit (security-guardian + android-specialist), implement P-074 and P-075, log.
+- **Work done:** no human replies or merges since last evening. P-074 → PR #17, P-075 → PR #18, both stacked on #5, each needed one QA fix round, then PASS (security PASS for #17). Audits gave P-084…P-089; the P-074 review gave P-090.
+- **Decisions:** approved P-084–P-087 and P-090; P-088 and P-089 needs-human (app lock / session handling).
+- **Next steps:** implement P-073 (group chat catch-up) and P-076 (Yahoo rate limits); next audit connectivity-engineer + performance-engineer.
