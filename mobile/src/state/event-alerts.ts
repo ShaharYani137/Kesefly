@@ -8,7 +8,8 @@
  * A story triggers a notification when it is new since the last check and either
  *   - names one of the user's stocks (medium impact or more), or
  *   - has high impact on markets.
- * Big daily moves (±3% or more) in the user's holdings also alert, once per symbol per day.
+ * Big daily moves (±3% or more) in the user's holdings also alert, once per symbol per exchange trading day
+ * (see move-alert-keys.ts).
  * At most 3 alerts per run, so a busy news day does not flood the phone.
  *
  * The task reads settings straight from AsyncStorage, because it may run with no UI mounted.
@@ -25,6 +26,7 @@ import { STRINGS } from '@/i18n/strings';
 import { bidi, ltr } from '@/ui/bidi';
 
 import { DEFAULT_PREFS, type Prefs, STORAGE_KEY } from './app-store';
+import { moveToAlert, pruneMoveKeys } from './move-alert-keys';
 import { channelId, contentSound, DEFAULT_SOUNDS, ensureSoundChannel, type NotifType, type SoundId } from './sounds';
 
 export const EVENTS_TASK = 'kesefly-event-check';
@@ -130,17 +132,15 @@ export async function checkEvents(): Promise<number> {
     sent++;
   }
 
-  // Big moves in the user's own holdings.
-  const day = new Date().toISOString().slice(0, 10);
-  const moves = seen.moves.filter((m) => m.endsWith(day));
+  // Big moves in the user's own holdings, once per symbol per exchange trading day.
+  const moves = pruneMoveKeys(seen.moves, Date.now());
   if (held.length && sent < MAX_PER_RUN) {
     const quotes = await getQuotes(held, true);
     for (const sym of held) {
+      if (sent >= MAX_PER_RUN) break;
       const q = quotes[sym];
-      const key = `${sym}|${day}`;
-      if (!q || Math.abs(q.changePct) < prefs.moveThreshold / 100 || moves.includes(key) || sent >= MAX_PER_RUN) continue;
-      // Only alert when the quote is from today (markets may be closed).
-      if (Date.now() - q.time > 18 * 3600_000) continue;
+      const key = moveToAlert(sym, q, prefs.moveThreshold, moves, Date.now());
+      if (!q || !key) continue;
       const pct = `${q.changePct > 0 ? '+' : ''}${(q.changePct * 100).toFixed(1)}%`;
       await Notifications.scheduleNotificationAsync({
         content: {
