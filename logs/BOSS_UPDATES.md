@@ -249,8 +249,8 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 4. **Still open from before, recommendations unchanged:** P-062 delete account (yes), P-063 profile listing (yes), P-019 confirmation link (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
 
 **Done (awaiting your merge, after #5)**
-- P-074: no more 1:1 dollar-to-shekel totals when the rate is missing. The app keeps the last good rate, shows "Rate as of …" when it is old and "—" when it has none (tax screen included). [#17](https://github.com/ShaharYani137/Kesefly/pull/17). qa-tester PASS (after one fix round), security-guardian PASS. Needs a Hebrew device check on Stocks and Tax.
-- P-075: "big move" alerts no longer fire twice around UTC midnight; once per exchange trading day. [#18](https://github.com/ShaharYani137/Kesefly/pull/18). qa-tester PASS (after one fix round).
+- P-074: no more 1:1 dollar-to-shekel totals when the rate is missing. The app keeps the last good rate, shows "Rate as of …" when it is old and "—" when it has none (tax screen included). [#17](https://github.com/ShaharYani137/Kesefly/pull/17). qa-tester PASS (after one fix round), security-guardian PASS, checks green (run 45955121715). Needs a Hebrew device check on Stocks and Tax.
+- P-075: "big move" alerts no longer fire twice around UTC midnight; once per exchange trading day. [#18](https://github.com/ShaharYani137/Kesefly/pull/18). qa-tester PASS (after one fix round), checks green (run 45955124700).
 - From before: #5–#16.
 
 **Security**
