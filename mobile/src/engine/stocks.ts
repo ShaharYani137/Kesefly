@@ -9,6 +9,8 @@
  * Keep all access in this file so the provider can be swapped without touching the UI.
  */
 
+import { limiter } from './concurrency';
+
 export type Quote = {
   symbol: string;
   name: string;
@@ -45,6 +47,34 @@ export class StockError extends Error {
 const BASE = 'https://query1.finance.yahoo.com/v8/finance/chart/';
 const CACHE_MS = 60_000;
 const cache = new Map<string, { at: number; quote: Quote }>();
+
+// ---------- Yahoo rate limit (HTTP 429) ----------
+// After a 429 we stop asking Yahoo for quotes for a while. Normal callers get the cached quote if
+// it is recent enough; `force` callers (they need a live price) get the rateLimit error. The pause
+// starts at 60 s and doubles on each new 429 (up to 15 min); a successful Yahoo answer resets it.
+// These numbers are a Kesefly design decision, not a documented Yahoo limit.
+const COOLDOWN_START_MS = 60_000;
+const COOLDOWN_MAX_MS = 15 * 60_000;
+/** During the pause, a cached quote is served only if younger than this (design decision). */
+const COOLDOWN_SERVE_MAX_AGE_MS = 15 * 60_000;
+let coolUntil = 0;
+let coolMs = 0;
+
+const coolingDown = () => Date.now() < coolUntil;
+
+function onRateLimit() {
+  // Requests sent before the pause began may still come back 429; they do not double it.
+  if (coolingDown()) return;
+  coolMs = coolMs ? Math.min(coolMs * 2, COOLDOWN_MAX_MS) : COOLDOWN_START_MS;
+  coolUntil = Date.now() + coolMs;
+}
+
+function onYahooOk() {
+  if (!coolingDown()) coolMs = 0;
+}
+
+/** At most 4 Yahoo quote requests in flight at once (shared by every screen). */
+const quoteSlot = limiter(4);
 
 type ChartMeta = {
   symbol: string;
@@ -153,7 +183,16 @@ export async function getQuote(symbol: string, force = false): Promise<Quote> {
     cache.set(sym, { at: Date.now(), quote });
     return quote;
   }
+  return quoteSlot(() => yahooQuote(sym, force));
+}
 
+async function yahooQuote(sym: string, force: boolean): Promise<Quote> {
+  if (coolingDown()) {
+    // Rate limited: a recent cached quote for normal callers, else the rate-limit error.
+    const last = cache.get(sym);
+    if (!force && last && Date.now() - last.at < COOLDOWN_SERVE_MAX_AGE_MS) return last.quote;
+    throw new StockError('rateLimit');
+  }
   let res: Response;
   try {
     res = await fetch(`${BASE}${encodeURIComponent(sym)}?range=1d&interval=1d`, {
@@ -164,8 +203,12 @@ export async function getQuote(symbol: string, force = false): Promise<Quote> {
     throw new StockError('network');
   }
   if (res.status === 404) throw new StockError('notFound');
-  if (res.status === 429) throw new StockError('rateLimit');
+  if (res.status === 429) {
+    onRateLimit();
+    throw new StockError('rateLimit');
+  }
   if (!res.ok) throw new StockError('network', `HTTP ${res.status}`);
+  onYahooOk();
 
   const body = (await res.json()) as ChartResponse;
   const r = body.chart?.result?.[0];
@@ -283,7 +326,12 @@ export async function getHistory(symbol: string, key: RangeKey): Promise<History
     throw new StockError('network');
   }
   if (res.status === 404) throw new StockError('notFound');
+  if (res.status === 429) {
+    onRateLimit();
+    throw new StockError('rateLimit');
+  }
   if (!res.ok) throw new StockError('network', `HTTP ${res.status}`);
+  onYahooOk();
   const r = ((await res.json()) as HistoryResponse).chart?.result?.[0];
   const ts = r?.timestamp ?? [];
   const closes = r?.indicators?.quote?.[0]?.close ?? [];
@@ -318,7 +366,12 @@ export async function getHistorySince(symbol: string, fromMs: number): Promise<H
     throw new StockError('network');
   }
   if (res.status === 404) throw new StockError('notFound');
+  if (res.status === 429) {
+    onRateLimit();
+    throw new StockError('rateLimit');
+  }
   if (!res.ok) throw new StockError('network', `HTTP ${res.status}`);
+  onYahooOk();
   const r = ((await res.json()) as HistoryResponse).chart?.result?.[0];
   const ts = r?.timestamp ?? [];
   const closes = r?.indicators?.quote?.[0]?.close ?? [];
