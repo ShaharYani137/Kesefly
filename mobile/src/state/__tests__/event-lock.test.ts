@@ -11,6 +11,8 @@ const m = vi.hoisted(() => ({
   getEvents: vi.fn(),
   getQuotes: vi.fn(),
   notify: vi.fn(),
+  /** Background task bodies passed to TaskManager.defineTask, by task name (latest module instance wins). */
+  tasks: new Map<string, () => Promise<unknown>>(),
 }));
 
 vi.mock('@react-native-async-storage/async-storage', () => ({
@@ -29,7 +31,10 @@ vi.mock('expo-background-task', () => ({
   registerTaskAsync: async () => {},
   unregisterTaskAsync: async () => {},
 }));
-vi.mock('expo-task-manager', () => ({ defineTask: () => {}, isTaskRegisteredAsync: async () => false }));
+vi.mock('expo-task-manager', () => ({
+  defineTask: (name: string, fn: () => Promise<unknown>) => void m.tasks.set(name, fn),
+  isTaskRegisteredAsync: async () => false,
+}));
 vi.mock('@/engine/news', () => ({ getEvents: m.getEvents }));
 vi.mock('@/engine/stocks', () => ({ getQuotes: m.getQuotes }));
 vi.mock('@/ui/bidi', () => ({ bidi: (t: string) => t, ltr: (t: string) => t }));
@@ -70,7 +75,7 @@ const story = (id: string) => ({
   score: 10,
 });
 
-const seen = () => JSON.parse(m.store.get(SEEN) ?? 'null') as { ids: string[]; runningSince?: number } | null;
+const seen = () => JSON.parse(m.store.get(SEEN) ?? 'null') as { ids: string[]; lastCheck?: number; moves?: string[]; runningSince?: number } | null;
 
 /** A promise the test resolves by hand, to keep a check "running". */
 function gate<T>() {
@@ -198,5 +203,112 @@ describe('checkEvents lock', () => {
     expect(Object.keys(seen() ?? {}).sort()).toEqual(['ids', 'lastCheck', 'moves']);
     expect(await checkEvents()).toBe(0);
     expect(m.notify).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('checkEvents lock (P-092 QA)', () => {
+  const quote = (changePct: number) => ({ time: Date.now() - 60_000, exchange: 'NasdaqGS', changePct });
+  const setState = (extra: Record<string, unknown>) =>
+    m.store.set(STATE, JSON.stringify({ lang: 'en', eventAlerts: true, holdings: [], prefs: { quietHours: false }, ...extra }));
+
+  beforeEach(() => {
+    m.store.clear();
+    setState({});
+    m.getEvents.mockReset().mockResolvedValue([story('a')]);
+    m.getQuotes.mockReset().mockResolvedValue({});
+    m.notify.mockReset().mockResolvedValue('id');
+    m.tasks.clear();
+    vi.resetModules();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('early returns (no state, alerts off, quiet hours) never write a lock', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 10, 28, 23, 0)); // 23:00 phone time: quiet hours
+    const { checkEvents } = await import('@/state/event-alerts');
+    const before = { ids: ['x'], lastCheck: 5, moves: [] };
+    m.store.set(SEEN, JSON.stringify(before));
+
+    setState({ prefs: { quietHours: true } });
+    expect(await checkEvents()).toBe(0);
+    setState({ eventAlerts: false });
+    expect(await checkEvents()).toBe(0);
+    m.store.delete(STATE);
+    expect(await checkEvents()).toBe(0);
+
+    expect(seen()).toEqual(before);
+    expect(m.getEvents).not.toHaveBeenCalled();
+  });
+
+  it('background task returns Success when skipped or done, Failed on a throw, and the lock is cleared', async () => {
+    const { EVENTS_TASK } = await import('@/state/event-alerts');
+    const task = m.tasks.get(EVENTS_TASK)!;
+    expect(task).toBeTypeOf('function');
+
+    // Another runtime holds the lock: skipped, still Success.
+    m.store.set(SEEN, JSON.stringify({ ids: [], lastCheck: 0, moves: [], runningSince: Date.now() - 1000 }));
+    expect(await task()).toBe(1);
+    expect(m.getEvents).not.toHaveBeenCalled();
+
+    // A failed run: Failed, and the lock it took is gone.
+    m.store.set(SEEN, JSON.stringify({ ids: [], lastCheck: 0, moves: [] }));
+    m.getEvents.mockRejectedValueOnce(new Error('network'));
+    expect(await task()).toBe(2);
+    expect(seen()?.runningSince).toBeUndefined();
+
+    // Normal run: Success, one alert.
+    expect(await task()).toBe(1);
+    expect(m.notify).toHaveBeenCalledTimes(1);
+    expect(seen()?.runningSince).toBeUndefined();
+  });
+
+  it('keeps move keys (P-075) in the lock record, the final write and after a failure', async () => {
+    setState({ holdings: [{ symbol: 'AAPL' }, { symbol: 'MSFT' }] });
+    m.getEvents.mockResolvedValue([]);
+    m.getQuotes.mockResolvedValue({ AAPL: quote(0.05) });
+    const { checkEvents } = await import('@/state/event-alerts');
+
+    expect(await checkEvents()).toBe(1);
+    const moves = seen()?.moves ?? [];
+    expect(moves).toHaveLength(1);
+    expect(moves[0]).toMatch(/^AAPL\|\d{4}-\d{2}-\d{2}$/);
+
+    // While a run is in progress the record still holds the move keys.
+    let during: unknown;
+    m.getQuotes.mockImplementationOnce(async () => {
+      during = JSON.parse(m.store.get(SEEN)!);
+      return { AAPL: quote(0.05) };
+    });
+    expect(await checkEvents()).toBe(0); // same move, same trading day: not posted again
+    expect(during).toMatchObject({ moves, runningSince: expect.any(Number) });
+    expect(seen()?.moves).toEqual(moves);
+
+    // A run that fails after the lock keeps the keys too, so the move is not re-posted.
+    m.getQuotes.mockRejectedValueOnce(new Error('quotes down'));
+    await expect(checkEvents()).rejects.toThrow('quotes down');
+    expect(seen()).toEqual({ ids: [], lastCheck: expect.any(Number), moves });
+    expect(await checkEvents()).toBe(0);
+    expect(m.notify).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the lock when posting a notification throws', async () => {
+    m.notify.mockRejectedValueOnce(new Error('denied'));
+    const { checkEvents } = await import('@/state/event-alerts');
+    await expect(checkEvents()).rejects.toThrow('denied');
+    expect(seen()?.runningSince).toBeUndefined();
+    expect(await checkEvents()).toBe(1);
+  });
+
+  it('a failed run does not clear a lock another run has taken since', async () => {
+    let other = 0;
+    m.getEvents.mockImplementationOnce(async () => {
+      const cur = seen()!;
+      other = (cur.runningSince ?? 0) + 1;
+      m.store.set(SEEN, JSON.stringify({ ...cur, runningSince: other }));
+      throw new Error('network');
+    });
+    const { checkEvents } = await import('@/state/event-alerts');
+    await expect(checkEvents()).rejects.toThrow('network');
+    expect(seen()?.runningSince).toBe(other);
   });
 });
