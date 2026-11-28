@@ -297,8 +297,8 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 3. **Still open, recommendations unchanged:** P-093 (yes), P-088 (yes), P-089 (yes), P-062 delete account (yes), P-063 (yes), P-019 (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
 
 **Done (awaiting your merge)**
-- P-091: adding a holding shows Tel Aviv matches at once; the Yahoo search gives up after 5 s, so no endless spinner offline. [#21](https://github.com/ShaharYani137/Kesefly/pull/21), stacked on #5. qa-tester PASS, security-guardian PASS. Needs a Hebrew/English device check.
-- P-092: overlapping alert checks (app start, 10-min timer, background task) no longer post the same story or move twice. [#22](https://github.com/ShaharYani137/Kesefly/pull/22), stacked on #18. qa-tester PASS, security-guardian PASS.
+- P-091: adding a holding shows Tel Aviv matches at once; the Yahoo search gives up after 5 s, so no endless spinner offline. [#21](https://github.com/ShaharYani137/Kesefly/pull/21), stacked on #5. qa-tester PASS, security-guardian PASS, checks green (run 46118629043). Needs a Hebrew/English device check.
+- P-092: overlapping alert checks (app start, 10-min timer, background task) no longer post the same story or move twice. [#22](https://github.com/ShaharYani137/Kesefly/pull/22), stacked on #18. qa-tester PASS, security-guardian PASS, checks green (run 46118631708).
 - From before: #5–#20.
 
 **Security**
