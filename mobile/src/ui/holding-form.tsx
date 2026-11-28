@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 
 import { formatPrice, getQuote, isTicker, type Quote } from '@/engine/stocks';
-import { searchSymbols, type SymbolMatch } from '@/engine/search';
+import { localSymbols, searchesOnline, searchSymbols, type SymbolMatch } from '@/engine/search';
 import { fill, type Holding, useApp } from '@/state/app-store';
 import { guessCurrency } from '@/state/portfolio';
 import { Button, Card, Row, SymbolBadge, Txt } from '@/ui/components';
@@ -77,20 +77,25 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
   const [query, setQuery] = useState(initial);
   const [picked, setPicked] = useState<SymbolMatch | null>(initial ? { symbol: initial, name: '', exchange: '' } : null);
   // Results tagged with their query, so stale results never show for a newer query.
-  const [results, setResults] = useState<{ q: string; list: SymbolMatch[] }>({ q: '', list: [] });
+  // `pending`: offline matches are shown and the Yahoo search is still running (at most 5 s).
+  const [results, setResults] = useState<{ q: string; list: SymbolMatch[]; pending: boolean }>({ q: '', list: [], pending: false });
   const [shares, setShares] = useState('');
   const [price, setPrice] = useState('');
   const [date, setDate] = useState(today);
   const [fee, setFee] = useState('');
 
-  // Search 350 ms after typing stops; a newer query cancels the older request.
+  // Search 350 ms after typing stops: offline (Tel Aviv) matches show at once, Yahoo matches
+  // merge in when they arrive or after the 5 s timeout. A newer query cancels the older request.
   useEffect(() => {
     const q = query.trim();
     if (picked || q.length < 2) return;
     const ctrl = new AbortController();
     const t = setTimeout(() => {
+      const online = searchesOnline(q);
+      setResults({ q, list: localSymbols(q), pending: online });
+      if (!online) return;
       searchSymbols(q, ctrl.signal).then((list) => {
-        if (!ctrl.signal.aborted) setResults({ q, list });
+        if (!ctrl.signal.aborted) setResults({ q, list, pending: false });
       });
     }, 350);
     return () => {
@@ -108,8 +113,10 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
   const quote = useQuote(symbol);
   const cur = quote?.currency ?? (symbol ? guessCurrency(symbol) : '');
   const showList = !picked && query.trim().length >= 2;
-  const busy = results.q !== query.trim();
-  const matches = busy ? [] : results.list;
+  const current = results.q === query.trim();
+  const matches = current ? results.list : [];
+  // Spinner row under the matches while typing settles or Yahoo is still answering.
+  const busy = !current || results.pending;
   return (
     <Card>
       <Txt variant="headline">{s.stocks.addHolding}</Txt>
@@ -128,43 +135,42 @@ export function AddHolding({ onSave, onCancel, symbol: initial = '' }: { onSave:
       ) : null}
       {showList ? (
         <View style={{ borderRadius: Metrics.fieldRadius, borderWidth: 1, borderColor: colors.separator, overflow: 'hidden' }}>
+          {matches.map((m, i) => (
+            <Pressable
+              key={m.symbol}
+              accessibilityRole="button"
+              accessibilityLabel={`${m.symbol} ${m.name}`}
+              onPress={() => {
+                setPicked(m);
+                setQuery(m.symbol);
+              }}
+              style={({ pressed }) => ({
+                minHeight: 56,
+                paddingHorizontal: 12,
+                paddingVertical: 8,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 12,
+                borderTopWidth: i ? 1 : 0,
+                borderTopColor: colors.separator,
+                opacity: pressed ? 0.6 : 1,
+              })}>
+              <SymbolBadge symbol={m.symbol} size={36} />
+              <View style={{ flex: 1 }}>
+                <Txt variant="body" numberOfLines={1}>
+                  {m.name}
+                </Txt>
+                <Txt variant="footnote" color="textSecondary" numberOfLines={1}>
+                  {[m.symbol, m.exchange, m.taseId].filter(Boolean).join(' · ')}
+                </Txt>
+              </View>
+            </Pressable>
+          ))}
           {busy ? (
-            <View style={{ minHeight: 48, justifyContent: 'center' }}>
-              <ActivityIndicator color={colors.textSecondary} />
+            <View style={{ minHeight: 48, justifyContent: 'center', borderTopWidth: matches.length ? 1 : 0, borderTopColor: colors.separator }}>
+              <ActivityIndicator color={colors.textSecondary} accessibilityLabel={s.stocks.loading} />
             </View>
-          ) : matches.length ? (
-            matches.map((m, i) => (
-              <Pressable
-                key={m.symbol}
-                accessibilityRole="button"
-                accessibilityLabel={`${m.symbol} ${m.name}`}
-                onPress={() => {
-                  setPicked(m);
-                  setQuery(m.symbol);
-                }}
-                style={({ pressed }) => ({
-                  minHeight: 56,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 12,
-                  borderTopWidth: i ? 1 : 0,
-                  borderTopColor: colors.separator,
-                  opacity: pressed ? 0.6 : 1,
-                })}>
-                <SymbolBadge symbol={m.symbol} size={36} />
-                <View style={{ flex: 1 }}>
-                  <Txt variant="body" numberOfLines={1}>
-                    {m.name}
-                  </Txt>
-                  <Txt variant="footnote" color="textSecondary" numberOfLines={1}>
-                    {[m.symbol, m.exchange, m.taseId].filter(Boolean).join(' · ')}
-                  </Txt>
-                </View>
-              </Pressable>
-            ))
-          ) : (
+          ) : matches.length ? null : (
             <Txt variant="footnote" color="textSecondary" style={{ padding: 12 }}>
               {isTicker(typed) ? s.stocks.searchPick : s.stocks.searchNoMatch}
             </Txt>
