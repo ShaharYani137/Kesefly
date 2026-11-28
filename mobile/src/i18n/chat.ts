@@ -24,6 +24,7 @@ const en = {
     username: 'Username',
     usernameHint: '3 to 20 characters: English letters, digits and _.',
     displayName: 'Name shown in chats',
+    nameRejected: 'Names cannot include check marks, hidden characters or the word Kesefly. Choose a different name.',
     save: 'Save',
     // New chat
     direct: 'Person',
@@ -80,6 +81,7 @@ const he: ChatStrings = {
     username: 'שם משתמש',
     usernameHint: '3 עד 20 תווים: אותיות באנגלית, ספרות ו-_.',
     displayName: "השם שיוצג בצ'אט",
+    nameRejected: 'אי אפשר לכלול בשם סימני וי, תווים נסתרים או את המילה כספלי (Kesefly). בחרו שם אחר.',
     save: 'שמירה',
     direct: 'אדם',
     groupTab: 'קבוצה',

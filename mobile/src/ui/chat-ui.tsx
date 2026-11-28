@@ -5,10 +5,11 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, TextInput, View } from 'react-native';
 
 import { ChatError, type Profile, saveProfile, USERNAME_RE } from '@/chat/api';
+import { atUsername, isAllowedChatName } from '@/chat/names';
 import { useApp } from '@/state/app-store';
 import { useAuth } from '@/state/auth';
 import { Button, Card, Icon, Txt } from '@/ui/components';
-import { Metrics, useTokens } from '@/ui/theme';
+import { Metrics, type TypeRole, useTokens } from '@/ui/theme';
 
 /** Error text for any chat failure. */
 export function useChatError() {
@@ -34,6 +35,20 @@ export function VerifiedBadge({ size = 16 }: { size?: number }) {
     <View accessible accessibilityLabel={s.chat.verified}>
       <Icon sf="checkmark.seal.fill" md="verified" size={size} color={colors.accent} />
     </View>
+  );
+}
+
+/**
+ * The @username as its own secondary text, always left-to-right (isolate marks plus
+ * writingDirection), so it reads "@dana" in Hebrew too. Shown next to display names so a
+ * name alone cannot pass as someone else (P-099). It never shrinks or truncates (usernames
+ * are at most 20 characters), so in a row only the display name next to it ellipsizes.
+ */
+export function Username({ username, variant = 'caption' }: { username: string; variant?: TypeRole }) {
+  return (
+    <Txt variant={variant} color="textSecondary" style={{ writingDirection: 'ltr', flexShrink: 0 }}>
+      {atUsername(username)}
+    </Txt>
   );
 }
 
@@ -89,6 +104,10 @@ export function ProfileSetup({ current, onSaved }: { current: Profile | null; on
   const valid = USERNAME_RE.test(username);
 
   const save = async () => {
+    if (!isAllowedChatName(name)) {
+      setError(s.chat.nameRejected);
+      return;
+    }
     setBusy(true);
     setError('');
     try {

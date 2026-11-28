@@ -5,6 +5,7 @@
  * Every call runs as the signed-in cloud account (its access token); Row Level Security on the
  * server decides what the user may read and write. Nothing here is stored on the phone.
  */
+import { isAllowedChatName } from '@/chat/names';
 import { CLOUD, getAccessToken, SUPABASE_KEY, SUPABASE_URL } from '@/state/auth';
 
 export type ChatErrorCode = 'offline' | 'signedOut' | 'network' | 'taken' | 'invalid' | 'notSetUp';
@@ -102,6 +103,8 @@ export async function getMyProfile(): Promise<Profile | null> {
 export async function saveProfile(username: string, displayName: string): Promise<Profile> {
   const name = username.trim().toLowerCase();
   if (!USERNAME_RE.test(name)) throw new ChatError('invalid');
+  // Screens check the name first and show why (chat/names.ts); this is the last line of defence.
+  if (!isAllowedChatName(displayName)) throw new ChatError('invalid');
   const id = await myUserId();
   const rows = await request<Profile[]>('profiles?on_conflict=id&select=id,username,display_name', {
     method: 'POST',
@@ -129,7 +132,10 @@ export async function searchUsers(query: string): Promise<Profile[]> {
 
 export const listConversations = () => rpc<Conversation[]>('my_conversations');
 export const startDirect = (other: string) => rpc<string>('start_direct', { other });
-export const createGroup = (title: string, memberIds: string[]) => rpc<string>('create_group', { group_title: title.trim(), member_ids: memberIds });
+export async function createGroup(title: string, memberIds: string[]): Promise<string> {
+  if (!isAllowedChatName(title)) throw new ChatError('invalid');
+  return rpc<string>('create_group', { group_title: title.trim(), member_ids: memberIds });
+}
 export const addGroupMembers = (conv: string, memberIds: string[]) => rpc<void>('add_group_members', { conv, member_ids: memberIds });
 export const leaveConversation = (conv: string) => rpc<void>('leave_conversation', { conv });
 export const markRead = (conv: string) => rpc<void>('mark_read', { conv });
