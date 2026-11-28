@@ -84,31 +84,67 @@ type YahooSearch = {
 };
 const TYPES = new Set(['EQUITY', 'ETF', 'MUTUALFUND', 'INDEX']);
 
-async function yahooMatches(q: string, signal?: AbortSignal): Promise<SymbolMatch[]> {
+/** Longest wait for Yahoo search before giving up and showing the Tel Aviv list only. */
+export const SEARCH_TIMEOUT_MS = 5_000;
+
+/**
+ * Yahoo search, aborted after `SEARCH_TIMEOUT_MS` or when the caller's signal aborts, whichever
+ * comes first. Joined by hand (not `AbortSignal.any`/`AbortSignal.timeout`) so it works on every
+ * JS engine the app runs on.
+ */
+async function yahooMatches(q: string, signal?: AbortSignal, timeoutMs = SEARCH_TIMEOUT_MS): Promise<SymbolMatch[]> {
   const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0`;
-  const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, signal });
-  if (!res.ok) return [];
-  const body = (await res.json()) as YahooSearch;
-  return (body.quotes ?? [])
-    .filter((r) => r.symbol && TYPES.has(r.quoteType ?? ''))
-    .map((r) => ({ symbol: r.symbol!.toUpperCase(), name: r.longname ?? r.shortname ?? r.symbol!, exchange: r.exchDisp ?? '' }));
+  if (signal?.aborted) return [];
+  const ctrl = new AbortController();
+  const stop = () => ctrl.abort();
+  signal?.addEventListener('abort', stop);
+  const timer = setTimeout(stop, timeoutMs);
+  // fetch does not always settle on abort (some engines ignore the signal), so race it too.
+  const aborted = new Promise<never>((_, reject) => ctrl.signal.addEventListener('abort', () => reject(new Error('aborted'))));
+  try {
+    const work = (async () => {
+      const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0', Accept: 'application/json' }, signal: ctrl.signal });
+      if (!res.ok) return [];
+      return ((await res.json()) as YahooSearch).quotes ?? [];
+    })();
+    work.catch(() => {}); // A late failure after the timeout won the race is not an error.
+    const quotes = await Promise.race([work, aborted]);
+    return quotes
+      .filter((r) => r.symbol && TYPES.has(r.quoteType ?? ''))
+      .map((r) => ({ symbol: r.symbol!.toUpperCase(), name: r.longname ?? r.shortname ?? r.symbol!, exchange: r.exchDisp ?? '' }));
+  } finally {
+    clearTimeout(timer);
+    signal?.removeEventListener('abort', stop);
+  }
+}
+
+/** Offline matches (Tel Aviv list and Hebrew names of US stocks), at once and without the network. */
+export function localSymbols(query: string): SymbolMatch[] {
+  return localMatches(query.trim());
+}
+
+/** True when `searchSymbols` also asks Yahoo: Latin text. Hebrew text and security numbers stay offline. */
+export function searchesOnline(query: string): boolean {
+  const q = query.trim();
+  return q.length > 0 && !HEBREW.test(q) && !/^\d+$/.test(q);
 }
 
 /**
  * Matches for a query, at most 10. Hebrew text and security numbers search the Tel Aviv list
  * only (Yahoo does not know them). Latin text mixes both: Yahoo first for global reach, Tel Aviv
- * matches fill in. Network errors return only the Tel Aviv list.
+ * matches fill in. Network errors, a Yahoo wait over `SEARCH_TIMEOUT_MS` or an aborted `signal`
+ * return only the Tel Aviv list. Show `localSymbols` while this runs.
  */
-export async function searchSymbols(query: string, signal?: AbortSignal): Promise<SymbolMatch[]> {
+export async function searchSymbols(query: string, signal?: AbortSignal, timeoutMs = SEARCH_TIMEOUT_MS): Promise<SymbolMatch[]> {
   const q = query.trim();
   if (!q) return [];
   const local = localMatches(q);
-  if (HEBREW.test(q) || /^\d+$/.test(q)) return local;
+  if (!searchesOnline(q)) return local;
   let remote: SymbolMatch[] = [];
   try {
-    remote = await yahooMatches(q, signal);
+    remote = await yahooMatches(q, signal, timeoutMs);
   } catch {
-    // Offline or aborted: Tel Aviv list only.
+    // Offline, timed out or aborted: Tel Aviv list only.
   }
   // Exact Tel Aviv symbol hits stay on top; otherwise interleave so both markets show.
   const out: SymbolMatch[] = [];
