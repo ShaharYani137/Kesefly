@@ -327,8 +327,8 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 4. **Still open, recommendations unchanged:** P-093, P-088, P-089, P-062, P-063, P-019, P-054, P-060, P-017, P-039, P-048 (yes); P-024 (off); P-020 / P-041, P-021, P-029; PR #2 merge, PR #3 hold.
 
 **Done (awaiting your merge)**
-- P-099: chat always shows the @username next to a display name (header, group senders, chat list), and names with hidden characters, check marks, "@" or "Kesefly" are refused. [#23](https://github.com/ShaharYani137/Kesefly/pull/23), stacked on #5. qa-tester PASS, security-guardian PASS after two fixes. Checks running. Needs a Hebrew/English device check.
-- P-102: provident fund (gemel) deposit fee can be entered; a 4% fee is no longer "Good". [#24](https://github.com/ShaharYani137/Kesefly/pull/24), stacked on #5. qa-tester PASS. Checks running.
+- P-099: chat always shows the @username next to a display name (header, group senders, chat list), and names with hidden characters, check marks, "@" or "Kesefly" are refused. [#23](https://github.com/ShaharYani137/Kesefly/pull/23), stacked on #5. qa-tester PASS, security-guardian PASS after two fixes. Checks green (run 46172817333). Needs a Hebrew/English device check.
+- P-102: provident fund (gemel) deposit fee can be entered; a 4% fee is no longer "Good". [#24](https://github.com/ShaharYani137/Kesefly/pull/24), stacked on #5. qa-tester PASS. Checks green (run 46172819491).
 - From before: #5–#22.
 
 **Security**
