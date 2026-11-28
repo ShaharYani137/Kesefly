@@ -10,7 +10,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { formatMoney } from '@/engine/format';
-import { feeCheck, ISRAELI, liquidDate, type SavingsAccount, type SavingsKind, US_KINDS } from '@/engine/savings';
+import { DEPOSIT_FEE_KINDS, feeCheck, ISRAELI, liquidDate, type SavingsAccount, type SavingsKind, US_KINDS } from '@/engine/savings';
 import { convert, getUsdIls } from '@/engine/stocks';
 import type { Currency } from '@/engine/types';
 import { fill, newId, useApp } from '@/state/app-store';
@@ -114,6 +114,7 @@ function AccountCard({ a, years: y, onEdit }: { a: SavingsAccount; years: number
   const c = feeCheck(a, y);
   const money = (v: number) => formatMoney(v, a.currency, lang);
   const us = US_KINDS.includes(a.kind);
+  const depFee = DEPOSIT_FEE_KINDS.includes(a.kind);
   const liquid = liquidDate(a);
   const today = new Date().toISOString().slice(0, 10);
   const badge = { good: { bg: colors.positive, label: s.savings.good }, high: { bg: colors.warning, label: s.savings.high }, max: { bg: colors.danger, label: s.savings.max } }[c.level];
@@ -134,13 +135,13 @@ function AccountCard({ a, years: y, onEdit }: { a: SavingsAccount; years: number
         {money(a.balance)}
       </Txt>
       <Txt variant="footnote" color="textSecondary">
-        {us ? fill(s.savings.feesUS, { bal: pct(a.feeBalance) }) : a.kind === 'pension' ? fill(s.savings.fees, { dep: pct(a.feeDeposit), bal: pct(a.feeBalance) }) : fill(s.savings.feesBal, { bal: pct(a.feeBalance) })}
+        {us ? fill(s.savings.feesUS, { bal: pct(a.feeBalance) }) : depFee ? fill(s.savings.fees, { dep: pct(a.feeDeposit || 0), bal: pct(a.feeBalance) }) : fill(s.savings.feesBal, { bal: pct(a.feeBalance) })}
       </Txt>
       <Pill label={badge.label} bg={badge.bg} fg={colors.background} />
       {c.level !== 'good' ? (
         <>
           <Txt variant="subhead">
-            {a.kind === 'pension' ? fill(s.savings.goodRate, { dep: pct(c.good.deposit), bal: pct(c.good.balance) }) : fill(s.savings.goodRateBal, { bal: pct(c.good.balance) })}
+            {depFee ? fill(s.savings.goodRate, { dep: pct(c.good.deposit), bal: pct(c.good.balance) }) : fill(s.savings.goodRateBal, { bal: pct(c.good.balance) })}
           </Txt>
           {c.extraCost >= 1 ? (
             <Txt variant="subhead" color="warning">
@@ -181,10 +182,11 @@ function AccountForm({
   const num = (v: number) => (v ? String(Number(v.toFixed(4))) : '');
   const [balance, setBalance] = useState(num(initial.balance));
   const [monthly, setMonthly] = useState(num(initial.monthly));
-  const [feeDep, setFeeDep] = useState(num(initial.feeDeposit * 100));
+  const [feeDep, setFeeDep] = useState(num((initial.feeDeposit || 0) * 100));
   const [feeBal, setFeeBal] = useState(num(initial.feeBalance * 100));
   const [opened, setOpened] = useState(initial.opened ?? '');
   const us = US_KINDS.includes(kind);
+  const depFee = DEPOSIT_FEE_KINDS.includes(kind);
   const ok = Number(balance) > 0 && validDate(opened);
 
   const label = (t: string) => (
@@ -199,7 +201,7 @@ function AccountForm({
       provider: provider.trim(),
       balance: Number(balance) || 0,
       monthly: Number(monthly) || 0,
-      feeDeposit: kind === 'pension' ? (Number(feeDep) || 0) / 100 : 0,
+      feeDeposit: depFee ? (Number(feeDep) || 0) / 100 : 0,
       feeBalance: (Number(feeBal) || 0) / 100,
       currency,
       opened: kind === 'hishtalmut' && opened ? opened : undefined,
@@ -240,7 +242,7 @@ function AccountForm({
       <Row>
         <Field value={monthly} onChange={(t) => setMonthly(cleanNum(t))} placeholder="0" numeric />
       </Row>
-      {kind === 'pension' ? (
+      {depFee ? (
         <>
           {label(s.savings.feeDeposit)}
           <Row>

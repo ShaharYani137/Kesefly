@@ -16,7 +16,7 @@ export type SavingsAccount = {
   balance: number;
   /** Deposit per month (employee + employer), same currency as the balance. */
   monthly: number;
-  /** Management fee on deposits, fraction (0.015 = 1.5%). Israeli pension only. */
+  /** Management fee on deposits, fraction (0.015 = 1.5%). Pension and provident fund only (see DEPOSIT_FEE_KINDS). Older saved entries may lack it: read as 0. */
   feeDeposit: number;
   /** Yearly fee on the balance (or fund expense ratio for 401k / IRA), fraction. */
   feeBalance: number;
@@ -27,15 +27,18 @@ export type SavingsAccount = {
 
 export const ISRAELI: SavingsKind[] = ['pension', 'hishtalmut', 'gemel'];
 export const US_KINDS: SavingsKind[] = ['k401', 'ira'];
+/** Kinds that can charge a fee on deposits, so the form asks for it. */
+export const DEPOSIT_FEE_KINDS: SavingsKind[] = ['pension', 'gemel'];
 
 /**
  * Legal maximum fees in Israel (Capital Market Authority): pension 6% of deposits and 0.5% of
- * the balance; study and provident funds 2% of the balance (provident funds 1.05%).
+ * the balance; study fund 2% of the balance (no deposit fee); provident fund 4% of deposits and
+ * 1.05% of the balance (תקנות הפיקוח על שירותים פיננסיים (קופות גמל) (דמי ניהול), התשע"ב-2012).
  */
 export const MAX_FEES: Partial<Record<SavingsKind, { deposit: number; balance: number }>> = {
   pension: { deposit: 0.06, balance: 0.005 },
   hishtalmut: { deposit: 0, balance: 0.02 },
-  gemel: { deposit: 0, balance: 0.0105 },
+  gemel: { deposit: 0.04, balance: 0.0105 },
 };
 
 /**
@@ -78,10 +81,11 @@ export function project(balance: number, monthly: number, feeDeposit: number, fe
 export function feeCheck(a: SavingsAccount, years: number): FeeCheck {
   const good = GOOD_FEES[a.kind];
   const max = MAX_FEES[a.kind];
-  const projected = project(a.balance, a.monthly, a.feeDeposit, a.feeBalance, years);
-  const projectedGood = project(a.balance, a.monthly, Math.min(a.feeDeposit, good.deposit), Math.min(a.feeBalance, good.balance), years);
-  const atMax = !!max && (a.feeBalance >= max.balance - 1e-9 || (max.deposit > 0 && a.feeDeposit >= max.deposit - 1e-9));
-  const high = a.feeBalance > good.balance + 1e-9 || a.feeDeposit > good.deposit + 1e-9;
+  const dep = a.feeDeposit || 0; // older saved entries may lack it
+  const projected = project(a.balance, a.monthly, dep, a.feeBalance, years);
+  const projectedGood = project(a.balance, a.monthly, Math.min(dep, good.deposit), Math.min(a.feeBalance, good.balance), years);
+  const atMax = !!max && (a.feeBalance >= max.balance - 1e-9 || (max.deposit > 0 && dep >= max.deposit - 1e-9));
+  const high = a.feeBalance > good.balance + 1e-9 || dep > good.deposit + 1e-9;
   return { level: atMax ? 'max' : high ? 'high' : 'good', good, extraCost: Math.max(0, projectedGood - projected), projected, projectedGood };
 }
 
