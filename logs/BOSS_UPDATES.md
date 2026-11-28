@@ -315,3 +315,32 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - P-009 note: quote requests need a timeout first (a hung one would also pause alert checks).
 
 **Next:** implement P-099 (chat @username) and P-102 (gemel fee). Next audit: connectivity-engineer + qa-tester.
+
+## 2026-11-28 evening
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so typecheck, lint and vitest run only on GitHub (PR #5 checks). No human replies, merges or new comments since this morning.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Nineteen checked fixes (#6–#24) are stacked on it.
+2. **P-109: a keychain read error at startup signs the user out.** If iOS starts the app in the background while the phone is locked, the app can show the sign-in screen even though the session is still saved. Fix: treat a read error as "try again on unlock", never as "signed out". This touches session handling, so it needs you. **Recommendation: yes**, together with P-089 (keychain class) and P-054.
+3. **P-100 (server name check) still waiting.** Now also covers look-alike letters (Cyrillic "е") and Hebrew vowel marks. **Recommendation: yes**, in one migration with P-001 / P-002 / P-063.
+4. **Still open, recommendations unchanged:** P-093, P-088, P-089, P-062, P-063, P-019, P-054, P-060, P-017, P-039, P-048 (yes); P-024 (off); P-020 / P-041, P-021, P-029; PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge)**
+- P-099: chat always shows the @username next to a display name (header, group senders, chat list), and names with hidden characters, check marks, "@" or "Kesefly" are refused. [#23](https://github.com/ShaharYani137/Kesefly/pull/23), stacked on #5. qa-tester PASS, security-guardian PASS after two fixes. Checks running. Needs a Hebrew/English device check.
+- P-102: provident fund (gemel) deposit fee can be entered; a 4% fee is no longer "Good". [#24](https://github.com/ShaharYani137/Kesefly/pull/24), stacked on #5. qa-tester PASS. Checks running.
+- From before: #5–#22.
+
+**Security**
+- P-107 (medium, approved): if reading saved data fails once (corrupt value, locked keychain), the app saves empty defaults over it and the user's holdings, savings, Lab trades or AI chats are lost for good.
+- P-113 (low, approved): groups still show no username, so a 2-member group named like a person looks like a 1:1 chat; old names with hidden characters still display.
+
+**Approved since last update**
+- P-107: never save over data that failed to load; retry the load.
+- P-108: Lab scanner says "checked X of Y" instead of "No setups found" when data failed.
+- P-110: practice trades no longer miss a stop that arrives in a late bar (wrong P&L today).
+- P-111: short money format: no "$1,000K", minus sign before the currency.
+- P-112: study-fund "tax-free from" date fix (Feb 29, local date) and engine tests.
+- P-113: follow-ups to #23 (groups, old names).
+
+**Next:** implement P-107 (data loss) and P-110 (practice-trade stops). Next audit: security-guardian + performance-engineer.

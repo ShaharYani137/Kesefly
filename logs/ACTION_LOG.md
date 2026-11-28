@@ -385,3 +385,9 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-28 09:05 | Recorded P-099…P-106; approved P-099, P-101 (step 1), P-102–P-106; P-100 needs-human (Supabase constraint); P-091/P-092 done; note on P-009 | `logs/PROPOSALS.md` | Done |
 | 2026-11-28 09:07 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-28 09:12 | PR #21 checks green (run 46118629043), PR #22 checks green (run 46118631708): typecheck, lint, vitest pass | PRs #21, #22 | Done |
+| 2026-11-28 19:45 | Boss evening cycle start: main unchanged (a69a977), no human replies or merges; npm registry still unreachable | — | Checked |
+| 2026-11-28 19:50 | Audits: connectivity-engineer (3 proposals), qa-tester (3 proposals), read only | — | Done |
+| 2026-11-28 20:05 | P-099 implemented on `agents/2026-11-28-chat-username` (c8c1796, fixes 191a141); qa-tester PASS, security-guardian PASS after 2 medium fixes; pushed, PR #23 | `mobile/src/chat/names.ts`, `ui/chat-ui.tsx`, `app/chats/*`, `chat/api.ts`, `i18n/chat.ts`, tests | Done |
+| 2026-11-28 20:05 | P-102 implemented on `agents/2026-11-28-gemel-fee` (38be109); qa-tester PASS; pushed, PR #24 | `mobile/src/engine/savings.ts`, `app/savings.tsx`, `engine/__tests__/savings.test.ts` | Done |
+| 2026-11-28 20:10 | Recorded P-107…P-113; approved P-107, P-108, P-110–P-113; P-109 needs-human (session handling); P-099/P-102 done; P-100 note extended | `logs/PROPOSALS.md` | Done |
+| 2026-11-28 20:12 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
