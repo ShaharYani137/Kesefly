@@ -62,6 +62,13 @@ describe('chat api', () => {
     await expect(api.saveProfile('Bad Name!', '')).rejects.toMatchObject({ code: 'invalid' });
   });
 
+  it('refuses look-alike display names before any request', async () => {
+    const api = await import('@/chat/api');
+    reply(200, [{ id: 'user-1', username: 'dana', display_name: 'Kesefly' }]);
+    await expect(api.saveProfile('dana', 'Kesefly')).rejects.toMatchObject({ code: 'invalid' });
+    expect(calls).toHaveLength(0);
+  });
+
   it('sends trimmed messages and refuses empty ones', async () => {
     const api = await import('@/chat/api');
     reply(201, [{ id: 7, conversation_id: 'c1', sender_id: 'user-1', body: 'hi', created_at: '2026-11-21T10:00:00Z' }]);

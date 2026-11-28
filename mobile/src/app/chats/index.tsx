@@ -147,7 +147,7 @@ export default function ChatsScreen() {
                             {title}
                           </Txt>
                           {!c.is_group && isVerified(c.peer_username) ? <VerifiedBadge /> : null}
-                          {peerAt ? <Username username={peerAt} variant="subhead" shrink /> : null}
+                          {peerAt ? <Username username={peerAt} variant="subhead" /> : null}
                         </Row>
                         <Txt variant="caption" style={{ color: c.unread ? colors.accent : colors.textSecondary }}>
                           {chatTime(c.last_at, lang, s.chat)}

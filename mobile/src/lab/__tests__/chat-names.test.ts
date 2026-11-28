@@ -12,13 +12,13 @@ describe('chatNameProblem', () => {
   });
 
   it('rejects bidi overrides, isolates and marks', () => {
-    for (const c of ['‮', '‭', '‪', '⁦', '⁧', '⁨', '⁩', '‎', '‏', '؜']) {
+    for (const c of ['\u202E', '\u202D', '\u202A', '\u2066', '\u2067', '\u2068', '\u2069', '\u200E', '\u200F', '\u061C']) {
       expect(chatNameProblem(`Dana${c}`)).toBe('hidden');
     }
   });
 
   it('rejects zero-width and other invisible format characters', () => {
-    for (const c of ['​', '‌', '‍', '⁠', '﻿', '­', '\u{E0041}']) {
+    for (const c of ['\u200B', '\u200C', '\u200D', '\u2060', '\uFEFF', '\u00AD', '\u{E0041}']) {
       expect(chatNameProblem(`Da${c}na`)).toBe('hidden');
     }
   });
@@ -39,7 +39,7 @@ describe('chatNameProblem', () => {
   });
 
   it('rejects check marks and verified-looking glyphs', () => {
-    for (const c of ['✓', '✔', '✔️', '☑', '✅', '🗸', '🗹', '√']) {
+    for (const c of ['✓', '✔', '✔\uFE0F', '☑', '✅', '🗸', '🗹', '√']) {
       expect(chatNameProblem(`Dana ${c}`)).toBe('checkMark');
     }
   });
@@ -50,14 +50,20 @@ describe('chatNameProblem', () => {
     }
   });
 
+  it('rejects "@" so a display name cannot pass as an @username', () => {
+    for (const n of ['@shasha', 'Dana @dana', 'me@home', '\uFF20shasha', '\uFE6Bshasha']) {
+      expect(chatNameProblem(n)).toBe('at');
+    }
+  });
+
   it('reports hidden characters first when several rules apply', () => {
-    expect(chatNameProblem('Kesefly ✔‮')).toBe('hidden');
+    expect(chatNameProblem('Kesefly ✔\u202E')).toBe('hidden');
     expect(chatNameProblem('Kesefly ✔')).toBe('checkMark');
   });
 });
 
 describe('atUsername', () => {
   it('wraps @username in left-to-right isolate marks', () => {
-    expect(atUsername('dana_1')).toBe('⁦@dana_1⁩');
+    expect(atUsername('dana_1')).toBe('\u2066@dana_1\u2069');
   });
 });

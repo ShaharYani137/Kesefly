@@ -214,7 +214,7 @@ export default function ChatRoomScreen() {
                 {sender?.name ?? '?'}
               </Txt>
               {verifiedIds.has(item.m.sender_id) ? <VerifiedBadge size={12} /> : null}
-              {sender?.username ? <Username username={sender.username} shrink /> : null}
+              {sender?.username ? <Username username={sender.username} /> : null}
             </Row>
           ) : null}
           <Txt selectable style={{ color: mine ? colors.onAccent : colors.text }}>

@@ -41,11 +41,12 @@ export function VerifiedBadge({ size = 16 }: { size?: number }) {
 /**
  * The @username as its own secondary text, always left-to-right (isolate marks plus
  * writingDirection), so it reads "@dana" in Hebrew too. Shown next to display names so a
- * name alone cannot pass as someone else (P-099).
+ * name alone cannot pass as someone else (P-099). It never shrinks or truncates (usernames
+ * are at most 20 characters), so in a row only the display name next to it ellipsizes.
  */
-export function Username({ username, variant = 'caption', shrink }: { username: string; variant?: TypeRole; shrink?: boolean }) {
+export function Username({ username, variant = 'caption' }: { username: string; variant?: TypeRole }) {
   return (
-    <Txt variant={variant} color="textSecondary" numberOfLines={1} style={{ writingDirection: 'ltr', flexShrink: shrink ? 1 : 0 }}>
+    <Txt variant={variant} color="textSecondary" style={{ writingDirection: 'ltr', flexShrink: 0 }}>
       {atUsername(username)}
     </Txt>
   );
