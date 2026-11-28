@@ -15,7 +15,7 @@ import { getConversation, leaveConversation, listMembers, listMessages, markRead
 import { subscribeMessages } from '@/chat/realtime';
 import { fill, useApp } from '@/state/app-store';
 import { BackButton, IconButton, Row, Txt } from '@/ui/components';
-import { ChatAvatar, chatDay, isVerified, useChatError, VerifiedBadge } from '@/ui/chat-ui';
+import { ChatAvatar, chatDay, isVerified, useChatError, Username, VerifiedBadge } from '@/ui/chat-ui';
 import { showDialog } from '@/ui/dialog';
 import { useKeyboardInset } from '@/ui/keyboard';
 import { Metrics, useTokens } from '@/ui/theme';
@@ -40,6 +40,8 @@ export default function ChatRoomScreen() {
   const [isGroup, setIsGroup] = useState(false);
   /** 1:1 chat with a verified account: badge after the name in the header. */
   const [peerVerified, setPeerVerified] = useState(false);
+  /** 1:1 chat: the peer's @username, always shown under the name (P-099). */
+  const [peerUsername, setPeerUsername] = useState('');
   const [title, setTitle] = useState(titleParam ?? '');
   const [loading, setLoading] = useState(true);
   const [older, setOlder] = useState(true);
@@ -69,6 +71,7 @@ export default function ChatRoomScreen() {
           if (peer) {
             setTitle(peer.display_name || `@${peer.username}`);
             setPeerVerified(isVerified(peer.username));
+            setPeerUsername(peer.display_name ? peer.username : '');
           }
         }
         setMembers(mem);
@@ -156,7 +159,17 @@ export default function ChatRoomScreen() {
       },
     ]);
 
-  const names = useMemo(() => new Map(members.map((m) => [m.user_id, m.profile ? m.profile.display_name || `@${m.profile.username}` : '?'])), [members]);
+  /** Sender label in groups: the display name, plus the @username when a display name is set. */
+  const names = useMemo(
+    () =>
+      new Map(
+        members.map((m): [string, { name: string; username: string }] => [
+          m.user_id,
+          m.profile ? { name: m.profile.display_name || `@${m.profile.username}`, username: m.profile.display_name ? m.profile.username : '' } : { name: '?', username: '' },
+        ]),
+      ),
+    [members],
+  );
   const verifiedIds = useMemo(() => new Set(members.filter((m) => isVerified(m.profile?.username)).map((m) => m.user_id)), [members]);
   const items: Item[] = useMemo(() => [...pending.map((p) => ({ kind: 'pending' as const, p })), ...messages.map((m) => ({ kind: 'msg' as const, m }))], [pending, messages]);
   const time = (iso: string) => new Date(iso).toLocaleTimeString(lang === 'he' ? 'he-IL' : 'en-US', { hour: '2-digit', minute: '2-digit' });
@@ -171,6 +184,7 @@ export default function ChatRoomScreen() {
     const newDay = !above || dayOf(above) !== dayOf(item);
     const sameSenderAbove = above && !newDay && above.kind === 'msg' && item.kind === 'msg' && above.m.sender_id === item.m.sender_id;
     const failed = item.kind === 'pending' && item.p.status === 'failed';
+    const sender = item.kind === 'msg' ? names.get(item.m.sender_id) : undefined;
     return (
       <View style={{ gap: 4, marginTop: sameSenderAbove ? 2 : 8 }}>
         {newDay ? (
@@ -196,10 +210,11 @@ export default function ChatRoomScreen() {
           }}>
           {isGroup && !mine && !sameSenderAbove && item.kind === 'msg' ? (
             <Row style={{ gap: 4, marginBottom: 2 }}>
-              <Txt variant="caption" style={{ color: colors.accent, flexShrink: 1 }}>
-                {names.get(item.m.sender_id) ?? '?'}
+              <Txt variant="caption" numberOfLines={1} style={{ color: colors.accent, flexShrink: 1 }}>
+                {sender?.name ?? '?'}
               </Txt>
               {verifiedIds.has(item.m.sender_id) ? <VerifiedBadge size={12} /> : null}
+              {sender?.username ? <Username username={sender.username} shrink /> : null}
             </Row>
           ) : null}
           <Txt selectable style={{ color: mine ? colors.onAccent : colors.text }}>
@@ -230,6 +245,8 @@ export default function ChatRoomScreen() {
               <Txt variant="caption" color="textSecondary" numberOfLines={1}>
                 {fill(s.chat.members, { n: members.length })}
               </Txt>
+            ) : peerUsername ? (
+              <Username username={peerUsername} />
             ) : null}
           </View>
           <IconButton sf="rectangle.portrait.and.arrow.right" md="logout" label={s.chat.leave} onPress={leave} />

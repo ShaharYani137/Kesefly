@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 
 import { createGroup, type Profile, searchUsers, startDirect } from '@/chat/api';
+import { isAllowedChatName } from '@/chat/names';
 import { fill, useApp } from '@/state/app-store';
 import { Button, Card, Chip, Icon, Row, Screen, Segmented, TextField, Txt } from '@/ui/components';
 import { ChatAvatar, isVerified, useChatError, VerifiedBadge } from '@/ui/chat-ui';
@@ -63,6 +64,11 @@ export default function NewChatScreen() {
   };
 
   const makeGroup = async () => {
+    // No check marks, hidden characters or "Kesefly" in group names (P-099).
+    if (!isAllowedChatName(groupName)) {
+      setError(s.chat.nameRejected);
+      return;
+    }
     setBusy(true);
     setError('');
     try {

@@ -14,7 +14,7 @@ import { useAuth } from '@/state/auth';
 import { updateChatBadge } from '@/state/chat-alerts';
 import { requestPermission } from '@/state/notifications';
 import { Card, Icon, IconButton, Row, Screen, Txt } from '@/ui/components';
-import { ChatAvatar, chatTime, isVerified, ProfileSetup, useChatError, VerifiedBadge } from '@/ui/chat-ui';
+import { ChatAvatar, chatTime, isVerified, ProfileSetup, useChatError, Username, VerifiedBadge } from '@/ui/chat-ui';
 import { Metrics, useTokens } from '@/ui/theme';
 
 const POLL_MS = 30_000;
@@ -120,12 +120,14 @@ export default function ChatsScreen() {
             <Card style={{ paddingVertical: 4, gap: 0 }}>
               {chats.map((c, i) => {
                 const title = c.is_group ? (c.title ?? s.chat.group) : c.peer_name || (c.peer_username ? `@${c.peer_username}` : '?');
+                // 1:1 chat under a display name: also show the @username (P-099).
+                const peerAt = !c.is_group && c.peer_name && c.peer_username ? c.peer_username : '';
                 const preview = c.last_body ? (c.last_sender === me ? `${s.chat.you}: ${c.last_body}` : c.last_body) : c.is_group ? fill(s.chat.members, { n: c.member_count }) : '';
                 return (
                   <Pressable
                     key={c.id}
                     accessibilityRole="button"
-                    accessibilityLabel={c.unread ? `${title}, ${c.unread}` : title}
+                    accessibilityLabel={[title, peerAt && `@${peerAt}`, c.unread || ''].filter(Boolean).join(', ')}
                     onPress={() => router.push({ pathname: '/chats/[id]', params: { id: c.id, title } })}
                     style={({ pressed }) => ({
                       flexDirection: 'row',
@@ -145,6 +147,7 @@ export default function ChatsScreen() {
                             {title}
                           </Txt>
                           {!c.is_group && isVerified(c.peer_username) ? <VerifiedBadge /> : null}
+                          {peerAt ? <Username username={peerAt} variant="subhead" shrink /> : null}
                         </Row>
                         <Txt variant="caption" style={{ color: c.unread ? colors.accent : colors.textSecondary }}>
                           {chatTime(c.last_at, lang, s.chat)}
