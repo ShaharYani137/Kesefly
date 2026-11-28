@@ -104,3 +104,101 @@ describe('symbol search', () => {
     expect(await searchSymbols('teva')).toEqual(localSymbols('teva'));
   });
 });
+
+/** P-091 QA: no leaked timers or listeners, and the UI's `pending` flag matches real network use. */
+describe('symbol search cleanup (P-091 QA)', () => {
+  /** A caller signal that counts its live abort listeners. */
+  function counted() {
+    const ctrl = new AbortController();
+    let live = 0;
+    const add = ctrl.signal.addEventListener.bind(ctrl.signal);
+    const remove = ctrl.signal.removeEventListener.bind(ctrl.signal);
+    ctrl.signal.addEventListener = ((t: string, l: EventListenerOrEventListenerObject, o?: AddEventListenerOptions) => {
+      live++;
+      add(t, l, o);
+    }) as typeof ctrl.signal.addEventListener;
+    ctrl.signal.removeEventListener = ((t: string, l: EventListenerOrEventListenerObject, o?: EventListenerOptions) => {
+      live--;
+      remove(t, l, o);
+    }) as typeof ctrl.signal.removeEventListener;
+    return { ctrl, live: () => live };
+  }
+
+  /** Counts timers set and cleared through the globals the engine uses. */
+  function timers() {
+    const set = new Set<unknown>();
+    const realSet = globalThis.setTimeout;
+    const realClear = globalThis.clearTimeout;
+    vi.stubGlobal('setTimeout', ((fn: () => void, ms?: number) => {
+      const id = realSet(fn, ms);
+      set.add(id);
+      return id;
+    }) as typeof setTimeout);
+    vi.stubGlobal('clearTimeout', ((id?: ReturnType<typeof setTimeout>) => {
+      set.delete(id);
+      realClear(id);
+    }) as typeof clearTimeout);
+    return { pending: () => set.size };
+  }
+
+  const ok = () =>
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ quotes: [{ symbol: 'TEVA', quoteType: 'EQUITY' }] }), { status: 200 })));
+
+  it('clears the timeout and removes the caller listener when Yahoo answers', async () => {
+    const t = timers();
+    ok();
+    const { ctrl, live } = counted();
+    await searchSymbols('teva', ctrl.signal, 60_000);
+    expect(t.pending()).toBe(0);
+    expect(live()).toBe(0);
+  });
+
+  it('removes the caller listener after a timeout and after a caller abort', async () => {
+    stall(true);
+    const a = counted();
+    await searchSymbols('teva', a.ctrl.signal, 10);
+    expect(a.live()).toBe(0);
+    const b = counted();
+    const p = searchSymbols('teva', b.ctrl.signal, 60_000);
+    b.ctrl.abort();
+    await p;
+    expect(b.live()).toBe(0);
+  });
+
+  it('does not pile up listeners on a long-lived caller signal', async () => {
+    ok();
+    const { ctrl, live } = counted();
+    for (let i = 0; i < 5; i++) await searchSymbols('teva', ctrl.signal, 60_000);
+    expect(live()).toBe(0);
+  });
+
+  it('a fetch that fails after the timeout causes no unhandled rejection', async () => {
+    const seen: unknown[] = [];
+    const onUnhandled = (e: unknown) => seen.push(e);
+    process.on('unhandledRejection', onUnhandled);
+    try {
+      vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>((_, reject) => setTimeout(() => reject(new TypeError('late')), 30))));
+      expect(await searchSymbols('teva', undefined, 5)).toEqual(localSymbols('teva'));
+      await new Promise((r) => setTimeout(r, 60));
+      expect(seen).toEqual([]);
+    } finally {
+      process.off('unhandledRejection', onUnhandled);
+    }
+  });
+
+  it('searchesOnline matches whether searchSymbols really calls the network', async () => {
+    for (const q of ['teva', 'AAPL', ' aapl ', 'a1', 'טבע', 'טבע teva', 'teva טבע', '629014', ' 629014 ', '', '   ']) {
+      const fn = vi.fn(async () => new Response('{}', { status: 200 }));
+      vi.stubGlobal('fetch', fn);
+      await searchSymbols(q);
+      expect([q, fn.mock.calls.length > 0]).toEqual([q, searchesOnline(q)]);
+    }
+  });
+
+  it('Hebrew mixed with Latin or digits stays offline', async () => {
+    const fn = stall(true);
+    await searchSymbols('טבע teva');
+    await searchSymbols('טבע 1');
+    expect(fn).not.toHaveBeenCalled();
+  });
+});
