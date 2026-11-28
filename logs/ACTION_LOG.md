@@ -376,3 +376,11 @@ Append-only. One row per action Claude performs in this project. Newest at botto
 | 2026-11-27 20:10 | Recorded P-091…P-098; approved P-091, P-092, P-094–P-096, P-098; P-093 needs-human; P-097 rejected (dup of P-010); P-073/P-076 done; scope notes on P-010, P-044 | `logs/PROPOSALS.md` | Done |
 | 2026-11-27 20:12 | Evening Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |
 | 2026-11-27 20:20 | PR #19 checks green (run 46045388387), PR #20 checks green (run 46045394242): typecheck, lint, vitest pass | PRs #19, #20 | Done |
+| 2026-11-28 08:41 | Boss morning cycle start; main has no `.claude/agents/boss.md`, used `Shavit`; no human replies, merges or new comments since 2026-11-27 evening | GitHub, git | Done |
+| 2026-11-28 08:45 | Worktrees: `agents/2026-11-28-search-timeout` (from #5 head b9e1bd1), `agents/2026-11-28-event-lock` (from #18 head 22b14f2) | git | Done |
+| 2026-11-28 08:46 | Briefed security-guardian + product-ux (AUDIT) and connectivity-engineer (IMPLEMENT P-091, P-092) in parallel | agents | Done |
+| 2026-11-28 08:55 | P-091 03ef81a, P-092 0035748 implemented; npm registry still unreachable (bun install fails) | branches | Done |
+| 2026-11-28 09:00 | qa-tester PASS P-091 (QA tests b270d19) and P-092 (QA tests b9102e5); security-guardian PASS both | review | PASS |
+| 2026-11-28 09:02 | Pushed both branches; opened PR #21 (P-091, on #5) and PR #22 (P-092, on #18) | GitHub | Done |
+| 2026-11-28 09:05 | Recorded P-099…P-106; approved P-099, P-101 (step 1), P-102–P-106; P-100 needs-human (Supabase constraint); P-091/P-092 done; note on P-009 | `logs/PROPOSALS.md` | Done |
+| 2026-11-28 09:07 | Morning Boss update; logs committed to `agents/boss-log` | `logs/BOSS_UPDATES.md`, `logs/ACTION_LOG.md`, `logs/SESSION_LOG.md` | Done |

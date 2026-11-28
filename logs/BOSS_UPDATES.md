@@ -286,3 +286,32 @@ Twice a day (morning and evening) the **boss** agent appends an update here and 
 - Rejected P-097: duplicate of P-010 (history part added there).
 
 **Next:** implement P-092 (after #18) and P-091. Next audit: security-guardian + product-ux.
+
+## 2026-11-28 morning
+
+**Still blocked locally:** the cloud run still cannot reach the npm registry, so real typecheck, lint and vitest run only on GitHub (PR #5 checks). No human replies, merges or new comments since last evening.
+
+**Waiting for you**
+1. **Merge PR #5 (PR checks) first?** **Recommendation: merge.** Seventeen checked fixes (#6–#22) are stacked on it.
+2. **P-100: block fake "official" chat names on the server.** Anyone can call themselves "Kesefly Support ✔" today. A database rule would refuse hidden direction/zero-width characters, check-mark glyphs and "Kesefly" in names and group titles (except verified accounts). **Recommendation: yes**, in one migration with P-001 / P-002 / P-063. The display part (P-099) needs no approval and is queued.
+3. **Still open, recommendations unchanged:** P-093 (yes), P-088 (yes), P-089 (yes), P-062 delete account (yes), P-063 (yes), P-019 (yes), P-054, P-060, P-017, P-039, P-048 (yes), P-024 (off), P-020 / P-041, P-021, P-029, PR #2 merge, PR #3 hold.
+
+**Done (awaiting your merge)**
+- P-091: adding a holding shows Tel Aviv matches at once; the Yahoo search gives up after 5 s, so no endless spinner offline. [#21](https://github.com/ShaharYani137/Kesefly/pull/21), stacked on #5. qa-tester PASS, security-guardian PASS. Needs a Hebrew/English device check.
+- P-092: overlapping alert checks (app start, 10-min timer, background task) no longer post the same story or move twice. [#22](https://github.com/ShaharYani137/Kesefly/pull/22), stacked on #18. qa-tester PASS, security-guardian PASS.
+- From before: #5–#20.
+
+**Security**
+- P-099 (medium, approved): chat shows only the display name, so a scammer can pose as "Kesefly Support ✔" or copy a group admin's name. App will always show the @username. Server part is P-100, above.
+
+**Approved since last update**
+- P-099: show @username in chat header, group senders and chat list.
+- P-101: Lab numbers say "before fees, spread and tax" (cost field later).
+- P-102: provident fund (gemel) deposit fee can be entered; up to 4% was rated "good".
+- P-103: study fund is tax-free only for deposits within the ceiling.
+- P-104: Time Machine warns when it has too few past days and stops sounding like a signal.
+- P-105: Hebrew singular slips → plural forms (disclaimer, buttons, assistant).
+- P-106: follow-up to #21, search rows stop jumping when Yahoo answers.
+- P-009 note: quote requests need a timeout first (a hung one would also pause alert checks).
+
+**Next:** implement P-099 (chat @username) and P-102 (gemel fee). Next audit: connectivity-engineer + qa-tester.
