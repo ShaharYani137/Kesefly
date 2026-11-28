@@ -8,10 +8,16 @@
  * A story triggers a notification when it is new since the last check and either
  *   - names one of the user's stocks (medium impact or more), or
  *   - has high impact on markets.
- * Big daily moves (±3% or more) in the user's holdings also alert, once per symbol per day.
+ * Big daily moves (±3% or more) in the user's holdings also alert, once per symbol per exchange trading day
+ * (see move-alert-keys.ts).
  * At most 3 alerts per run, so a busy news day does not flood the phone.
  *
  * The task reads settings straight from AsyncStorage, because it may run with no UI mounted.
+ *
+ * Checks never overlap (P-092, see event-lock.ts): callers in the same JS runtime share the
+ * running check, and a check in another runtime skips while the seen-record's `runningSince`
+ * is under 2 minutes old. Otherwise two checks could post the same story or move twice, and
+ * the later write would drop the seen ids of the other.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as BackgroundTask from 'expo-background-task';
@@ -25,6 +31,8 @@ import { STRINGS } from '@/i18n/strings';
 import { bidi, ltr } from '@/ui/bidi';
 
 import { DEFAULT_PREFS, type Prefs, STORAGE_KEY } from './app-store';
+import { isLocked, singleFlight } from './event-lock';
+import { moveToAlert, pruneMoveKeys } from './move-alert-keys';
 import { channelId, contentSound, DEFAULT_SOUNDS, ensureSoundChannel, type NotifType, type SoundId } from './sounds';
 
 export const EVENTS_TASK = 'kesefly-event-check';
@@ -32,7 +40,8 @@ const SEEN_KEY = 'investapp/events/seen/v1';
 const MAX_PER_RUN = 3;
 
 type Saved = { lang?: Lang; holdings?: { symbol: string }[]; watchlist?: string[]; eventAlerts?: boolean; prefs?: Partial<Prefs> };
-type Seen = { ids: string[]; lastCheck: number; moves: string[] };
+/** `runningSince`: start time of the check in progress (absent when none; older records lack it). */
+type Seen = { ids: string[]; lastCheck: number; moves: string[]; runningSince?: number };
 
 async function readSeen(): Promise<Seen> {
   try {
@@ -42,6 +51,20 @@ async function readSeen(): Promise<Seen> {
     // fall through
   }
   return { ids: [], lastCheck: 0, moves: [] };
+}
+
+async function writeSeen(seen: Seen) {
+  await AsyncStorage.setItem(SEEN_KEY, JSON.stringify(seen));
+}
+
+/** Clears our `runningSince` after a failed run, unless another run has taken the lock since. */
+async function releaseLock(stamp: number) {
+  try {
+    const { runningSince, ...rest } = await readSeen();
+    if (runningSince === stamp) await writeSeen(rest);
+  } catch {
+    // The mark goes stale after 2 minutes anyway.
+  }
 }
 
 /** Creates (or renames) the event and price-move channels for the chosen sounds. */
@@ -93,8 +116,14 @@ function isQuiet(d = new Date()): boolean {
   return h >= 22 || h < 7;
 }
 
-/** One check. Returns how many notifications were sent. Safe to call from UI or background. */
-export async function checkEvents(): Promise<number> {
+/**
+ * One check. Returns how many notifications were sent. Safe to call from UI or background.
+ * Calls made while a check runs get that check's result; returns 0 when another JS runtime
+ * is checking (that run sends the alerts).
+ */
+export const checkEvents: () => Promise<number> = singleFlight(runCheck);
+
+async function runCheck(): Promise<number> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
   if (!raw) return 0;
   const saved = JSON.parse(raw) as Saved;
@@ -108,57 +137,66 @@ export async function checkEvents(): Promise<number> {
   const symbols = [...new Set([...held, ...(saved.watchlist ?? [])])];
 
   const seen = await readSeen();
-  // First run: only look back 2 hours, so turning alerts on does not replay yesterday's news.
-  const since = seen.lastCheck || Date.now() - 2 * 3600_000;
-  const sounds = { ...DEFAULT_SOUNDS, ...prefs.sounds };
-  await ensureEventsChannel(lang, sounds);
+  // Another JS runtime (the headless background task) is checking: skip, that run sends the alerts.
+  const stamp = Date.now();
+  if (isLocked(seen.runningSince, stamp)) return 0;
+  await writeSeen({ ...seen, runningSince: stamp });
+  let done = false;
+  try {
+    // First run: only look back 2 hours, so turning alerts on does not replay yesterday's news.
+    const since = seen.lastCheck || Date.now() - 2 * 3600_000;
+    const sounds = { ...DEFAULT_SOUNDS, ...prefs.sounds };
+    await ensureEventsChannel(lang, sounds);
 
-  const events = await getEvents({ symbols, lang, force: true });
-  // Stories in the app language rank a little higher, so a Hebrew user gets Hebrew sources first.
-  const rank = (e: MarketEvent) => e.score + (e.lang === lang ? 8 : 0);
-  const fresh = events
-    .filter((e) => !seen.ids.includes(e.id) && worth(e, since, prefs.alertScope))
-    .sort((a, b) => rank(b) - rank(a))
-    .slice(0, MAX_PER_RUN);
+    const events = await getEvents({ symbols, lang, force: true });
+    // Stories in the app language rank a little higher, so a Hebrew user gets Hebrew sources first.
+    const rank = (e: MarketEvent) => e.score + (e.lang === lang ? 8 : 0);
+    const fresh = events
+      .filter((e) => !seen.ids.includes(e.id) && worth(e, since, prefs.alertScope))
+      .sort((a, b) => rank(b) - rank(a))
+      .slice(0, MAX_PER_RUN);
 
-  let sent = 0;
-  for (const e of fresh) {
-    await Notifications.scheduleNotificationAsync({
-      content: { ...eventContent(e, lang), data: { url: '/events', link: e.link }, sound: contentSound(sounds.events) },
-      trigger: { channelId: channelId('events', sounds.events) } as Notifications.NotificationTriggerInput,
-    });
-    sent++;
-  }
-
-  // Big moves in the user's own holdings.
-  const day = new Date().toISOString().slice(0, 10);
-  const moves = seen.moves.filter((m) => m.endsWith(day));
-  if (held.length && sent < MAX_PER_RUN) {
-    const quotes = await getQuotes(held, true);
-    for (const sym of held) {
-      const q = quotes[sym];
-      const key = `${sym}|${day}`;
-      if (!q || Math.abs(q.changePct) < prefs.moveThreshold / 100 || moves.includes(key) || sent >= MAX_PER_RUN) continue;
-      // Only alert when the quote is from today (markets may be closed).
-      if (Date.now() - q.time > 18 * 3600_000) continue;
-      const pct = `${q.changePct > 0 ? '+' : ''}${(q.changePct * 100).toFixed(1)}%`;
+    let sent = 0;
+    for (const e of fresh) {
       await Notifications.scheduleNotificationAsync({
-        content: {
-          title: bidi((q.changePct > 0 ? s.events.moveUp : s.events.moveDown).replace('{symbol}', sym).replace('{pct}', pct), lang === 'he'),
-          body: bidi(s.events.moveBody, lang === 'he'),
-          data: { url: `/stock/${encodeURIComponent(sym)}` },
-          sound: contentSound(sounds.moves),
-        },
-        trigger: { channelId: channelId('moves', sounds.moves) } as Notifications.NotificationTriggerInput,
+        content: { ...eventContent(e, lang), data: { url: '/events', link: e.link }, sound: contentSound(sounds.events) },
+        trigger: { channelId: channelId('events', sounds.events) } as Notifications.NotificationTriggerInput,
       });
-      moves.push(key);
       sent++;
     }
-  }
 
-  const ids = [...fresh.map((e) => e.id), ...seen.ids].slice(0, 400);
-  await AsyncStorage.setItem(SEEN_KEY, JSON.stringify({ ids, lastCheck: Date.now(), moves } satisfies Seen));
-  return sent;
+    // Big moves in the user's own holdings, once per symbol per exchange trading day.
+    const moves = pruneMoveKeys(seen.moves, Date.now());
+    if (held.length && sent < MAX_PER_RUN) {
+      const quotes = await getQuotes(held, true);
+      for (const sym of held) {
+        if (sent >= MAX_PER_RUN) break;
+        const q = quotes[sym];
+        const key = moveToAlert(sym, q, prefs.moveThreshold, moves, Date.now());
+        if (!q || !key) continue;
+        const pct = `${q.changePct > 0 ? '+' : ''}${(q.changePct * 100).toFixed(1)}%`;
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: bidi((q.changePct > 0 ? s.events.moveUp : s.events.moveDown).replace('{symbol}', sym).replace('{pct}', pct), lang === 'he'),
+            body: bidi(s.events.moveBody, lang === 'he'),
+            data: { url: `/stock/${encodeURIComponent(sym)}` },
+            sound: contentSound(sounds.moves),
+          },
+          trigger: { channelId: channelId('moves', sounds.moves) } as Notifications.NotificationTriggerInput,
+        });
+        moves.push(key);
+        sent++;
+      }
+    }
+
+    const ids = [...fresh.map((e) => e.id), ...seen.ids].slice(0, 400);
+    // Saved without runningSince, which releases the lock.
+    await writeSeen({ ids, lastCheck: Date.now(), moves });
+    done = true;
+    return sent;
+  } finally {
+    if (!done) await releaseLock(stamp);
+  }
 }
 
 // Must be defined at module scope, so the OS can run it when the app is not open.
